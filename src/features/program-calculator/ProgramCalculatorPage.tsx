@@ -1025,7 +1025,11 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                         <span className="text-foreground font-medium">{formatMiles(t.billableRoundTripMiles)}</span>
                       </div>
                       <div>
-                        Surcharge per Visit: <span className="text-foreground font-medium">{formatMoney(t.feePerVisit)}</span>
+                        Total Location Visits: <span className="text-foreground font-medium">{t.totalVisits}</span>
+                      </div>
+                      <div>
+                        Travel Surcharge per Visit:{" "}
+                        <span className="text-foreground font-medium">{formatMoney(t.feePerVisit)}</span>
                       </div>
                       {t.extraVisits > 0 ? (
                         <div>

@@ -1147,7 +1147,10 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
                     </span>
                   </div>
                   <div>
-                    Travel Fee per Visit:{" "}
+                    Total Location Visits: <span className="font-medium text-foreground">{loc.totalVisits}</span>
+                  </div>
+                  <div>
+                    Travel Surcharge per Visit:{" "}
                     <span className="font-medium text-foreground">
                       {formatMoneyCents(loc.feePerVisit)}
                     </span>
