@@ -139,7 +139,21 @@ export function ProgramDraftProvider({ children }: { children: ReactNode }) {
   const clear = useMemo(
     () => ({
       builder: () => updateDraft({ builder: createDefaultDraft().builder }),
-      calculator: () => updateDraft({ calculator: createDefaultDraft().calculator }),
+      calculator: () =>
+        updateDraft((prev) => {
+          const defaults = createDefaultDraft().calculator;
+          const isDepartmentBased = prev.builder.guidelines.allowanceScope === "department_based";
+          const departmentConfigs = isDepartmentBased
+            ? ensureDepartmentConfigs(defaults.departmentConfigs ?? [], 2)
+            : defaults.departmentConfigs ?? [];
+          return {
+            calculator: {
+              ...defaults,
+              contact: prev.calculator.contact,
+              departmentConfigs,
+            },
+          };
+        }),
     }),
     [updateDraft]
   );
