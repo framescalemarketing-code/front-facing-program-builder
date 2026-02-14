@@ -1112,8 +1112,9 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                             Invoice Total (Before Discount):{" "}
                             <span className="text-foreground font-medium">{formatMoney(estimate.invoiceTotal)}</span>
                           </div>
-                          <div className="pt-1 text-base font-semibold text-foreground">
-                            Invoice Total (With Max Discount): {formatMoney(invoiceTotalWithMaxDiscount)}
+                          <div>
+                            Invoice Total (With Max Discount):{" "}
+                            <span className="text-foreground font-medium">{formatMoney(invoiceTotalWithMaxDiscount)}</span>
                           </div>
                         </>
                       ) : (
@@ -1134,8 +1135,9 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                           <span className="text-foreground font-medium">{formatMoney(estimate.discountTotalMax)}</span>
                         </div>
                       ) : null}
-                      <div className="pt-1 text-base font-semibold text-foreground">
-                        {invoiceTotalSummaryLabel}: {formatMoney(invoiceTotalWithMaxDiscount)}
+                      <div>
+                        {invoiceTotalSummaryLabel}:{" "}
+                        <span className="text-foreground font-medium">{formatMoney(invoiceTotalWithMaxDiscount)}</span>
                       </div>
                     </div>
                   )}
@@ -1210,8 +1212,9 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                             Invoice Total (Before Discount):{" "}
                             <span className="text-foreground font-medium">{formatMoney(estimate.invoiceTotal)}</span>
                           </div>
-                          <div className="pt-1 text-base font-semibold text-foreground">
-                            Invoice Total (With Max Discount): {formatMoney(invoiceTotalWithMaxDiscount)}
+                          <div>
+                            Invoice Total (With Max Discount):{" "}
+                            <span className="text-foreground font-medium">{formatMoney(invoiceTotalWithMaxDiscount)}</span>
                           </div>
                         </>
                       ) : (
@@ -1232,8 +1235,9 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                           <span className="text-foreground font-medium">{formatMoney(estimate.discountTotalMax)}</span>
                         </div>
                       ) : null}
-                      <div className="pt-1 text-base font-semibold text-foreground">
-                        {invoiceTotalSummaryLabel}: {formatMoney(invoiceTotalWithMaxDiscount)}
+                      <div>
+                        {invoiceTotalSummaryLabel}:{" "}
+                        <span className="text-foreground font-medium">{formatMoney(invoiceTotalWithMaxDiscount)}</span>
                       </div>
                     </div>
                   )}

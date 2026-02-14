@@ -1485,8 +1485,9 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
                       Invoice Total (Before Discount):{" "}
                       <span className="font-medium text-foreground">{formatMoneyCents(estimate.invoiceTotal)}</span>
                     </div>
-                    <div className="pt-1 text-base font-semibold text-foreground">
-                      Invoice Total (With Max Discount): {formatMoneyCents(invoiceTotalWithMaxDiscount)}
+                    <div>
+                      Invoice Total (With Max Discount):{" "}
+                      <span className="font-medium text-foreground">{formatMoneyCents(invoiceTotalWithMaxDiscount)}</span>
                     </div>
                   </>
                 ) : (
@@ -1507,8 +1508,9 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
                     <span className="font-medium text-foreground">{formatMoneyCents(estimate.discountTotalMax)}</span>
                   </div>
                 ) : null}
-                <div className="pt-1 text-base font-semibold text-foreground">
-                  {invoiceTotalSummaryLabel}: {formatMoneyCents(invoiceTotalWithMaxDiscount)}
+                <div>
+                  {invoiceTotalSummaryLabel}:{" "}
+                  <span className="font-medium text-foreground">{formatMoneyCents(invoiceTotalWithMaxDiscount)}</span>
                 </div>
               </div>
             )}
@@ -1594,8 +1596,9 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
                       Invoice Total (Before Discount):{" "}
                       <span className="font-medium text-foreground">{formatMoneyCents(estimate.invoiceTotal)}</span>
                     </div>
-                    <div className="pt-1 text-base font-semibold text-foreground">
-                      Invoice Total (With Max Discount): {formatMoneyCents(invoiceTotalWithMaxDiscount)}
+                    <div>
+                      Invoice Total (With Max Discount):{" "}
+                      <span className="font-medium text-foreground">{formatMoneyCents(invoiceTotalWithMaxDiscount)}</span>
                     </div>
                   </>
                 ) : (
@@ -1616,8 +1619,9 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
                     <span className="font-medium text-foreground">{formatMoneyCents(estimate.discountTotalMax)}</span>
                   </div>
                 ) : null}
-                <div className="pt-1 text-base font-semibold text-foreground">
-                  {invoiceTotalSummaryLabel}: {formatMoneyCents(invoiceTotalWithMaxDiscount)}
+                <div>
+                  {invoiceTotalSummaryLabel}:{" "}
+                  <span className="font-medium text-foreground">{formatMoneyCents(invoiceTotalWithMaxDiscount)}</span>
                 </div>
               </div>
             )}
