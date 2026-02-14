@@ -1,0 +1,2122 @@
+﻿// components/P02c_QuotePreview.tsx
+"use client";
+
+import { memo, useEffect, useMemo, useState } from "react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas-pro";
+import type { NavigateFn, NavSource, PageId } from "@/app/routerTypes";
+import { PageHero } from "@/components/layout/PageHero";
+import { SectionWrap } from "@/components/layout/SectionWrap";
+import { LiveGuidance } from "@/components/LiveGuidance";
+import { useProgramDraft } from "@/hooks/useProgramDraft";
+import { calculateCompanywideAllowance, includeEuAddOnsInAllowance } from "@/lib/allowanceMath";
+import { defaultDraft } from "@/lib/programDraft";
+import type {  EUPackage,
+  EUPackageAddOnKey,  DepartmentConfigRow,
+  PaymentDiscount,
+  PaymentTerms,
+  ServiceTier,
+} from "@/lib/programDraft";
+
+const SHOWROOM_ADDRESS = import.meta.env.VITE_SHOWROOM_ADDRESS ?? "6780 Miramar Rd, San Diego, CA 92121";
+const ONSIGHT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL ?? "team@onsightoptics.com";
+const ONSIGHT_PHONE = import.meta.env.VITE_SUPPORT_PHONE ?? "619-402-1033";
+
+const BRAND_LOGO_URL = (import.meta.env.VITE_BRAND_LOGO_URL ?? "").trim();
+const DEFAULT_LOGO_URL = "/brand/osso/osso-logo-horizontal.png";
+const REMOTE_LOGO_FALLBACK =
+  "https://raw.githubusercontent.com/framescalemarketing-code/osso-brand-assets/main/osso-logo-horizontal.png";
+
+const SUBMIT_KEY = "osso_quote_preview_submission_v6";
+const QUOTE_ID_PREFIX = "Q";
+
+const PRICING = {
+  onboardingFeeSingleSiteStandard: 1200,
+  onboardingFeeAdditionalSite: 500,
+
+  extraSiteVisitFee: 60,
+
+  euAllowancePerEmployee: {
+    Compliance: 235,
+    Comfort: 290,
+    Complete: 435,
+    Covered: 435,
+  } satisfies Record<EUPackage, number>,
+
+  serviceFeePerEmployee: {
+    Essential: 65,
+    Access: 85,
+    Premier: 105,
+    Enterprise: 155,
+  } satisfies Record<ServiceTier, number>,
+
+  standardVisitsByTier: {
+    Essential: 2,
+    Access: 6,
+    Premier: 12,
+    Enterprise: 24,
+  } satisfies Record<ServiceTier, number>,
+
+  euPackageAddOnsPerEmployee: {
+    polarized: 135,
+    antiFog: 50,
+    antiReflectiveStd: 55,
+    blueLightAntiReflective: 100,
+    tint: 40,
+    transitions: 135,
+    transitionsPolarized: 165,
+    extraScratchCoating: 50,
+  } satisfies Record<EUPackageAddOnKey, number>,
+
+  travel: {
+    includedOneWayMiles: 50,
+    dollarsPerMileOver: 1,
+    roundTripMultiplier: 2,
+  },
+
+  financeFeesPerInvoice: {
+    NET30: 0,
+    NET45: 15,
+    NET60: 30,
+    NET75: 45,
+    NET90: 60,
+  } satisfies Record<PaymentTerms, number>,
+
+  paymentDiscounts: {
+    none: 0,
+    "2_15_NET30": 0.02,
+    "3_10_NET30": 0.03,
+  } satisfies Record<PaymentDiscount, number>,
+};
+
+const EU_PACKAGE_ADD_ON_ITEMS: Array<{ key: EUPackageAddOnKey; label: string; amount: number }> = [
+  { key: "antiFog" as EUPackageAddOnKey, label: "Anti-Fog", amount: PRICING.euPackageAddOnsPerEmployee.antiFog },
+  { key: "antiReflectiveStd" as EUPackageAddOnKey, label: "Anti-Reflective", amount: PRICING.euPackageAddOnsPerEmployee.antiReflectiveStd },
+  {
+    key: "blueLightAntiReflective" as EUPackageAddOnKey,
+    label: "Blue Light + Anti-Reflective Coating",
+    amount: PRICING.euPackageAddOnsPerEmployee.blueLightAntiReflective,
+  },
+  { key: "extraScratchCoating" as EUPackageAddOnKey, label: "Extra Scratch Coating", amount: PRICING.euPackageAddOnsPerEmployee.extraScratchCoating },
+  { key: "polarized" as EUPackageAddOnKey, label: "Polarized", amount: PRICING.euPackageAddOnsPerEmployee.polarized },
+  { key: "tint" as EUPackageAddOnKey, label: "Tint", amount: PRICING.euPackageAddOnsPerEmployee.tint },
+  { key: "transitions" as EUPackageAddOnKey, label: "Transitions", amount: PRICING.euPackageAddOnsPerEmployee.transitions },
+  { key: "transitionsPolarized" as EUPackageAddOnKey, label: "Transitions Polarized", amount: PRICING.euPackageAddOnsPerEmployee.transitionsPolarized },
+].sort((a, b) => a.label.localeCompare(b.label));
+
+
+
+function clampInt(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.round(value));
+}
+
+type SelectedOptionItem = { label: string; amount: number };
+
+type CalculatorSelections = {
+  addOns?: {
+    euPackageAddOns?: Partial<Record<EUPackageAddOnKey, boolean>>;
+  };
+};
+
+function selectedOptionsFromCalculator(calculator: CalculatorSelections) {
+  const addOns: SelectedOptionItem[] = EU_PACKAGE_ADD_ON_ITEMS.filter(
+    (i) => calculator.addOns?.euPackageAddOns?.[i.key]
+  ).map((i) => ({ label: i.label, amount: i.amount }));
+
+  return { addOns };
+}
+
+function formatMoney(amount: number) {
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function formatAddOnLabelWithAmount(label: string) {
+  const match = EU_PACKAGE_ADD_ON_ITEMS.find((item) => item.label === label);
+  return match ? `${match.label} ${formatMoney(match.amount)}` : label;
+}
+
+type BuildQuotePdfArgs = {
+  quoteId: string;
+  createdAtIso?: string;
+  showroomReference?: string;
+  estimate?: unknown;
+  contact?: unknown;
+  program?: unknown;
+  selectedOptions?: unknown;
+  guidelines?: unknown;
+};
+
+async function buildQuotePdfBase64({ quoteId }: BuildQuotePdfArgs) {
+  const root = document.querySelector("#quote-pdf-root") as HTMLElement | null;
+  if (!root) throw new Error("Quote preview root not found for PDF generation.");
+
+  const rootWidth = Math.max(1, Math.round(root.scrollWidth || root.clientWidth || root.getBoundingClientRect().width || 1024));
+
+  const scratch = document.createElement("div");
+  scratch.setAttribute("data-pdf-scratch", "true");
+  scratch.style.position = "absolute";
+  scratch.style.left = "-99999px";
+  scratch.style.top = "0";
+  scratch.style.width = `${rootWidth}px`;
+  scratch.style.pointerEvents = "none";
+  scratch.style.background = "#ffffff";
+
+  const clone = root.cloneNode(true) as HTMLElement;
+  clone.style.display = "block";
+  clone.style.width = `${rootWidth}px`;
+  clone.style.background = "#ffffff";
+  scratch.appendChild(clone);
+
+  // Normalize colors to computed RGB so html2canvas doesn't trip on oklab/oklch values
+  const inlineComputedColors = (el: HTMLElement) => {
+    const computed = window.getComputedStyle(el);
+    const colorProps = [
+      "color",
+      "background-color",
+      "border-color",
+      "border-top-color",
+      "border-right-color",
+      "border-bottom-color",
+      "border-left-color",
+      "outline-color",
+    ];
+    colorProps.forEach((prop) => {
+      const v = computed.getPropertyValue(prop);
+      if (v) el.style.setProperty(prop, v);
+    });
+
+    // Strip gradients / shadows that may use oklab/oklch
+    el.style.setProperty("background-image", "none");
+    el.style.setProperty("box-shadow", "none");
+    el.style.setProperty("text-shadow", "none");
+
+    Array.from(el.children).forEach((child) => inlineComputedColors(child as HTMLElement));
+  };
+  inlineComputedColors(clone);
+
+  document.body.appendChild(scratch);
+
+  try {
+    const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
+    const marginPt = 36;
+    const pdfWidth = doc.internal.pageSize.getWidth();
+    const pdfHeight = doc.internal.pageSize.getHeight();
+    const contentWidth = pdfWidth - marginPt * 2;
+    const contentHeight = pdfHeight - marginPt * 2;
+
+    const canvas = await html2canvas(clone, {
+      scale: 2,
+      backgroundColor: "#ffffff",
+      useCORS: true,
+      logging: false,
+      windowWidth: clone.scrollWidth,
+      onclone: (clonedDoc) => {
+        const html = clonedDoc.documentElement;
+        const body = clonedDoc.body;
+
+        html.style.setProperty("color-scheme", "light");
+        body.style.setProperty("background", "#ffffff");
+
+        html.classList.remove("dark");
+        body.classList.remove("dark");
+
+        const style = clonedDoc.createElement("style");
+        style.textContent = `
+          html, body { background: #ffffff !important; color: #0f172a !important; }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          .app-shell-header { display: none !important; }
+          .no-print { display: none !important; }
+          [data-pdf-exclude="true"] { display: none !important; }
+          [data-pdf-root="quote"] { background: #ffffff !important; }
+          [data-pdf-root="quote"] * { filter: none !important; backdrop-filter: none !important; }
+          body > :not([data-pdf-scratch="true"]) { display: none !important; }
+        `;
+        clonedDoc.head.appendChild(style);
+      },
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+    const imgHeight = (canvas.height * contentWidth) / canvas.width;
+    let y = marginPt;
+
+    doc.addImage(imgData, "PNG", marginPt, y, contentWidth, imgHeight, undefined, "FAST");
+
+    while (y + imgHeight > pdfHeight - marginPt) {
+      y -= contentHeight;
+      doc.addPage();
+      doc.addImage(imgData, "PNG", marginPt, y, contentWidth, imgHeight, undefined, "FAST");
+    }
+
+    const dataUri = doc.output("datauristring");
+    const base64 = dataUri.split(",")[1] ?? "";
+    const tail = (quoteId ?? "").slice(-4).replace(/[^A-Za-z0-9]/g, "");
+    const filename = tail ? `OSSOQ${tail}.pdf` : "OSSOQ.pdf";
+    return { pdfBase64: base64, pdfFilename: filename };
+  } finally {
+    if (scratch.parentNode) {
+      scratch.parentNode.removeChild(scratch);
+    }
+  }
+}
+
+function formatMoneyCents(amount: number) {
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function formatDate(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "2-digit" }).format(d);
+}
+
+function safeText(v: string) {
+  const t = (v ?? "").trim();
+  return t ? t : "Not Provided";
+}
+
+function capitalizeFirst(s: string) {
+  const t = (s ?? "").trim();
+  if (!t) return "";
+  return t.slice(0, 1).toUpperCase() + t.slice(1);
+}
+
+
+
+function eligibilityFrequencyLabel(freq?: string) {
+  if (!freq) return "";
+  if (freq === "biennial") return "Every 2 Years";
+  if (freq === "annual") return "Annual";
+  return capitalizeFirst(freq);
+}
+function quoteOptionsLabel(sideShieldType?: string) {
+  if (sideShieldType === "removable") return "Removable";
+  return "Permanent/Integrated";
+}
+
+function coverageTypeLabel(v: string) {
+  if (v === "prescription_only") return "Prescription Only";
+  if (v === "prescription_and_plano") return "Prescription + Plano";
+  if (v === "plano_only") return "Plano Only";
+  return "Prescription Only";
+}
+
+function allowanceScopeLabel(v: string) {
+  if (v === "department_based") return "Department Based Allowances";
+  return "Single Allowance For All Employees";
+}
+
+function discountLabel(discount: PaymentDiscount) {
+  if (discount === "none") return "None";
+  if (discount === "2_15_NET30") return "2% If Paid Within 15 Days";
+  return "3% If Paid Within 10 Days";
+}
+
+function formatLocationAddress(loc: { streetAddress: string; city: string; state: string; zipCode: string }) {
+  const parts = [loc.streetAddress, loc.city, loc.state, loc.zipCode].map((s) => s?.trim()).filter(Boolean);
+  return parts.join(", ");
+}
+
+function isNonEmpty(value: string | undefined) {
+  return Boolean(value?.trim());
+}
+
+function isLocationComplete(loc: { streetAddress: string; city: string; state: string }) {
+  return isNonEmpty(loc.streetAddress) && isNonEmpty(loc.city) && isNonEmpty(loc.state);
+}
+
+function travelTotalForLocation(oneWayMiles: number, totalVisits: number) {
+  const oneWay = Math.max(0, Number.isFinite(oneWayMiles) ? oneWayMiles : 0);
+  const over = Math.max(0, oneWay - PRICING.travel.includedOneWayMiles);
+  const billableRoundTripMiles = over * PRICING.travel.roundTripMultiplier;
+  const feePerVisit = billableRoundTripMiles * PRICING.travel.dollarsPerMileOver;
+  const total = feePerVisit * Math.max(0, totalVisits);
+  return { oneWay, billableRoundTripMiles, feePerVisit, total };
+}
+
+function departmentAllowanceDetails(
+  row: DepartmentConfigRow,
+  baseAllowance: number,
+  includeAddOnsInAllowance: boolean
+) {
+  const employees = clampInt(row.employeeCount);
+  const selectedAddOns = EU_PACKAGE_ADD_ON_ITEMS.filter((i) => row.selections?.euPackageAddOns?.[i.key]);
+
+  const addOnsPerEmployee = includeAddOnsInAllowance ? selectedAddOns.reduce((sum, i) => sum + i.amount, 0) : 0;
+
+  const allowancePerEmployee = baseAllowance + addOnsPerEmployee;
+  const allowanceSubtotal = allowancePerEmployee * employees;
+
+  return {
+    employees,
+    allowancePerEmployee,
+    allowanceSubtotal,
+    selectedAddOnsLabels: selectedAddOns.map((i) => i.label),
+  };
+}
+
+type DepartmentAllowanceBreakdownLine = {
+  id: string;
+  departmentName: string;
+  employeeCount: number;
+  allowancePerEmployee: number;
+  allowanceSubtotal: number;
+  selectedAddOnsLabels: string[];
+};
+
+type DepartmentServiceBreakdownLine = {
+  id: string;
+  departmentName: string;
+  employeeCount: number;
+  servicePerEmployee: number;
+  serviceSubtotal: number;
+};
+
+type DepartmentAllowanceBreakdownTableProps = {
+  rows: DepartmentAllowanceBreakdownLine[];
+  employeesTotal: number;
+  allowanceTotal: number;
+};
+
+const DepartmentAllowanceBreakdownTable = memo(function DepartmentAllowanceBreakdownTable({
+  rows,
+  employeesTotal,
+  allowanceTotal,
+}: DepartmentAllowanceBreakdownTableProps) {
+  return (
+    <div className="mt-3 overflow-x-auto">
+      <div className="mb-2 text-sm font-semibold text-foreground">Department Allowance Breakdown</div>
+      <table className="min-w-full text-xs text-muted-foreground">
+        <thead>
+          <tr className="text-left">
+            <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
+            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees</th>
+            <th className="py-1 px-2 font-semibold text-foreground">Add Ons</th>
+                        <th className="py-1 px-2 text-right font-semibold text-foreground">Allowance per Employee</th>
+            <th className="py-1 pl-2 text-right font-semibold text-foreground">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.id}>
+              <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
+              <td className="py-1 px-2 text-right">{row.employeeCount}</td>
+              <td className="py-1 px-2">{row.selectedAddOnsLabels.length ? row.selectedAddOnsLabels.join(", ") : ""}</td>
+              <td className="py-1 px-2 text-right">{formatMoney(row.allowancePerEmployee)}</td>
+              <td className="py-1 pl-2 text-right">{formatMoney(row.allowanceSubtotal)}</td>
+            </tr>
+          ))}
+          <tr className="font-semibold text-foreground">
+            <td className="py-1 pr-2">Totals</td>
+            <td className="py-1 px-2 text-right">{employeesTotal}</td>
+            <td className="py-1 px-2"></td>
+            <td className="py-1 px-2 text-right"></td>
+            <td className="py-1 pl-2 text-right">{formatMoney(allowanceTotal)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+});
+
+const DepartmentServiceBreakdownTable = memo(function DepartmentServiceBreakdownTable({
+  rows,
+  employeesTotal,
+  serviceTotal,
+}: {
+  rows: DepartmentServiceBreakdownLine[];
+  employeesTotal: number;
+  serviceTotal: number;
+}) {
+  return (
+    <div className="mt-3 overflow-x-auto">
+      <div className="mb-2 text-sm font-semibold text-foreground">Service Tier Breakdown by Department</div>
+      <table className="min-w-full text-xs text-muted-foreground">
+        <thead>
+          <tr className="text-left">
+            <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
+            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees</th>
+            <th className="py-1 px-2 text-right font-semibold text-foreground">Service per Employee</th>
+            <th className="py-1 pl-2 text-right font-semibold text-foreground">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.id}>
+              <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
+              <td className="py-1 px-2 text-right">{row.employeeCount}</td>
+              <td className="py-1 px-2 text-right">{formatMoney(row.servicePerEmployee)}</td>
+              <td className="py-1 pl-2 text-right">{formatMoney(row.serviceSubtotal)}</td>
+            </tr>
+          ))}
+          <tr className="font-semibold text-foreground">
+            <td className="py-1 pr-2">Totals</td>
+            <td className="py-1 px-2 text-right">{employeesTotal}</td>
+            <td className="py-1 px-2 text-right"></td>
+            <td className="py-1 pl-2 text-right">{formatMoney(serviceTotal)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+});
+
+type DepartmentDiscountBreakdownLine = {
+  id: string;
+  departmentName: string;
+  employeeCount: number;
+  invoicePerEmployee: number;
+  discountPct: number;
+  discountPerEmployeeMax: number;
+  discountTotalMax: number;
+};
+
+const DepartmentDiscountBreakdownTable = memo(function DepartmentDiscountBreakdownTable({
+  rows,
+}: {
+  rows: DepartmentDiscountBreakdownLine[];
+}) {
+  const employeesTotal = rows.reduce((sum, row) => sum + row.employeeCount, 0);
+  const discountTotalMax = rows.reduce((sum, row) => sum + row.discountTotalMax, 0);
+
+  return (
+    <div className="mt-3 overflow-x-auto">
+      <table className="min-w-full text-xs text-muted-foreground">
+        <thead>
+          <tr className="text-left">
+            <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
+            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees</th>
+            <th className="py-1 px-2 text-right font-semibold text-foreground">Invoice per Employee</th>
+            <th className="py-1 px-2 text-right font-semibold text-foreground">Discount Percent</th>
+            <th className="py-1 px-2 text-right font-semibold text-foreground">Max Discount per Invoice</th>
+            <th className="py-1 pl-2 text-right font-semibold text-foreground">Max Discount Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.id}>
+              <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
+              <td className="py-1 px-2 text-right">{row.employeeCount}</td>
+              <td className="py-1 px-2 text-right">{formatMoney(row.invoicePerEmployee)}</td>
+              <td className="py-1 px-2 text-right">{`${(row.discountPct * 100).toFixed(0)}%`}</td>
+              <td className="py-1 px-2 text-right">{formatMoney(row.discountPerEmployeeMax)}</td>
+              <td className="py-1 pl-2 text-right">{formatMoney(row.discountTotalMax)}</td>
+            </tr>
+          ))}
+          <tr className="font-semibold text-foreground">
+            <td className="py-1 pr-2">Totals</td>
+            <td className="py-1 px-2 text-right">{employeesTotal}</td>
+            <td className="py-1 px-2 text-right"></td>
+            <td className="py-1 px-2 text-right"></td>
+            <td className="py-1 px-2 text-right"></td>
+            <td className="py-1 pl-2 text-right">{formatMoney(discountTotalMax)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+});
+
+
+
+type DepartmentInvoiceBreakdownLine = {
+  id: string;
+  departmentName: string;
+  employeeCount: number;
+  invoicePerEmployee: number;
+  invoiceTotal: number;
+  financeFeePerInvoice: number;
+  financeFeeTotal: number;
+};
+
+
+const DepartmentInvoiceBreakdownTable = memo(function DepartmentInvoiceBreakdownTable({
+  rows,
+  showFees,
+}: {
+  rows: DepartmentInvoiceBreakdownLine[];
+  showFees: boolean;
+}) {
+  const employeesTotal = rows.reduce((sum, row) => sum + row.employeeCount, 0);
+  const invoiceTotal = rows.reduce((sum, row) => sum + row.invoiceTotal, 0);
+  const financeFeeTotal = rows.reduce((sum, row) => sum + row.financeFeeTotal, 0);
+
+  return (
+    <div className="mt-3 overflow-x-auto">
+      <table className="min-w-full text-xs text-muted-foreground">
+        <thead>
+          <tr className="text-left">
+            <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
+            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees</th>
+            <th className="py-1 px-2 text-right font-semibold text-foreground">Invoice per Employee</th>
+            {showFees ? (
+              <th className="py-1 px-2 text-right font-semibold text-foreground">Finance Fee per Invoice</th>
+            ) : null}
+            <th className="py-1 pl-2 text-right font-semibold text-foreground">Invoice Total</th>
+            {showFees ? (
+              <th className="py-1 pl-2 text-right font-semibold text-foreground">Finance Fee Total</th>
+            ) : null}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.id}>
+              <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
+              <td className="py-1 px-2 text-right">{row.employeeCount}</td>
+              <td className="py-1 px-2 text-right">{formatMoney(row.invoicePerEmployee)}</td>
+              {showFees ? (
+                <td className="py-1 px-2 text-right">{formatMoney(row.financeFeePerInvoice)}</td>
+              ) : null}
+              <td className="py-1 pl-2 text-right">{formatMoney(row.invoiceTotal)}</td>
+              {showFees ? (
+                <td className="py-1 pl-2 text-right">{formatMoney(row.financeFeeTotal)}</td>
+              ) : null}
+            </tr>
+          ))}
+          <tr className="font-semibold text-foreground">
+            <td className="py-1 pr-2">Totals</td>
+            <td className="py-1 px-2 text-right">{employeesTotal}</td>
+            <td className="py-1 px-2 text-right"></td>
+            {showFees ? <td className="py-1 px-2 text-right"></td> : null}
+            <td className="py-1 pl-2 text-right">{formatMoney(invoiceTotal)}</td>
+            {showFees ? <td className="py-1 pl-2 text-right">{formatMoney(financeFeeTotal)}</td> : null}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+});
+
+export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
+  const ENABLE_QUOTE_SUBMIT = false;
+  const { draft } = useProgramDraft();
+  const [actionMessage, setActionMessage] = useState("");
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDraftDiagnostics, setShowDraftDiagnostics] = useState(false);
+  const [finalQuoteMeta, setFinalQuoteMeta] = useState<{ id: string; createdAtIso: string } | null>(null);
+  const draftQuoteMetaRef = useState(() => {
+    const createdAtIso = new Date().toISOString();
+    const id = `D${createdAtIso.replaceAll("-", "").slice(0, 8)}${createdAtIso.replaceAll(":", "").slice(11, 15)}`;
+    return { id, createdAtIso };
+  })[0];
+  const brandLogoUrl = useMemo(() => BRAND_LOGO_URL || DEFAULT_LOGO_URL || REMOTE_LOGO_FALLBACK, []);
+
+  const effectiveQuoteMeta = finalQuoteMeta ?? draftQuoteMetaRef;
+
+  function generateQuoteId() {
+    const createdAtIso = new Date().toISOString();
+    const id = `${QUOTE_ID_PREFIX}${createdAtIso.replaceAll("-", "").slice(0, 8)}${createdAtIso.replaceAll(":", "").slice(11, 15)}`;
+    return { id, createdAtIso };
+  }
+
+  useEffect(() => {
+    const onAfterPrint = () => {
+      setIsPrinting(false);
+
+      // Only lock a quote id after a print flow completes; reuse once set
+      setFinalQuoteMeta((prev) => {
+        if (prev) return prev;
+        return generateQuoteId();
+      });
+    };
+    window.addEventListener("afterprint", onAfterPrint);
+    return () => window.removeEventListener("afterprint", onAfterPrint);
+  }, []);
+
+  useEffect(() => {
+    if (!isPrinting) return;
+
+    const t = window.setTimeout(() => {
+      window.print();
+    }, 50);
+
+    return () => window.clearTimeout(t);
+  }, [isPrinting]);
+
+  function nav(page: PageId, via: NavSource) {
+    onNavigate(page, via);
+  }
+
+  const calculator = draft?.calculator ?? defaultDraft.calculator;
+  const guidelines = {
+    ...defaultDraft.builder.guidelines,
+    ...(draft?.builder?.guidelines ?? {}),
+    restrictions: {
+      ...defaultDraft.builder.guidelines.restrictions,
+      ...(draft?.builder?.guidelines?.restrictions ?? {}),
+    },
+  };
+  const calculatorAddOns = calculator.addOns ?? defaultDraft.calculator.addOns;
+  const coverageType = guidelines.coverageType ?? "prescription_only";
+  const allowanceScope = guidelines.allowanceScope ?? "companywide";
+  const isDepartmentBased = allowanceScope === "department_based";
+  const departmentConfigs: DepartmentConfigRow[] = calculator.departmentConfigs ?? [];
+
+  const selectedAddOns = useMemo(() => {
+    if (isDepartmentBased) {
+      const keys = new Set<EUPackageAddOnKey>();
+      departmentConfigs.forEach((row) => {
+        EU_PACKAGE_ADD_ON_ITEMS.forEach((item) => {
+          if (row.selections?.euPackageAddOns?.[item.key]) keys.add(item.key);
+        });
+      });
+
+      return EU_PACKAGE_ADD_ON_ITEMS.filter((i) => keys.has(i.key)).map((i) => ({
+        label: i.label,
+        amount: i.amount,
+      }));
+    }
+
+    return EU_PACKAGE_ADD_ON_ITEMS.filter((i) => calculatorAddOns.euPackageAddOns[i.key]).map((i) => ({
+      label: i.label,
+      amount: i.amount,
+    }));
+  }, [calculatorAddOns.euPackageAddOns, departmentConfigs, isDepartmentBased]);
+
+  const submitValidationMessage = useMemo(() => {
+    const contact = calculator.contact;
+    const missing: string[] = [];
+
+    if (!isNonEmpty(contact.fullName)) missing.push("Full Name");
+    if (!isNonEmpty(contact.companyName)) missing.push("Company Name");
+    if (!isNonEmpty(contact.email)) missing.push("Email");
+    if (!isNonEmpty(contact.phone)) missing.push("Phone");
+
+    if (missing.length > 0) {
+      return `Complete all contact fields before submitting: ${missing.join(", ")}.`;
+    }
+
+    const hasAtLeastOneLocation = calculator.locations.some((loc) => isLocationComplete(loc));
+    if (!hasAtLeastOneLocation) {
+      return "Add at least one location with street, city, and state before submitting.";
+    }
+
+    return "";
+  }, [calculator.contact, calculator.locations]);
+
+  const estimate = useMemo(() => {
+    const employeesRaw = calculator.eligibleEmployees === "" ? 0 : calculator.eligibleEmployees;
+    const employeesDefault = clampInt(employeesRaw);
+
+    const selectedEU = calculator.selectedEU;
+    const selectedTier = calculator.selectedTier;
+
+    const safeSelectedEU: EUPackage = selectedEU ? (selectedEU as EUPackage) : "Compliance";
+    const safeSelectedTier: ServiceTier = selectedTier ? (selectedTier as ServiceTier) : "Essential";
+    const baseEUAllowance = PRICING.euAllowancePerEmployee[safeSelectedEU];
+
+    const includeAddOnsInAllowance = includeEuAddOnsInAllowance();
+
+    const departmentRows = departmentConfigs ?? [];
+
+    const departmentAllowanceBreakdown = isDepartmentBased
+      ? departmentRows.map((row, index) => {
+          const details = departmentAllowanceDetails(row, baseEUAllowance, includeAddOnsInAllowance);
+          return {
+            id: row.id,
+            departmentName: row.name.trim() || `D${index + 1}`,
+            employeeCount: details.employees,
+            allowancePerEmployee: details.allowancePerEmployee,
+            allowanceSubtotal: details.allowanceSubtotal,
+            selectedAddOnsLabels: details.selectedAddOnsLabels,
+          };
+        })
+      : [];
+
+    const departmentEmployees = isDepartmentBased
+      ? departmentAllowanceBreakdown.reduce((sum, row) => sum + row.employeeCount, 0)
+      : 0;
+
+    const employees = isDepartmentBased ? departmentEmployees : employeesDefault;
+
+    const locations = calculator.locations ?? [];
+    const locationCount = Math.max(1, locations.length);
+
+    const onboardingBase = PRICING.onboardingFeeSingleSiteStandard;
+    const additionalSitesCount = Math.max(0, locationCount - 1);
+    const onboardingFee = onboardingBase + additionalSitesCount * PRICING.onboardingFeeAdditionalSite;
+
+    const includedVisits = PRICING.standardVisitsByTier[safeSelectedTier];
+
+    const extraVisitsRaw = calculatorAddOns.extraSiteVisits === "" ? 0 : calculatorAddOns.extraSiteVisits;
+    const extraVisits = clampInt(extraVisitsRaw);
+    const totalVisits = includedVisits + extraVisits;
+
+    const extraVisitsFee = extraVisits * PRICING.extraSiteVisitFee;
+
+    const euPackageAddOnsPerEmployeeGlobal = EU_PACKAGE_ADD_ON_ITEMS.reduce((sum, item) => {
+      return sum + (calculatorAddOns.euPackageAddOns[item.key] ? item.amount : 0);
+    }, 0);
+
+    let allowancePerEmployee: number;
+    let allowanceTotal: number;
+    const euBaseAllowance = baseEUAllowance;
+    let euPackageAddOnsPerEmployee = euPackageAddOnsPerEmployeeGlobal;
+    const coveredExampleAntiFogPerEmployee = PRICING.euPackageAddOnsPerEmployee.antiFog;
+    const coveredExampleAntiReflectivePerEmployee = PRICING.euPackageAddOnsPerEmployee.antiReflectiveStd;
+    const coveredExampleTintPerEmployee = PRICING.euPackageAddOnsPerEmployee.tint;
+    const coveredSelectedAddOns = EU_PACKAGE_ADD_ON_ITEMS.filter((item) => calculatorAddOns.euPackageAddOns[item.key]);
+    const coveredSelectedAddOnsLabels = coveredSelectedAddOns.map(
+      (item) => `${item.label} ${formatMoney(item.amount)}`
+    );
+    const coveredAllAddOnsPerEmployee = EU_PACKAGE_ADD_ON_ITEMS.reduce((sum, item) => sum + item.amount, 0);
+    const coveredExampleFloorPerEmployee = safeSelectedEU === "Covered" ? euBaseAllowance : 0;
+    const coveredExampleFloorTotal = coveredExampleFloorPerEmployee * employees;
+    const coveredExampleCeilingPerEmployee =
+      safeSelectedEU === "Covered" ? coveredExampleFloorPerEmployee + coveredAllAddOnsPerEmployee : 0;
+    const coveredExampleCeilingTotal = coveredExampleCeilingPerEmployee * employees;
+    const coveredExampleCombinationPerEmployee =
+      safeSelectedEU === "Covered" ? coveredExampleFloorPerEmployee + euPackageAddOnsPerEmployeeGlobal : 0;
+    const coveredExampleCombinationTotal = coveredExampleCombinationPerEmployee * employees;
+
+    if (isDepartmentBased) {
+      allowanceTotal = departmentAllowanceBreakdown.reduce((sum, row) => sum + row.allowanceSubtotal, 0);
+      allowancePerEmployee = employees > 0 ? allowanceTotal / employees : 0;
+      euPackageAddOnsPerEmployee = 0;
+    } else {
+      const allowance = calculateCompanywideAllowance({
+        baseEUAllowance: euBaseAllowance,
+        euPackageAddOnsPerEmployee: euPackageAddOnsPerEmployeeGlobal,
+        employees,
+      });
+      allowancePerEmployee = allowance.allowancePerEmployee;
+      allowanceTotal = allowance.allowanceTotal;
+    }
+
+    const tierBaseServicePerEmployee = PRICING.serviceFeePerEmployee[safeSelectedTier];
+
+    const servicePerEmployee = tierBaseServicePerEmployee;
+    const serviceTotal = tierBaseServicePerEmployee * employees;
+
+    const validMiles = locations
+      .map((l) => Math.max(0, Number.isFinite(l.oneWayMiles) ? l.oneWayMiles : 0))
+      .filter((miles) => miles > 0);
+
+    const minOneWayMiles = validMiles.length ? Math.min(...validMiles) : 0;
+
+    const travelPricingForQuote = travelTotalForLocation(minOneWayMiles, totalVisits);
+    const travelTotal = travelPricingForQuote.total;
+
+    const travelByLocation = locations.map((loc) => {
+      const tm = travelTotalForLocation(loc.oneWayMiles, totalVisits);
+      return {
+        label: loc.label,
+        address: formatLocationAddress(loc),
+        autoDistance: Boolean(loc.autoDistance),
+        oneWayMiles: tm.oneWay,
+        oneWayMinutes: clampInt(loc.oneWayMinutes),
+        totalVisits,
+        billableRoundTripMiles: tm.billableRoundTripMiles,
+        feePerVisit: tm.feePerVisit,
+        total: tm.total,
+      };
+    });
+
+    const subtotal = onboardingFee + allowanceTotal + serviceTotal + extraVisitsFee + travelTotal;
+
+    const paymentTerms = calculator.paymentTerms;
+    const paymentDiscount = calculator.paymentDiscount;
+
+    const financeFeePerInvoice = PRICING.financeFeesPerInvoice[paymentTerms];
+    const financeFeeTotal = financeFeePerInvoice * employees;
+
+    const discountAllowed = paymentTerms === "NET30";
+    const discountPct = discountAllowed ? PRICING.paymentDiscounts[paymentDiscount] : 0;
+
+    const invoicePerEmployee = allowancePerEmployee + servicePerEmployee;
+    const invoiceTotal = invoicePerEmployee * employees;
+
+    const discountPerEmployeeMax = invoicePerEmployee * discountPct;
+    const discountTotalMax = invoiceTotal * discountPct;
+
+    const grandTotal = subtotal - discountTotalMax + financeFeeTotal;
+
+    return {
+      employees,
+      selectedEU,
+      selectedTier,
+
+      locationCount,
+
+      onboardingFee,
+
+      euBaseAllowance,
+      euPackageAddOnsPerEmployee,
+      coveredExampleFloorPerEmployee,
+      coveredExampleFloorTotal,
+      coveredExampleCeilingPerEmployee,
+      coveredExampleCeilingTotal,
+      coveredExampleAntiFogPerEmployee,
+      coveredExampleAntiReflectivePerEmployee,
+      coveredExampleTintPerEmployee,
+      coveredSelectedAddOnsLabels,
+      coveredExampleCombinationPerEmployee,
+      coveredExampleCombinationTotal,
+
+      allowancePerEmployee,
+      allowanceTotal,
+
+      tierBaseServicePerEmployee,
+      servicePerEmployee,
+      serviceTotal,
+
+      includedVisits,
+      extraVisits,
+      totalVisits,
+      extraVisitsFee,
+
+      travelByLocation,
+      travelTotal,
+
+      subtotal,
+
+      paymentTerms,
+      financeFeePerInvoice,
+      financeFeeTotal,
+
+      paymentDiscount,
+      discountAllowed,
+      discountPct,
+      invoicePerEmployee,
+      invoiceTotal,
+      discountPerEmployeeMax,
+      discountTotalMax,
+
+      grandTotal,
+
+      isDepartmentBased,
+      departmentAllowanceBreakdown,
+    };
+  }, [calculator, calculatorAddOns, departmentConfigs, isDepartmentBased]);
+
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").trim().replace(/\/$/, "");
+  const envValidationMessage = ENABLE_QUOTE_SUBMIT && !apiBaseUrl
+    ? "Configuration error: VITE_API_BASE_URL is missing. Set it in your environment before submitting quotes."
+    : "";
+
+  function finalizeQuoteMeta() {
+    const meta = generateQuoteId();
+    setFinalQuoteMeta(meta);
+    return meta;
+  }
+
+  async function submitQuote() {
+    setActionMessage("");
+
+    if (envValidationMessage) {
+      setActionMessage(envValidationMessage);
+      return;
+    }
+
+    if (submitValidationMessage) {
+      setActionMessage(submitValidationMessage);
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const meta = finalizeQuoteMeta();
+
+    let pdfBase64: string | undefined;
+    let pdfFilename: string | undefined;
+
+    try {
+      const pdf = await buildQuotePdfBase64({
+        quoteId: meta.id,
+        createdAtIso: meta.createdAtIso,
+        showroomReference: SHOWROOM_ADDRESS,
+        estimate,
+        contact: draft?.calculator?.contact ?? {},
+        program: {
+          eligibleEmployees: draft?.calculator?.eligibleEmployees,
+          selectedEU: draft?.calculator?.selectedEU,
+          selectedTier: draft?.calculator?.selectedTier,
+          includedVisits: estimate.includedVisits,
+          extraVisits: estimate.extraVisits,
+          totalVisits: estimate.totalVisits,
+          locationCount: estimate.locationCount,
+          paymentTerms: estimate.paymentTerms,
+          paymentDiscount: estimate.paymentDiscount,
+          financeFeePerInvoice: estimate.financeFeePerInvoice,
+          discountPerEmployeeMax: estimate.discountPerEmployeeMax,
+          discountTotalMax: estimate.discountTotalMax,
+        },
+        selectedOptions: selectedOptionsFromCalculator(draft?.calculator ?? {}),
+        guidelines: draft?.builder?.guidelines ?? {},
+      });
+      pdfBase64 = pdf.pdfBase64;
+      pdfFilename = pdf.pdfFilename;
+    } catch (pdfError) {
+      setIsSubmitting(false);
+      const message = pdfError instanceof Error ? pdfError.message : "PDF generation failed.";
+      setActionMessage(`Quote could not be submitted. ${message}`);
+      return;
+    }
+
+    const payload = {
+      quoteId: meta.id,
+      createdAtIso: meta.createdAtIso,
+      showroomReference: SHOWROOM_ADDRESS,
+      draft,
+      estimate,
+      pdfBase64,
+      pdfFilename,
+    };
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/send-quote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const rawDetail = await response.text();
+        let detail = rawDetail;
+
+        try {
+          const parsed = JSON.parse(rawDetail);
+
+          // Prefer structured details from the server
+          if (parsed?.detail) {
+            if (typeof parsed.detail === "string") {
+              detail = `${parsed.error || "Error"}: ${parsed.detail}`;
+            } else {
+              detail = `${parsed.error || "Error"}: ${JSON.stringify(parsed.detail)}`;
+            }
+          } else {
+            detail = parsed?.error || parsed?.message || rawDetail;
+          }
+        } catch (parseError) {
+          console.debug("send-quote parse error", parseError);
+          // keep rawDetail
+        }
+
+        throw new Error(detail || "Server returned an error while sending the quote.");
+      }
+
+      try {
+        localStorage.setItem(SUBMIT_KEY, JSON.stringify(payload));
+      } catch (storageError) {
+        console.debug("send-quote localStorage error", storageError);
+      }
+
+      setActionMessage(`Quote ${meta.id} submitted! A confirmation will be sent shortly.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error.";
+      setActionMessage(`Quote could not be submitted. ${message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function printQuoteTwoPages() {
+    setActionMessage("");
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    setIsPrinting(true);
+  }
+
+  const secondaryButtonClass =
+    "inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background";
+
+  const primaryButtonClass =
+    "inline-flex items-center justify-center rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:opacity-95 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background";
+
+  const subtleCardClass = "rounded-md bg-secondary/30 p-4";
+  const subtleCardPrintClass = "quote-print-card rounded-md bg-secondary/30";
+  const cardTitleClass = "text-sm font-semibold text-foreground";
+  const rowTextClass = "mt-2 grid gap-1 text-sm text-muted-foreground";
+
+  const QuoteHeader = ({ tight }: { tight: boolean }) => (
+    <div className={tight ? "quote-print-header" : "px-6 py-5"}>
+      <div className="flex items-start justify-between gap-6">
+        <div className="flex items-start gap-3">
+          {brandLogoUrl ? (
+            <img src={brandLogoUrl} alt="On-Sight Safety Optics" className="mt-0.5 h-9 w-auto" />
+          ) : null}
+          <div className="space-y-1">
+            <div className="text-xl font-semibold text-[#244093]">On-Sight Safety Optics Quote</div>
+            <div className="text-sm text-[#1e3a8a]">
+              Quote ID: <span className="font-medium text-foreground">{effectiveQuoteMeta.id}</span>
+            </div>
+            <div className="text-sm text-[#1e3a8a]">
+              Date: <span className="font-medium text-foreground">{formatDate(effectiveQuoteMeta.createdAtIso)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-1 text-right">
+          <div className="text-sm font-semibold text-foreground">Showroom Reference</div>
+          <div className="text-xs text-muted-foreground">{SHOWROOM_ADDRESS}</div>
+
+          <div className="pt-2 text-sm font-semibold text-foreground">On-Sight Contact</div>
+          <div className="text-xs text-muted-foreground">{ONSIGHT_EMAIL}</div>
+          <div className="text-xs text-muted-foreground">{ONSIGHT_PHONE}</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const ContactDetailsCard = ({ print }: { print: boolean }) => (
+    <div className={print ? subtleCardPrintClass : subtleCardClass}>
+      <div className={cardTitleClass}>Contact Details</div>
+      <div className={rowTextClass}>
+        <div>
+          Company Name: <span className="font-medium text-foreground">{safeText(calculator.contact.companyName)}</span>
+        </div>
+        <div>
+          Full Name: <span className="font-medium text-foreground">{safeText(calculator.contact.fullName)}</span>
+        </div>
+        <div>
+          Email: <span className="font-medium text-foreground">{safeText(calculator.contact.email)}</span>
+        </div>
+        <div>
+          Phone: <span className="font-medium text-foreground">{safeText(calculator.contact.phone)}</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const ProgramGuidelinesCard = ({ print }: { print: boolean }) => (
+    <div className={print ? subtleCardPrintClass : subtleCardClass}>
+      <div className={cardTitleClass}>Program Guidelines</div>
+      <div className={rowTextClass}>
+        <div>
+          Coverage Type: <span className="font-medium text-foreground">{coverageTypeLabel(coverageType)}</span>
+        </div>
+        <div>
+          Allowance Scope: <span className="font-medium text-foreground">{allowanceScopeLabel(allowanceScope)}</span>
+        </div>
+        <div>
+          Side Shield Type: <span className="font-medium text-foreground">{quoteOptionsLabel(guidelines.sideShieldType)}</span>
+        </div>
+        <div>
+          Eligibility Frequency:{" "}
+          <span className="font-medium text-foreground">{eligibilityFrequencyLabel(guidelines.eligibilityFrequency)}</span>
+        </div>
+        <div>
+          Approvals:{" "}
+          <span className="font-medium text-foreground">
+            {guidelines.approvalWorkflowEnabled ? "Enabled" : "Not Enabled"}
+          </span>
+        </div>
+
+        <div className="pt-2 font-medium text-foreground">Restrictions</div>
+        <div>
+          Restrict Sunglass Options:{" "}
+          <span className="font-medium text-foreground">
+            {guidelines.restrictions.restrictSunglassOptions ? "Yes" : "No"}
+          </span>
+        </div>
+        <div>
+          Restrict UV Reactive Photochromic Lenses:{" "}
+          <span className="font-medium text-foreground">
+            {guidelines.restrictions.restrictUvReactivePhotochromicLenses ? "Yes" : "No"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const NotesCard = ({ print }: { print: boolean }) =>
+    guidelines.notes?.trim() ? (
+      <div className={print ? subtleCardPrintClass : subtleCardClass}>
+        <div className={cardTitleClass}>Notes</div>
+        <div className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{guidelines.notes}</div>
+      </div>
+    ) : null;
+
+  const CompactSelectedOptionsCard = ({ print }: { print: boolean }) => {
+    const containerClass = print ? subtleCardPrintClass : subtleCardClass;
+
+    return (
+      <div className={containerClass}>
+        <div className={cardTitleClass}>Selected Options</div>
+
+        <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <div className="text-xs font-semibold text-foreground">EU Package Add Ons</div>
+            {estimate.selectedEU === "Covered" ? (
+              <div className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                Covered includes all EU Package add ons.
+              </div>
+            ) : null}
+            {selectedAddOns.length === 0 ? (
+              <div className="mt-1 text-sm text-muted-foreground">None selected.</div>
+            ) : (
+              <div className="mt-2 space-y-1">
+                {selectedAddOns.map((i) => (
+                  <div key={i.label} className="flex items-start justify-between gap-2 text-sm text-muted-foreground">
+                    <div className="leading-snug">{i.label}</div>
+                    <div className="shrink-0 font-medium text-foreground">{formatMoney(i.amount)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const LocationsCard = ({ print }: { print: boolean }) => (
+    <div className={print ? subtleCardPrintClass : subtleCardClass}>
+      <div className={cardTitleClass}>Locations And Travel Surcharge</div>
+
+      {(calculator.locations ?? []).length === 0 ? (
+        <div className="mt-2 text-sm text-muted-foreground">No locations provided.</div>
+      ) : (
+        <>
+          <div className="mt-2 grid gap-2">
+            {estimate.travelByLocation.map((loc) => (
+              <div key={loc.label} className="rounded-md border border-border bg-background p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-sm font-semibold text-foreground">{loc.label}</div>
+                  <div className="text-sm font-semibold text-foreground">{formatMoneyCents(loc.total)}</div>
+                </div>
+
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {loc.address ? loc.address : "Address not provided"}
+                </div>
+
+                <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
+                  <div>
+                    Distance Mode:{" "}
+                    <span className="font-medium text-foreground">{loc.autoDistance ? "Auto" : "Manual"}</span>
+                  </div>
+                  <div>
+                    One Way Miles:{" "}
+                    <span className="font-medium text-foreground">{loc.oneWayMiles}</span>
+                  </div>
+                  <div>
+                    Miles Over 50 (One Way):{" "}
+                    <span className="font-medium text-foreground">
+                      {Math.max(0, Math.round((loc.oneWayMiles - PRICING.travel.includedOneWayMiles) * 10) / 10)}
+                    </span>
+                  </div>
+                  <div>
+                    One Way Drive Time:{" "}
+                    <span className="font-medium text-foreground">
+                      {loc.oneWayMinutes > 0 ? `${loc.oneWayMinutes} min` : "Not Available"}
+                    </span>
+                  </div>
+                  <div>
+                    Billable Round Trip Miles per Visit:{" "}
+                    <span className="font-medium text-foreground">
+                      {Math.round(loc.billableRoundTripMiles * 10) / 10}
+                    </span>
+                  </div>
+                  <div>
+                    Travel Fee per Visit:{" "}
+                    <span className="font-medium text-foreground">
+                      {formatMoneyCents(loc.feePerVisit)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 rounded-md border border-border bg-background p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm font-semibold text-foreground">
+                Total Travel Surcharge
+              </div>
+              <div className="text-sm font-semibold text-foreground">
+                {formatMoneyCents(estimate.travelTotal)}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+
+  const ProgramInputsCard = ({ print }: { print: boolean }) => {
+    const [showDepartmentAllowanceBreakdown, setShowDepartmentAllowanceBreakdown] = useState(print);
+    const [showDepartmentServiceBreakdown, setShowDepartmentServiceBreakdown] = useState(print);
+    const canShowDepartmentAllowanceBreakdown = isDepartmentBased && estimate.departmentAllowanceBreakdown.length > 0;
+    const departmentServiceBreakdown: DepartmentServiceBreakdownLine[] = estimate.departmentAllowanceBreakdown.map((row) => ({
+      id: row.id,
+      departmentName: row.departmentName,
+      employeeCount: row.employeeCount,
+      servicePerEmployee: estimate.servicePerEmployee,
+      serviceSubtotal: estimate.servicePerEmployee * row.employeeCount,
+    }));
+    const canShowDepartmentServiceBreakdown = isDepartmentBased && departmentServiceBreakdown.length > 0;
+
+    return (
+      <div className={print ? subtleCardPrintClass : subtleCardClass}>
+      <div className={cardTitleClass}>Program Inputs</div>
+      <div className={rowTextClass}>
+        <div>
+          {isDepartmentBased ? "Employees (Total)" : "Eligible Employees"}:{" "}
+          <span className="font-medium text-foreground">{estimate.employees}</span>
+        </div>
+        {isDepartmentBased ? (
+          <div>
+            Departments: <span className="font-medium text-foreground">{departmentConfigs.length}</span>
+          </div>
+        ) : null}
+        <div>
+          Service Tier: <span className="font-medium text-foreground">{estimate.selectedTier}</span>
+        </div>
+        <div>
+          Included Visits: <span className="font-medium text-foreground">{estimate.includedVisits}</span>
+        </div>
+        <div>
+          Additional Visits: <span className="font-medium text-foreground">{estimate.extraVisits}</span>
+        </div>
+        <div>
+          Total Visits: <span className="font-medium text-foreground">{estimate.totalVisits}</span>
+        </div>
+        <div className="pt-2">
+          Locations: <span className="font-medium text-foreground">{estimate.locationCount}</span>
+        </div>
+      </div>
+      <div className="mt-4 rounded-md border border-border bg-background p-3">
+        <div className="text-sm font-semibold text-foreground">EU Package</div>
+        <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
+          <div>
+            EU Package: <span className="font-medium text-foreground">{estimate.selectedEU}</span>
+          </div>
+          <div>
+            {isDepartmentBased ? "Employees (Total)" : "Employees"}:{" "}
+            <span className="font-medium text-foreground">{estimate.employees}</span>
+          </div>
+          {!isDepartmentBased && estimate.selectedEU !== "Covered" ? (
+            <div>
+              Total Allowance per Employee:{" "}
+              <span className="font-medium text-foreground">{formatMoney(estimate.allowancePerEmployee)}</span>
+            </div>
+          ) : null}
+          {estimate.selectedEU === "Covered" ? (
+            <>
+              <div>
+                {isDepartmentBased ? "Configured allowance per Employee:" : "Base allowance per Employee:"}{" "}
+                {isDepartmentBased && estimate.departmentAllowanceBreakdown.length > 0 ? (
+                  estimate.departmentAllowanceBreakdown.map((row, index) => (
+                    <span key={row.id}>
+                      <span>{`D${index + 1} `}</span>
+                      <span className="font-medium text-foreground">{formatMoney(row.allowancePerEmployee)}</span>
+                      {index < estimate.departmentAllowanceBreakdown.length - 1 ? ", " : ""}
+                    </span>
+                  ))
+                ) : (
+                  <span className="font-medium text-foreground">{formatMoney(estimate.coveredExampleFloorPerEmployee)}</span>
+                )}
+              </div>
+              <div>
+                Available allowance per Employee:{" "}
+                <span className="font-medium text-foreground">{formatMoney(estimate.coveredExampleCeilingPerEmployee)}</span>
+              </div>
+              <div className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                Different employees can choose different combinations of included options. Total covered value varies by selection.
+              </div>
+              {!isDepartmentBased ? (
+                <>
+                  <div className="mt-2 text-xs font-semibold text-foreground">Example combination:</div>
+                  <div className="text-xs leading-relaxed text-muted-foreground">
+                    Select options to simulate an employee selecting combinations.
+                  </div>
+                  <div className="text-xs leading-relaxed text-muted-foreground">
+                    Base allowance of{" "}
+                    <span className="font-medium text-foreground">{formatMoney(estimate.coveredExampleFloorPerEmployee)}</span>
+                    {estimate.coveredSelectedAddOnsLabels.length > 0 ? (
+                      <>
+                        {" "}
+                        +{" "}
+                        <span className="font-medium text-foreground">
+                          {estimate.coveredSelectedAddOnsLabels
+                            .map((label) => formatAddOnLabelWithAmount(label))
+                            .join(" + ")}
+                        </span>
+                      </>
+                    ) : null}{" "}
+                    = <span className="font-medium text-foreground">{formatMoney(estimate.coveredExampleCombinationPerEmployee)}</span>
+                  </div>
+                  <div className="text-xs leading-relaxed text-muted-foreground">
+                    Multiplied by employees for a subtotal:{" "}
+                    <span className="font-medium text-foreground">{formatMoney(estimate.coveredExampleCombinationTotal)}</span>
+                  </div>
+                </>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+        {estimate.selectedEU === "Covered" ? (
+          <div className="mt-3 space-y-1 text-lg font-semibold text-foreground">
+            <div>
+              {`Total: ${formatMoney(
+                isDepartmentBased ? estimate.allowanceTotal : estimate.coveredExampleFloorTotal
+              )}`}
+            </div>
+            <div>{`Total (Available Allowance): ${formatMoney(estimate.coveredExampleCeilingTotal)}`}</div>
+          </div>
+        ) : (
+          <div className="mt-3 text-lg font-semibold text-foreground">
+            {isDepartmentBased ? `Total Allowance Cost: ${formatMoney(estimate.allowanceTotal)}` : formatMoney(estimate.allowanceTotal)}
+          </div>
+        )}
+        {estimate.selectedEU === "Covered" ? (
+          <details className="mt-2 text-xs text-muted-foreground">
+            <summary className="cursor-pointer text-foreground/80">Need clarification? Contact an OSSO Program Specialist.</summary>
+            <div className="mt-1">
+              <a href="mailto:team@onsightoptics.com" className="underline">
+                team@onsightoptics.com
+              </a>{" "}
+              <span className="px-1">|</span>
+              <a href="tel:619-402-1033" className="underline">
+                619-402-1033
+              </a>
+            </div>
+          </details>
+        ) : null}
+        {canShowDepartmentAllowanceBreakdown ? (
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={() => (!print ? setShowDepartmentAllowanceBreakdown((prev) => !prev) : undefined)}
+              className="text-sm font-medium text-foreground underline underline-offset-4"
+            >
+              {showDepartmentAllowanceBreakdown ? "Hide Department Allowance Breakdown" : "Show Department Allowance Breakdown"}
+            </button>
+            {showDepartmentAllowanceBreakdown ? (
+              <DepartmentAllowanceBreakdownTable
+                rows={estimate.departmentAllowanceBreakdown}
+                employeesTotal={estimate.employees}
+                allowanceTotal={estimate.allowanceTotal}
+              />
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-4 rounded-md border border-border bg-background p-3">
+        <div className="text-sm font-semibold text-foreground">Service Tier</div>
+        <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
+          <div>
+            Service Tier: <span className="font-medium text-foreground">{estimate.selectedTier}</span>
+          </div>
+          <div>
+            Service per Employee:{" "}
+            <span className="font-medium text-foreground">{formatMoney(estimate.servicePerEmployee)}</span>
+          </div>
+          <div>
+            {isDepartmentBased ? "Employees (Total)" : "Employees"}:{" "}
+            <span className="font-medium text-foreground">{estimate.employees}</span>
+          </div>
+        </div>
+        <div className="mt-3 text-lg font-semibold text-foreground">
+          {isDepartmentBased ? `Total Service Cost: ${formatMoney(estimate.serviceTotal)}` : formatMoney(estimate.serviceTotal)}
+        </div>
+
+        {canShowDepartmentServiceBreakdown ? (
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={() => (!print ? setShowDepartmentServiceBreakdown((prev) => !prev) : undefined)}
+              className="text-sm font-medium text-foreground underline underline-offset-4"
+            >
+              {showDepartmentServiceBreakdown
+                ? "Hide Service Tier Breakdown by Department"
+                : "Show Service Tier Breakdown by Department"}
+            </button>
+            {showDepartmentServiceBreakdown ? (
+              <DepartmentServiceBreakdownTable
+                rows={departmentServiceBreakdown}
+                employeesTotal={estimate.employees}
+                serviceTotal={estimate.serviceTotal}
+              />
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </div>
+    );
+  };
+
+  const PaymentTermsCard = ({ print }: { print: boolean }) => {
+    const [showDepartmentPaymentBreakdown, setShowDepartmentPaymentBreakdown] = useState(print);
+    const departmentDiscountBreakdown = useMemo(() => {
+      return estimate.departmentAllowanceBreakdown.map((row) => {
+        const invoicePerEmployee = row.allowancePerEmployee + estimate.servicePerEmployee;
+        const discountPerEmployeeMax = invoicePerEmployee * estimate.discountPct;
+        const discountTotalMax = invoicePerEmployee * row.employeeCount * estimate.discountPct;
+        return {
+          id: row.id,
+          departmentName: row.departmentName,
+          employeeCount: row.employeeCount,
+          invoicePerEmployee,
+          discountPct: estimate.discountPct,
+          discountPerEmployeeMax,
+          discountTotalMax,
+        };
+      });
+    }, [estimate.departmentAllowanceBreakdown, estimate.discountPct, estimate.servicePerEmployee]);
+
+    const departmentInvoiceBreakdown = useMemo(() => {
+      return estimate.departmentAllowanceBreakdown.map((row) => {
+        const invoicePerEmployee = row.allowancePerEmployee + estimate.servicePerEmployee;
+        const financeFeePerInvoice = estimate.financeFeePerInvoice;
+        return {
+          id: row.id,
+          departmentName: row.departmentName,
+          employeeCount: row.employeeCount,
+          invoicePerEmployee,
+          invoiceTotal: invoicePerEmployee * row.employeeCount,
+          financeFeePerInvoice,
+          financeFeeTotal: financeFeePerInvoice * row.employeeCount,
+        };
+      });
+    }, [estimate.departmentAllowanceBreakdown, estimate.servicePerEmployee, estimate.financeFeePerInvoice]);
+
+    const showDepartmentDiscountBreakdown =
+      isDepartmentBased && estimate.discountPct > 0 && departmentDiscountBreakdown.length > 0;
+
+    const showDepartmentInvoiceBreakdown =
+      isDepartmentBased && estimate.discountPct === 0 && departmentInvoiceBreakdown.length > 0;
+
+    const showDepartmentInvoiceFees = estimate.financeFeePerInvoice > 0;
+
+    const showDepartmentPaymentBreakdownToggle =
+      showDepartmentDiscountBreakdown || showDepartmentInvoiceBreakdown;
+
+    const departmentPaymentBreakdownLabel = showDepartmentDiscountBreakdown
+      ? "Show Department Discount Breakdown"
+      : "Show Department Invoice Breakdown";
+
+    const isNet30 = estimate.paymentTerms === "NET30";
+    const hasMaxDiscount = estimate.discountPct > 0;
+    const invoiceTotalWithMaxDiscount = estimate.invoiceTotal - estimate.discountTotalMax + estimate.financeFeeTotal;
+    const invoiceTotalSummaryLabel = hasMaxDiscount ? "Invoice Total (With Max Discount)" : "Invoice Total (With Fees)";
+    const invoiceTotalBeforeLabel = estimate.financeFeePerInvoice > 0 ? "Invoice Total (Before Fees)" : "Invoice Total (Before Discount)";
+
+    return (
+      <div className={print ? subtleCardPrintClass : subtleCardClass}>
+        <div className={cardTitleClass}>Payment Terms</div>
+        {isDepartmentBased ? (
+          <>
+            <div className={rowTextClass}>
+              <div>
+                Payment Terms: <span className="font-medium text-foreground">{estimate.paymentTerms}</span>
+              </div>
+              {!isNet30 ? (
+                <div>
+                  Finance Fee Total: <span className="font-medium text-foreground">{formatMoney(estimate.financeFeeTotal)}</span>
+                </div>
+              ) : null}
+              {hasMaxDiscount ? (
+                <div>
+                  Maximum Possible Discount Total:{" "}
+                  <span className="font-medium text-foreground">{formatMoneyCents(estimate.discountTotalMax)}</span>
+                </div>
+              ) : null}
+            </div>
+            {isNet30 ? (
+              <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                {hasMaxDiscount ? (
+                  <>
+                    <div>
+                      Invoice Total (Before Discount):{" "}
+                      <span className="font-medium text-foreground">{formatMoneyCents(estimate.invoiceTotal)}</span>
+                    </div>
+                    <div className="pt-1 text-base font-semibold text-foreground">
+                      Invoice Total (With Max Discount): {formatMoneyCents(invoiceTotalWithMaxDiscount)}
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    Invoice Total: <span className="font-medium text-foreground">{formatMoneyCents(estimate.invoiceTotal)}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                <div>
+                  {invoiceTotalBeforeLabel}:{" "}
+                  <span className="font-medium text-foreground">{formatMoneyCents(estimate.invoiceTotal)}</span>
+                </div>
+                {hasMaxDiscount ? (
+                  <div>
+                    Maximum Possible Discount Total:{" "}
+                    <span className="font-medium text-foreground">{formatMoneyCents(estimate.discountTotalMax)}</span>
+                  </div>
+                ) : null}
+                <div className="pt-1 text-base font-semibold text-foreground">
+                  {invoiceTotalSummaryLabel}: {formatMoneyCents(invoiceTotalWithMaxDiscount)}
+                </div>
+              </div>
+            )}
+
+            {showDepartmentPaymentBreakdownToggle ? (
+              <div className="mt-3 rounded-md border border-border bg-background p-3">
+                <button
+                  type="button"
+                  onClick={() => (!print ? setShowDepartmentPaymentBreakdown((prev) => !prev) : undefined)}
+                  className="text-sm font-medium text-foreground underline underline-offset-4"
+                >
+                  {showDepartmentPaymentBreakdown ? "Hide Department Payment Breakdown" : departmentPaymentBreakdownLabel}
+                </button>
+                {showDepartmentPaymentBreakdown ? (
+                  showDepartmentDiscountBreakdown ? (
+                    <DepartmentDiscountBreakdownTable rows={departmentDiscountBreakdown} />
+                  ) : showDepartmentInvoiceBreakdown ? (
+                    <DepartmentInvoiceBreakdownTable rows={departmentInvoiceBreakdown} showFees={showDepartmentInvoiceFees} />
+                  ) : null
+                ) : null}
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <div className={rowTextClass}>
+              <div>
+                Terms: <span className="font-medium text-foreground">{estimate.paymentTerms}</span>
+              </div>
+              {!isNet30 ? (
+                <div>
+                  Finance Fee per Invoice:{" "}
+                  <span className="font-medium text-foreground">{formatMoney(estimate.financeFeePerInvoice)}</span>
+                </div>
+              ) : null}
+              {!isNet30 ? (
+                <div>
+                  Finance Fee Total: <span className="font-medium text-foreground">{formatMoney(estimate.financeFeeTotal)}</span>
+                </div>
+              ) : null}
+              {!isNet30 ? (
+                <div>
+                  Payment Discount:{" "}
+                  <span className="font-medium text-foreground">
+                    {estimate.discountAllowed ? discountLabel(estimate.paymentDiscount) : "Not Available For Selected Terms"}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+              <div>
+                Invoice Amount per Employee:{" "}
+                <span className="font-medium text-foreground">{formatMoneyCents(estimate.invoicePerEmployee)}</span>
+              </div>
+              {hasMaxDiscount ? (
+                <>
+                  <div>
+                    Max Possible Discount per Invoice:{" "}
+                    <span className="font-medium text-foreground">{formatMoneyCents(estimate.discountPerEmployeeMax)}</span>
+                  </div>
+                  <div>
+                    Maximum Possible Discount Total:{" "}
+                    <span className="font-medium text-foreground">{formatMoneyCents(estimate.discountTotalMax)}</span>
+                  </div>
+                </>
+              ) : null}
+            </div>
+            {isNet30 ? (
+              <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                {hasMaxDiscount ? (
+                  <>
+                    <div>
+                      Invoice Total (Before Discount):{" "}
+                      <span className="font-medium text-foreground">{formatMoneyCents(estimate.invoiceTotal)}</span>
+                    </div>
+                    <div className="pt-1 text-base font-semibold text-foreground">
+                      Invoice Total (With Max Discount): {formatMoneyCents(invoiceTotalWithMaxDiscount)}
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    Invoice Total: <span className="font-medium text-foreground">{formatMoneyCents(estimate.invoiceTotal)}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                <div>
+                  {invoiceTotalBeforeLabel}:{" "}
+                  <span className="font-medium text-foreground">{formatMoneyCents(estimate.invoiceTotal)}</span>
+                </div>
+                {hasMaxDiscount ? (
+                  <div>
+                    Maximum Possible Discount Total:{" "}
+                    <span className="font-medium text-foreground">{formatMoneyCents(estimate.discountTotalMax)}</span>
+                  </div>
+                ) : null}
+                <div className="pt-1 text-base font-semibold text-foreground">
+                  {invoiceTotalSummaryLabel}: {formatMoneyCents(invoiceTotalWithMaxDiscount)}
+                </div>
+              </div>
+            )}
+
+            {hasMaxDiscount ? (
+              <div className="mt-3 text-xs text-muted-foreground">
+                Discount is shown as a maximum based on the per Employee invoice amount. Total discount scales with your employee count.
+                Actual discount can be lower if some pairs price below the per Employee allowance.
+              </div>
+            ) : null}
+            {estimate.selectedEU === "Covered" ? (
+              <div className="mt-3 text-xs text-muted-foreground">Estimates show base allowance totals only.</div>
+            ) : null}
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const TotalEstimateCard = ({ print }: { print: boolean }) => {
+    const departmentAllowanceSummary = useMemo(
+      () => estimate.departmentAllowanceBreakdown.map((row, index) => ({ label: `D${index + 1}`, allowancePerEmployee: row.allowancePerEmployee })),
+      [estimate.departmentAllowanceBreakdown]
+    );
+    const departmentAllowanceSummaryVisible = useMemo(() => departmentAllowanceSummary.slice(0, 5), [departmentAllowanceSummary]);
+    const departmentAllowanceSummaryHiddenCount = Math.max(0, departmentAllowanceSummary.length - departmentAllowanceSummaryVisible.length);
+    const departmentInvoicePerEmployeeSummary = useMemo(
+      () =>
+        estimate.departmentAllowanceBreakdown.map((row, index) => ({
+          label: `D${index + 1}`,
+          invoicePerEmployee: row.allowancePerEmployee + estimate.servicePerEmployee,
+        })),
+      [estimate.departmentAllowanceBreakdown, estimate.servicePerEmployee]
+    );
+    const departmentInvoicePerEmployeeVisible = useMemo(
+      () => departmentInvoicePerEmployeeSummary.slice(0, 5),
+      [departmentInvoicePerEmployeeSummary]
+    );
+    const departmentInvoicePerEmployeeHiddenCount = Math.max(
+      0,
+      departmentInvoicePerEmployeeSummary.length - departmentInvoicePerEmployeeVisible.length
+    );
+
+    return (
+      <div className={print ? subtleCardPrintClass : subtleCardClass}>
+        <div className={cardTitleClass}>Total Estimate</div>
+
+      <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+        <div className="flex items-center justify-between gap-4">
+          <div>Onboarding Fees</div>
+          <div className="font-medium text-foreground">{formatMoney(estimate.onboardingFee)}</div>
+        </div>
+
+        <div className="flex items-center justify-between gap-4">
+          <div>Allowance Total</div>
+          <div className="font-medium text-foreground">{formatMoney(estimate.allowanceTotal)}</div>
+        </div>
+
+        <div className="flex items-center justify-between gap-4">
+          <div>Service Total</div>
+          <div className="font-medium text-foreground">{formatMoney(estimate.serviceTotal)}</div>
+        </div>
+
+        <div className="flex items-center justify-between gap-4">
+          <div>Additional Onsite Visits</div>
+          <div className="font-medium text-foreground">{formatMoney(estimate.extraVisitsFee)}</div>
+        </div>
+
+        <div className="flex items-center justify-between gap-4">
+          <div>Travel Surcharge</div>
+          <div className="font-medium text-foreground">{formatMoneyCents(estimate.travelTotal)}</div>
+        </div>
+
+        <div className="flex items-center justify-between gap-4">
+          <div>Finance Fees</div>
+          <div className="font-medium text-foreground">{formatMoney(estimate.financeFeeTotal)}</div>
+        </div>
+
+        <div className="flex items-center justify-between gap-4">
+          <div>Maximum Possible Discount Total</div>
+          <div className="font-medium text-foreground">{formatMoneyCents(estimate.discountTotalMax)}</div>
+        </div>
+
+        <div className="mt-2 flex items-center justify-between gap-4 border-t border-border pt-2">
+          <div className="text-base font-semibold text-foreground">Grand Total Estimate</div>
+          <div className="text-xl font-semibold text-foreground">{formatMoneyCents(estimate.grandTotal)}</div>
+        </div>
+      </div>
+
+        <div className="mt-4 text-xs text-muted-foreground">
+          {isDepartmentBased && departmentAllowanceSummaryVisible.length > 0 ? (
+            <>
+              <span>Allowance per Employee: </span>
+              {departmentAllowanceSummaryVisible.map((item, index) => (
+                <span key={item.label}>
+                  <span>{item.label} </span>
+                  <span className="font-medium text-foreground">{formatMoney(item.allowancePerEmployee)}</span>
+                  {index < departmentAllowanceSummaryVisible.length - 1 ? ", " : ""}
+                </span>
+              ))}
+              {departmentAllowanceSummaryHiddenCount > 0 ? ` +${departmentAllowanceSummaryHiddenCount} more (see breakdown)` : ""}
+              <span className="px-2">|</span>
+            </>
+          ) : (
+            <>
+              Allowance per Employee: <span className="font-medium text-foreground">{formatMoney(estimate.allowancePerEmployee)}</span>
+              <span className="px-2">|</span>
+            </>
+          )}
+          Service per Employee:{" "}
+          <span className="font-medium text-foreground">{formatMoney(estimate.servicePerEmployee)}</span>
+          <span className="px-2">|</span>
+          {isDepartmentBased && departmentInvoicePerEmployeeVisible.length > 0 ? (
+            <>
+              <span>Invoice per Employee: </span>
+              {departmentInvoicePerEmployeeVisible.map((item, index) => (
+                <span key={item.label}>
+                  <span>{item.label} </span>
+                  <span className="font-medium text-foreground">{formatMoney(item.invoicePerEmployee)}</span>
+                  {index < departmentInvoicePerEmployeeVisible.length - 1 ? ", " : ""}
+                </span>
+              ))}
+              {departmentInvoicePerEmployeeHiddenCount > 0 ? ` +${departmentInvoicePerEmployeeHiddenCount} more (see breakdown)` : ""}
+            </>
+          ) : (
+            <>
+              Invoice per Employee:{" "}
+              <span className="font-medium text-foreground">{formatMoney(estimate.invoicePerEmployee)}</span>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const guidanceId = "quote-guidance";
+  const guidanceMessage = useMemo(() => {
+    if (envValidationMessage) return envValidationMessage;
+    if (submitValidationMessage) return submitValidationMessage;
+    return "Review the preview, then download a PDF or submit the quote when ready.";
+  }, [envValidationMessage, submitValidationMessage]);
+
+  const submitDisabled = isSubmitting || Boolean(envValidationMessage) || Boolean(submitValidationMessage);
+
+  return (
+    <section aria-labelledby="quote-title">
+       <style>{`
+        @media print {
+          @page {
+            size: letter;
+            margin: 0.4in;
+          }
+
+          body {
+            background: var(--color-background) !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
+          header.no-print,
+          .app-shell-header,
+          [data-pdf-exclude="true"],
+          .no-print {
+            display: none !important;
+          }
+
+          .print-only {
+            display: block !important;
+            position: relative;
+            z-index: 1;
+            zoom: 0.90;
+          }
+
+          .print-hide {
+            display: none !important;
+          }
+
+          .print-page {
+            width: 100%;
+            margin: 0 auto;
+          }
+
+          .print-page-break {
+            break-after: page;
+            page-break-after: always;
+          }
+
+          .print-avoid-break {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+
+          .quote-print-header {
+            padding: 10px 12px;
+          }
+
+          .quote-print-card {
+            padding: 8px 8px;
+          }
+
+          .quote-print-body {
+            padding: 10px 10px;
+          }
+
+          .quote-print-body .text-sm {
+            font-size: 11px !important;
+            line-height: 1.15rem !important;
+          }
+
+          .quote-print-body .text-xs {
+            font-size: 10px !important;
+            line-height: 1.0rem !important;
+          }
+
+          .quote-print-header {
+            background: #ffffff;
+            border-bottom: 1px solid #d6dce8;
+          }
+
+          .quote-print-body {
+            background: #ffffff;
+          }
+
+          .quote-print-card {
+            border: 1px solid #d6dce8;
+            background: #f7f8fb;
+            border-radius: 12px;
+          }
+
+          .quote-print-gap {
+            gap: 12px;
+          }
+
+          .quote-print-stack {
+            gap: 10px;
+          }
+
+          .quote-print-body table td,
+          .quote-print-body table th {
+            color: #0f172a !important;
+          }
+        }
+
+        @media screen {
+          .print-only {
+            display: none;
+          }
+        }
+      `}</style>
+
+
+
+      <div className="no-print">
+        <div data-pdf-exclude="true">
+          <PageHero
+            id="quote-title"
+            title="Quote Preview"
+            subtitle="Review everything selected, then download a PDF or submit the quote."
+          />
+        </div>
+
+        <div className="mx-auto w-full max-w-screen-2xl px-4 sm:px-6 lg:px-8">
+          <SectionWrap>
+            <LiveGuidance id={guidanceId} message={guidanceMessage} />
+
+            <div
+              data-pdf-exclude="true"
+              className="flex flex-wrap items-center justify-between gap-3"
+              aria-describedby={guidanceId}
+            >
+              <div className="flex flex-wrap items-center gap-3">
+                <button type="button" onClick={() => nav("calculator", "internal")} className={secondaryButtonClass}>
+                  Back To Program Calculator
+                </button>
+                <button type="button" onClick={() => nav("builder", "internal")} className={secondaryButtonClass}>
+                  Back To Program Builder
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button type="button" onClick={printQuoteTwoPages} className={secondaryButtonClass}>
+                  Print Page as PDF
+                </button>
+
+                {ENABLE_QUOTE_SUBMIT ? (
+                  <button type="button" onClick={submitQuote} className={primaryButtonClass} disabled={submitDisabled}>
+                    {isSubmitting ? "Submitting..." : "Submit Quote"}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            {actionMessage ? (
+              <div
+                data-pdf-exclude="true"
+                className="mt-6 rounded-md border border-border bg-card px-4 py-3 text-sm text-foreground"
+                role="status"
+                aria-live="polite"
+              >
+                {actionMessage}
+              </div>
+            ) : null}
+
+            {/* Developer verification steps:
+                1. Fill Builder fields, including newly added inputs.
+                2. Continue to Calculator and fill all inputs, including newly added inputs.
+                3. Continue to Quote Preview and confirm every value is shown.
+                4. Refresh the page and confirm values are still present from storage.
+            */}
+            {import.meta.env.DEV ? (
+              <div data-pdf-exclude="true" className="mt-4 rounded-md border border-border bg-card p-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDraftDiagnostics((prev) => !prev)}
+                  className={secondaryButtonClass}
+                >
+                  {showDraftDiagnostics ? "Hide Draft Diagnostics" : "Show Draft Diagnostics"}
+                </button>
+                {showDraftDiagnostics ? (
+                  <pre className="mt-3 max-h-80 overflow-auto rounded-md bg-background p-3 text-xs text-foreground">
+                    {JSON.stringify(draft, null, 2)}
+                  </pre>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div
+              id="quote-pdf-root"
+              data-pdf-root="quote"
+              data-pdf-header="quote"
+              className="mt-10 overflow-hidden rounded-lg border border-border bg-card"
+            >
+              <QuoteHeader tight={false} />
+
+                                  <div className="space-y-5 px-6 pb-6">
+                      <div className="grid grid-cols-12 items-stretch gap-4">
+                      <div className="col-span-12 space-y-4 md:col-span-7">
+                        <ContactDetailsCard print={false} />
+                        <ProgramGuidelinesCard print={false} />
+                        <NotesCard print={false} />
+                        <CompactSelectedOptionsCard print={false} />
+                        <LocationsCard print={false} />
+                      </div>
+
+                      <div className="col-span-12 flex h-full flex-col gap-4 md:col-span-5">
+                        <ProgramInputsCard print={false} />
+                        <PaymentTermsCard print={false} />
+
+                        <div className="flex-1" />
+
+                        <TotalEstimateCard print={false} />
+                        <div data-pdf-exclude="true" className="flex flex-wrap items-center justify-end gap-3 pt-2">
+                          <button type="button" onClick={printQuoteTwoPages} className={secondaryButtonClass}>
+                            Print Page as PDF
+                          </button>
+                          {ENABLE_QUOTE_SUBMIT ? (
+                            <button
+                              type="button"
+                              onClick={submitQuote}
+                              className={primaryButtonClass}
+                              disabled={submitDisabled}
+                            >
+                              {isSubmitting ? "Submitting..." : "Submit Quote"}
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+
+            </div>
+          </SectionWrap>
+        </div>
+      </div>
+
+      <div className="print-only">
+        <div className="print-page print-page-break">
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
+            <QuoteHeader tight={true} />
+
+            <div className="quote-print-body space-y-3">
+              <div className="grid grid-cols-12 quote-print-gap">
+                <div className="col-span-12 md:col-span-7">
+                  <div className="grid quote-print-stack">
+                    <div className="print-avoid-break">
+                      <ContactDetailsCard print={true} />
+                    </div>
+
+                    <div className="print-avoid-break">
+                      <ProgramGuidelinesCard print={true} />
+                    </div>
+
+                    {guidelines.notes?.trim() ? (
+                      <div className="print-avoid-break">
+                        <NotesCard print={true} />
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="col-span-12 md:col-span-5">
+                  <div className="grid quote-print-stack">
+                    <div className="print-avoid-break">
+                      <CompactSelectedOptionsCard print={true} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="print-avoid-break">
+                <LocationsCard print={true} />
+              </div>
+
+              <div className="print-hide text-xs text-muted-foreground">
+                This quote preview is generated from the selections entered in the Program Builder and Program Calculator.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="print-page">
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
+            <QuoteHeader tight={true} />
+
+            <div className="quote-print-body space-y-3">
+              <div className="grid grid-cols-12 quote-print-gap">
+                <div className="col-span-12 md:col-span-6">
+                  <div className="grid quote-print-stack">
+                    <div className="print-avoid-break">
+                      <ProgramInputsCard print={true} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="col-span-12 md:col-span-6">
+                  <div className="grid quote-print-stack">
+                    <div className="print-avoid-break">
+                      <PaymentTermsCard print={true} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="col-span-12">
+                  <div className="grid quote-print-stack">
+                    <div className="print-avoid-break">
+                      <TotalEstimateCard print={true} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="print-hide text-xs text-muted-foreground">
+                This quote preview is generated from the selections entered in the Program Builder and Program Calculator.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  );
+}
+
+

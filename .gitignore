@@ -1,0 +1,10 @@
+﻿.env
+.env.*
+!.env.example
+.vercel
+.next
+node_modules
+dist
+coverage
+.DS_Store
+Thumbs.db
