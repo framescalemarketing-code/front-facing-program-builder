@@ -1332,12 +1332,12 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
         <div className="text-sm font-semibold text-foreground">{`Service Tier: ${estimate.selectedTier || "Not Selected"}`}</div>
         <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
           <div>
-            Service per Employee:{" "}
-            <span className="font-medium text-foreground">{formatMoney(estimate.servicePerEmployee)}</span>
-          </div>
-          <div>
             {isDepartmentBased ? "Employees (Total)" : "Employees"}:{" "}
             <span className="font-medium text-foreground">{estimate.employees}</span>
+          </div>
+          <div>
+            Service per Employee:{" "}
+            <span className="font-medium text-foreground">{formatMoney(estimate.servicePerEmployee)}</span>
           </div>
         </div>
         <div className="mt-3 text-sm text-muted-foreground">

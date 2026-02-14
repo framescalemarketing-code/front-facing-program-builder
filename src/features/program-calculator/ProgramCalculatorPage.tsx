@@ -1359,6 +1359,15 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
     }));
   }
 
+  function onChangeLocationAdditionalVisits(idx: number, rawValue: string) {
+    const nextVisits = clampInt(Number(rawValue));
+    setCalculator((prev) => ({
+      ...prev,
+      addOns: { ...prev.addOns, extraSiteVisits: 0 },
+      locations: prev.locations.map((row, i) => (i === idx ? { ...row, additionalOnsiteVisits: nextVisits } : row)),
+    }));
+  }
+
   function setAddOnsPatch(patch: Partial<AddOns>) {
     setCalculator((prev) => ({ ...prev, addOns: { ...prev.addOns, ...patch } }));
   }
@@ -2595,11 +2604,7 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
                               min={0}
                               step={1}
                               value={clampInt(loc.additionalOnsiteVisits)}
-                              onChange={(e) =>
-                                updateLocation(idx, {
-                                  additionalOnsiteVisits: clampInt(Number(e.target.value)),
-                                })
-                              }
+                              onChange={(e) => onChangeLocationAdditionalVisits(idx, e.target.value)}
                               className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background focus:border-transparent"
                               placeholder="0"
                             />
