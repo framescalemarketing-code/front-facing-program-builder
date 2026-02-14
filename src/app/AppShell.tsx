@@ -42,7 +42,12 @@ export function AppShell(props: { pages: Record<PageId, React.ComponentType<Page
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <a href="/" className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => onNavigate("builder", "internal")}
+              className="flex items-center gap-3 bg-transparent p-0 text-left"
+              aria-label="Go to Program Builder"
+            >
               <img
                 src="/brand/osso/osso-logo-horizontal.png"
                 alt="On-Sight Safety Optics"
@@ -56,7 +61,7 @@ export function AppShell(props: { pages: Record<PageId, React.ComponentType<Page
                 loading="eager"
               />
               <span className="sr-only">On-Sight Safety Optics</span>
-            </a>
+            </button>
             <div className="text-sm font-semibold">On-Sight Safety Optics</div>
           </div>
           <div className="hidden text-xs text-muted-foreground sm:block">Internal Quote Tool</div>

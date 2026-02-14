@@ -18,6 +18,7 @@ import {
   departmentInvoicePerEmployeeValues,
   hasDepartmentAddOnsBreakdown,
   PRINT_KEEP_TOGETHER_CLASSES,
+  resolveDepartmentBreakdownPrintState,
 } from "@/lib/quotePreviewRules";
 import type {  EUPackage,
   EUPackageAddOnKey,  DepartmentConfigRow,
@@ -212,40 +213,55 @@ const DepartmentAllowanceBreakdownTable = memo(function DepartmentAllowanceBreak
   allowanceTotal,
 }: DepartmentAllowanceBreakdownTableProps) {
   return (
-    <div className="mt-3 overflow-x-auto">
+    <div className="mt-3">
       <div className="mb-2 text-sm font-semibold text-foreground">Department Allowance Breakdown</div>
-      <table className="breakdown-table min-w-[760px] sm:min-w-full text-xs text-muted-foreground">
-        <colgroup>
-          <col className="breakdown-col-dept" />
-          <col className="breakdown-col-employees" />
-          <col className="breakdown-col-value" />
-          <col className="breakdown-col-total" />
-        </colgroup>
-        <thead>
-          <tr className="text-left">
-            <th className="breakdown-col-dept py-1 pr-2 font-semibold text-foreground">Department</th>
-            <th className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
-            <th className="breakdown-col-value py-1 px-2 text-right font-semibold text-foreground">Allowance per Employee</th>
-            <th className="breakdown-col-total py-1 pl-2 text-right font-semibold text-foreground">Subtotal</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              <td className="breakdown-col-dept py-1 pr-2 text-foreground">{row.departmentName}</td>
-              <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{row.employeeCount}</td>
-              <td className="breakdown-col-value py-1 px-2 text-right">{formatMoney(row.allowancePerEmployee)}</td>
-              <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(row.allowanceSubtotal)}</td>
+      <div className="space-y-2 md:hidden print:hidden">
+        {rows.map((row) => (
+          <div key={row.id} className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
+            <div className="text-sm font-semibold text-foreground">{row.departmentName}</div>
+            <div className="mt-1">Employees (Total): <span className="font-medium text-foreground">{row.employeeCount}</span></div>
+            <div>Allowance per Employee: <span className="font-medium text-foreground">{formatMoney(row.allowancePerEmployee)}</span></div>
+            <div>Subtotal: <span className="font-medium text-foreground">{formatMoney(row.allowanceSubtotal)}</span></div>
+          </div>
+        ))}
+        <div className="rounded-md border border-border bg-background p-3 text-xs font-semibold text-foreground">
+          Totals: {employeesTotal} Employees (Total), {formatMoney(allowanceTotal)}
+        </div>
+      </div>
+      <div className="hidden overflow-x-auto md:block print:block">
+        <table className="breakdown-table w-full text-xs text-muted-foreground">
+          <colgroup>
+            <col className="breakdown-col-dept" />
+            <col className="breakdown-col-employees" />
+            <col className="breakdown-col-value" />
+            <col className="breakdown-col-total" />
+          </colgroup>
+          <thead>
+            <tr className="text-left">
+              <th className="breakdown-col-dept py-1 pr-2 font-semibold text-foreground">Department</th>
+              <th className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
+              <th className="breakdown-col-value py-1 px-2 text-right font-semibold text-foreground">Allowance per Employee</th>
+              <th className="breakdown-col-total py-1 pl-2 text-right font-semibold text-foreground">Subtotal</th>
             </tr>
-          ))}
-          <tr className="font-semibold text-foreground">
-            <td className="breakdown-col-dept py-1 pr-2">Totals</td>
-            <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{employeesTotal}</td>
-            <td className="breakdown-col-value py-1 px-2 text-right"></td>
-            <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(allowanceTotal)}</td>
-          </tr>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td className="breakdown-col-dept py-1 pr-2 text-foreground">{row.departmentName}</td>
+                <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{row.employeeCount}</td>
+                <td className="breakdown-col-value py-1 px-2 text-right">{formatMoney(row.allowancePerEmployee)}</td>
+                <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(row.allowanceSubtotal)}</td>
+              </tr>
+            ))}
+            <tr className="font-semibold text-foreground">
+              <td className="breakdown-col-dept py-1 pr-2">Totals</td>
+              <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{employeesTotal}</td>
+              <td className="breakdown-col-value py-1 px-2 text-right"></td>
+              <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(allowanceTotal)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 });
@@ -258,34 +274,45 @@ const DepartmentAddOnsBreakdownTable = memo(function DepartmentAddOnsBreakdownTa
   alignWithService?: boolean;
 }) {
   return (
-    <div className="mt-3 overflow-x-auto">
+    <div className="mt-3">
       <div className="mb-2 text-sm font-semibold text-foreground">Department Add-Ons Breakdown</div>
-      <table
-        className={`breakdown-table min-w-[760px] sm:min-w-full text-sm text-muted-foreground ${alignWithService ? "table-fixed" : ""}`}
-        style={alignWithService ? { tableLayout: "fixed" } : undefined}
-      >
-        <colgroup>
-          <col className="breakdown-col-dept" />
-          <col className="breakdown-col-employees" />
-          <col className="breakdown-col-addons" />
-        </colgroup>
-        <thead>
-          <tr className="text-left">
-            <th className="breakdown-col-dept py-1.5 pr-3 font-semibold text-foreground">Department</th>
-            <th className="breakdown-col-employees breakdown-col-num py-1.5 px-4 text-right font-semibold text-foreground">Employees (Total)</th>
-            <th className="breakdown-col-addons py-1.5 pl-4 font-semibold text-foreground">Selected Add-Ons</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              <td className="breakdown-col-dept py-1.5 pr-3 align-top text-foreground">{row.departmentName}</td>
-              <td className="breakdown-col-employees breakdown-col-num py-1.5 px-4 text-right align-top">{row.employeeCount}</td>
-              <td className="breakdown-col-addons py-1.5 pl-4 align-top">{row.selectedAddOnsLabels.length ? row.selectedAddOnsLabels.join(", ") : "None"}</td>
+      <div className="space-y-2 md:hidden print:hidden">
+        {rows.map((row) => (
+          <div key={row.id} className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
+            <div className="text-sm font-semibold text-foreground">{row.departmentName}</div>
+            <div className="mt-1">Employees (Total): <span className="font-medium text-foreground">{row.employeeCount}</span></div>
+            <div>Selected Add-Ons: <span className="font-medium text-foreground">{row.selectedAddOnsLabels.length ? row.selectedAddOnsLabels.join(", ") : "None"}</span></div>
+          </div>
+        ))}
+      </div>
+      <div className="hidden overflow-x-auto md:block print:block">
+        <table
+          className={`breakdown-table w-full text-sm text-muted-foreground ${alignWithService ? "table-fixed" : ""}`}
+          style={alignWithService ? { tableLayout: "fixed" } : undefined}
+        >
+          <colgroup>
+            <col className="breakdown-col-dept" />
+            <col className="breakdown-col-employees" />
+            <col className="breakdown-col-addons" />
+          </colgroup>
+          <thead>
+            <tr className="text-left">
+              <th className="breakdown-col-dept py-1.5 pr-3 font-semibold text-foreground">Department</th>
+              <th className="breakdown-col-employees breakdown-col-num py-1.5 px-4 text-right font-semibold text-foreground">Employees (Total)</th>
+              <th className="breakdown-col-addons py-1.5 pl-4 font-semibold text-foreground">Selected Add-Ons</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td className="breakdown-col-dept py-1.5 pr-3 align-top text-foreground">{row.departmentName}</td>
+                <td className="breakdown-col-employees breakdown-col-num py-1.5 px-4 text-right align-top">{row.employeeCount}</td>
+                <td className="breakdown-col-addons py-1.5 pl-4 align-top">{row.selectedAddOnsLabels.length ? row.selectedAddOnsLabels.join(", ") : "None"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 });
@@ -296,46 +323,62 @@ const DepartmentEuBreakdownTable = memo(function DepartmentEuBreakdownTable({
   allowanceTotal,
 }: DepartmentAllowanceBreakdownTableProps) {
   return (
-    <div className="mt-3 overflow-x-auto">
+    <div className="mt-3">
       <div className="mb-2 text-sm font-semibold text-foreground">Department EU Breakdown</div>
-      <table className="breakdown-table department-eu-breakdown-table min-w-[980px] sm:min-w-full table-fixed text-sm text-muted-foreground">
-        <colgroup>
-          <col className="breakdown-col-dept" />
-          <col className="breakdown-col-employees" />
-          <col className="breakdown-col-addons" />
-          <col className="breakdown-col-value" />
-          <col className="breakdown-col-total" />
-        </colgroup>
-        <thead>
-          <tr className="text-left">
-            <th className="breakdown-col-dept py-2 pr-4 font-semibold text-foreground">Department</th>
-            <th className="breakdown-col-employees breakdown-col-num department-eu-employees py-2 px-4 text-right font-semibold text-foreground">Employees (Total)</th>
-            <th className="breakdown-col-addons department-eu-addons py-2 pl-6 font-semibold text-foreground">Selected Add-Ons</th>
-            <th className="breakdown-col-value py-2 px-5 text-right font-semibold text-foreground">Allowance per Employee</th>
-            <th className="breakdown-col-total py-2 pl-5 text-right font-semibold text-foreground">Subtotal</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              <td className="breakdown-col-dept py-2 pr-4 align-top text-foreground">{row.departmentName}</td>
-              <td className="breakdown-col-employees breakdown-col-num department-eu-employees py-2 px-4 text-right align-top">{row.employeeCount}</td>
-              <td className="breakdown-col-addons department-eu-addons py-2 pl-6 align-top leading-relaxed break-words">
-                {row.selectedAddOnsLabels.length ? row.selectedAddOnsLabels.join(", ") : "None"}
-              </td>
-              <td className="breakdown-col-value py-2 px-5 text-right align-top">{formatMoney(row.allowancePerEmployee)}</td>
-              <td className="breakdown-col-total py-2 pl-5 text-right align-top">{formatMoney(row.allowanceSubtotal)}</td>
+      <div className="space-y-2 md:hidden print:hidden">
+        {rows.map((row) => (
+          <div key={row.id} className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
+            <div className="text-sm font-semibold text-foreground">{row.departmentName}</div>
+            <div className="mt-1">Employees (Total): <span className="font-medium text-foreground">{row.employeeCount}</span></div>
+            <div>Selected Add-Ons: <span className="font-medium text-foreground">{row.selectedAddOnsLabels.length ? row.selectedAddOnsLabels.join(", ") : "None"}</span></div>
+            <div>Allowance per Employee: <span className="font-medium text-foreground">{formatMoney(row.allowancePerEmployee)}</span></div>
+            <div>Subtotal: <span className="font-medium text-foreground">{formatMoney(row.allowanceSubtotal)}</span></div>
+          </div>
+        ))}
+        <div className="rounded-md border border-border bg-background p-3 text-xs font-semibold text-foreground">
+          Totals: {employeesTotal} Employees (Total), {formatMoney(allowanceTotal)}
+        </div>
+      </div>
+      <div className="hidden overflow-x-auto md:block print:block">
+        <table className="breakdown-table department-eu-breakdown-table w-full table-fixed text-sm text-muted-foreground">
+          <colgroup>
+            <col className="breakdown-col-dept" />
+            <col className="breakdown-col-employees" />
+            <col className="breakdown-col-addons" />
+            <col className="breakdown-col-value" />
+            <col className="breakdown-col-total" />
+          </colgroup>
+          <thead>
+            <tr className="text-left">
+              <th className="breakdown-col-dept py-2 pr-4 font-semibold text-foreground">Department</th>
+              <th className="breakdown-col-employees breakdown-col-num department-eu-employees py-2 px-4 text-right font-semibold text-foreground">Employees (Total)</th>
+              <th className="breakdown-col-addons department-eu-addons py-2 pl-6 font-semibold text-foreground">Selected Add-Ons</th>
+              <th className="breakdown-col-value py-2 px-5 text-right font-semibold text-foreground">Allowance per Employee</th>
+              <th className="breakdown-col-total py-2 pl-5 text-right font-semibold text-foreground">Subtotal</th>
             </tr>
-          ))}
-          <tr className="font-semibold text-foreground">
-            <td className="breakdown-col-dept py-2 pr-4">Totals</td>
-            <td className="breakdown-col-employees breakdown-col-num department-eu-employees py-2 px-4 text-right">{employeesTotal}</td>
-            <td className="breakdown-col-addons department-eu-addons py-2 pl-6"></td>
-            <td className="breakdown-col-value py-2 px-5 text-right"></td>
-            <td className="breakdown-col-total py-2 pl-5 text-right">{formatMoney(allowanceTotal)}</td>
-          </tr>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td className="breakdown-col-dept py-2 pr-4 align-top text-foreground">{row.departmentName}</td>
+                <td className="breakdown-col-employees breakdown-col-num department-eu-employees py-2 px-4 text-right align-top">{row.employeeCount}</td>
+                <td className="breakdown-col-addons department-eu-addons py-2 pl-6 align-top leading-relaxed break-words">
+                  {row.selectedAddOnsLabels.length ? row.selectedAddOnsLabels.join(", ") : "None"}
+                </td>
+                <td className="breakdown-col-value py-2 px-5 text-right align-top">{formatMoney(row.allowancePerEmployee)}</td>
+                <td className="breakdown-col-total py-2 pl-5 text-right align-top">{formatMoney(row.allowanceSubtotal)}</td>
+              </tr>
+            ))}
+            <tr className="font-semibold text-foreground">
+              <td className="breakdown-col-dept py-2 pr-4">Totals</td>
+              <td className="breakdown-col-employees breakdown-col-num department-eu-employees py-2 px-4 text-right">{employeesTotal}</td>
+              <td className="breakdown-col-addons department-eu-addons py-2 pl-6"></td>
+              <td className="breakdown-col-value py-2 px-5 text-right"></td>
+              <td className="breakdown-col-total py-2 pl-5 text-right">{formatMoney(allowanceTotal)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 });
@@ -356,47 +399,62 @@ const DepartmentServiceBreakdownTable = memo(function DepartmentServiceBreakdown
   const useFixedAlignment = alignWithEuCombined || alignWithAddOnsOnly;
   const includeAddOnsSpacerColumn = alignWithEuCombined || alignWithAddOnsOnly;
   return (
-    <div className="mt-3 overflow-x-auto">
+    <div className="mt-3">
       <div className="mb-2 text-sm font-semibold text-foreground">Service Tier Breakdown by Department</div>
-      <table
-        className={`breakdown-table min-w-[760px] sm:min-w-full text-xs text-muted-foreground ${useFixedAlignment ? "table-fixed" : ""}`}
-        style={useFixedAlignment ? { tableLayout: "fixed" } : undefined}
-      >
-        <colgroup>
-          <col className="breakdown-col-dept" />
-          <col className="breakdown-col-employees" />
-          {includeAddOnsSpacerColumn ? <col className="breakdown-col-addons" /> : null}
-          <col className="breakdown-col-value" />
-          <col className="breakdown-col-total" />
-        </colgroup>
-        <thead>
-          <tr className="text-left">
-            <th className="breakdown-col-dept py-1 pr-2 font-semibold text-foreground">Department</th>
-            <th className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
-            {includeAddOnsSpacerColumn ? <th className="breakdown-col-addons py-1 pl-2 font-semibold text-foreground"></th> : null}
-            <th className="breakdown-col-value py-1 px-2 text-right font-semibold text-foreground">Service per Employee</th>
-            <th className="breakdown-col-total py-1 pl-2 text-right font-semibold text-foreground">Subtotal</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              <td className="breakdown-col-dept py-1 pr-2 text-foreground">{row.departmentName}</td>
-              <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{row.employeeCount}</td>
-              {includeAddOnsSpacerColumn ? <td className="breakdown-col-addons py-1 pl-2"></td> : null}
-              <td className="breakdown-col-value py-1 px-2 text-right">{formatMoney(row.servicePerEmployee)}</td>
-              <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(row.serviceSubtotal)}</td>
+      <div className="space-y-2 md:hidden print:hidden">
+        {rows.map((row) => (
+          <div key={row.id} className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
+            <div className="text-sm font-semibold text-foreground">{row.departmentName}</div>
+            <div className="mt-1">Employees (Total): <span className="font-medium text-foreground">{row.employeeCount}</span></div>
+            <div>Service per Employee: <span className="font-medium text-foreground">{formatMoney(row.servicePerEmployee)}</span></div>
+            <div>Subtotal: <span className="font-medium text-foreground">{formatMoney(row.serviceSubtotal)}</span></div>
+          </div>
+        ))}
+        <div className="rounded-md border border-border bg-background p-3 text-xs font-semibold text-foreground">
+          Totals: {employeesTotal} Employees (Total), {formatMoney(serviceTotal)}
+        </div>
+      </div>
+      <div className="hidden overflow-x-auto md:block print:block">
+        <table
+          className={`breakdown-table w-full text-xs text-muted-foreground ${useFixedAlignment ? "table-fixed" : ""}`}
+          style={useFixedAlignment ? { tableLayout: "fixed" } : undefined}
+        >
+          <colgroup>
+            <col className="breakdown-col-dept" />
+            <col className="breakdown-col-employees" />
+            {includeAddOnsSpacerColumn ? <col className="breakdown-col-addons" /> : null}
+            <col className="breakdown-col-value" />
+            <col className="breakdown-col-total" />
+          </colgroup>
+          <thead>
+            <tr className="text-left">
+              <th className="breakdown-col-dept py-1 pr-2 font-semibold text-foreground">Department</th>
+              <th className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
+              {includeAddOnsSpacerColumn ? <th className="breakdown-col-addons py-1 pl-2 font-semibold text-foreground"></th> : null}
+              <th className="breakdown-col-value py-1 px-2 text-right font-semibold text-foreground">Service per Employee</th>
+              <th className="breakdown-col-total py-1 pl-2 text-right font-semibold text-foreground">Subtotal</th>
             </tr>
-          ))}
-          <tr className="font-semibold text-foreground">
-            <td className="breakdown-col-dept py-1 pr-2">Totals</td>
-            <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{employeesTotal}</td>
-            {includeAddOnsSpacerColumn ? <td className="breakdown-col-addons py-1 pl-2"></td> : null}
-            <td className="breakdown-col-value py-1 px-2 text-right"></td>
-            <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(serviceTotal)}</td>
-          </tr>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td className="breakdown-col-dept py-1 pr-2 text-foreground">{row.departmentName}</td>
+                <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{row.employeeCount}</td>
+                {includeAddOnsSpacerColumn ? <td className="breakdown-col-addons py-1 pl-2"></td> : null}
+                <td className="breakdown-col-value py-1 px-2 text-right">{formatMoney(row.servicePerEmployee)}</td>
+                <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(row.serviceSubtotal)}</td>
+              </tr>
+            ))}
+            <tr className="font-semibold text-foreground">
+              <td className="breakdown-col-dept py-1 pr-2">Totals</td>
+              <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{employeesTotal}</td>
+              {includeAddOnsSpacerColumn ? <td className="breakdown-col-addons py-1 pl-2"></td> : null}
+              <td className="breakdown-col-value py-1 px-2 text-right"></td>
+              <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(serviceTotal)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 });
@@ -420,39 +478,56 @@ const DepartmentDiscountBreakdownTable = memo(function DepartmentDiscountBreakdo
   const discountTotalMax = rows.reduce((sum, row) => sum + row.discountTotalMax, 0);
 
   return (
-    <div className="mt-3 overflow-x-auto">
-      <table className="breakdown-table min-w-[980px] sm:min-w-full text-xs text-muted-foreground">
-        <thead>
-          <tr className="text-left">
-            <th className="breakdown-col-dept py-1 pr-2 font-semibold text-foreground">Department</th>
-            <th className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
-            <th className="breakdown-col-value py-1 px-2 text-right font-semibold text-foreground">Invoice per Employee</th>
-            <th className="breakdown-col-percent py-1 px-2 text-right font-semibold text-foreground">Discount Percent</th>
-            <th className="breakdown-col-value py-1 px-2 text-right font-semibold text-foreground">Max Discount per Invoice</th>
-            <th className="breakdown-col-total py-1 pl-2 text-right font-semibold text-foreground">Max Discount Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              <td className="breakdown-col-dept py-1 pr-2 text-foreground">{row.departmentName}</td>
-              <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{row.employeeCount}</td>
-              <td className="breakdown-col-value py-1 px-2 text-right">{formatMoney(row.invoicePerEmployee)}</td>
-              <td className="breakdown-col-percent py-1 px-2 text-right">{`${(row.discountPct * 100).toFixed(0)}%`}</td>
-              <td className="breakdown-col-value py-1 px-2 text-right">{formatMoney(row.discountPerEmployeeMax)}</td>
-              <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(row.discountTotalMax)}</td>
+    <div className="mt-3">
+      <div className="space-y-2 md:hidden print:hidden">
+        {rows.map((row) => (
+          <div key={row.id} className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
+            <div className="text-sm font-semibold text-foreground">{row.departmentName}</div>
+            <div className="mt-1">Employees (Total): <span className="font-medium text-foreground">{row.employeeCount}</span></div>
+            <div>Invoice per Employee: <span className="font-medium text-foreground">{formatMoney(row.invoicePerEmployee)}</span></div>
+            <div>Discount Percent: <span className="font-medium text-foreground">{`${(row.discountPct * 100).toFixed(0)}%`}</span></div>
+            <div>Max Discount per Invoice: <span className="font-medium text-foreground">{formatMoney(row.discountPerEmployeeMax)}</span></div>
+            <div>Max Discount Total: <span className="font-medium text-foreground">{formatMoney(row.discountTotalMax)}</span></div>
+          </div>
+        ))}
+        <div className="rounded-md border border-border bg-background p-3 text-xs font-semibold text-foreground">
+          Totals: {employeesTotal} Employees (Total), {formatMoney(discountTotalMax)}
+        </div>
+      </div>
+      <div className="hidden overflow-x-auto md:block print:block">
+        <table className="breakdown-table w-full text-xs text-muted-foreground">
+          <thead>
+            <tr className="text-left">
+              <th className="breakdown-col-dept py-1 pr-2 font-semibold text-foreground">Department</th>
+              <th className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
+              <th className="breakdown-col-value py-1 px-2 text-right font-semibold text-foreground">Invoice per Employee</th>
+              <th className="breakdown-col-percent py-1 px-2 text-right font-semibold text-foreground">Discount Percent</th>
+              <th className="breakdown-col-value py-1 px-2 text-right font-semibold text-foreground">Max Discount per Invoice</th>
+              <th className="breakdown-col-total py-1 pl-2 text-right font-semibold text-foreground">Max Discount Total</th>
             </tr>
-          ))}
-          <tr className="font-semibold text-foreground">
-            <td className="breakdown-col-dept py-1 pr-2">Totals</td>
-            <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{employeesTotal}</td>
-            <td className="breakdown-col-value py-1 px-2 text-right"></td>
-            <td className="breakdown-col-percent py-1 px-2 text-right"></td>
-            <td className="breakdown-col-value py-1 px-2 text-right"></td>
-            <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(discountTotalMax)}</td>
-          </tr>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td className="breakdown-col-dept py-1 pr-2 text-foreground">{row.departmentName}</td>
+                <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{row.employeeCount}</td>
+                <td className="breakdown-col-value py-1 px-2 text-right">{formatMoney(row.invoicePerEmployee)}</td>
+                <td className="breakdown-col-percent py-1 px-2 text-right">{`${(row.discountPct * 100).toFixed(0)}%`}</td>
+                <td className="breakdown-col-value py-1 px-2 text-right">{formatMoney(row.discountPerEmployeeMax)}</td>
+                <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(row.discountTotalMax)}</td>
+              </tr>
+            ))}
+            <tr className="font-semibold text-foreground">
+              <td className="breakdown-col-dept py-1 pr-2">Totals</td>
+              <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{employeesTotal}</td>
+              <td className="breakdown-col-value py-1 px-2 text-right"></td>
+              <td className="breakdown-col-percent py-1 px-2 text-right"></td>
+              <td className="breakdown-col-value py-1 px-2 text-right"></td>
+              <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(discountTotalMax)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 });
@@ -482,47 +557,65 @@ const DepartmentInvoiceBreakdownTable = memo(function DepartmentInvoiceBreakdown
   const financeFeeTotal = rows.reduce((sum, row) => sum + row.financeFeeTotal, 0);
 
   return (
-    <div className="mt-3 overflow-x-auto">
-      <table className="breakdown-table min-w-[980px] sm:min-w-full text-xs text-muted-foreground">
-        <thead>
-          <tr className="text-left">
-            <th className="breakdown-col-dept py-1 pr-2 font-semibold text-foreground">Department</th>
-            <th className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
-            <th className="breakdown-col-value py-1 px-2 text-right font-semibold text-foreground">Invoice per Employee</th>
-            {showFees ? (
-              <th className="breakdown-col-value py-1 px-2 text-right font-semibold text-foreground">Finance Fee per Invoice</th>
-            ) : null}
-            <th className="breakdown-col-total py-1 pl-2 text-right font-semibold text-foreground">Invoice Total</th>
-            {showFees ? (
-              <th className="breakdown-col-total py-1 pl-2 text-right font-semibold text-foreground">Finance Fee Total</th>
-            ) : null}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              <td className="breakdown-col-dept py-1 pr-2 text-foreground">{row.departmentName}</td>
-              <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{row.employeeCount}</td>
-              <td className="breakdown-col-value py-1 px-2 text-right">{formatMoney(row.invoicePerEmployee)}</td>
+    <div className="mt-3">
+      <div className="space-y-2 md:hidden print:hidden">
+        {rows.map((row) => (
+          <div key={row.id} className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
+            <div className="text-sm font-semibold text-foreground">{row.departmentName}</div>
+            <div className="mt-1">Employees (Total): <span className="font-medium text-foreground">{row.employeeCount}</span></div>
+            <div>Invoice per Employee: <span className="font-medium text-foreground">{formatMoney(row.invoicePerEmployee)}</span></div>
+            {showFees ? <div>Finance Fee per Invoice: <span className="font-medium text-foreground">{formatMoney(row.financeFeePerInvoice)}</span></div> : null}
+            <div>Invoice Total: <span className="font-medium text-foreground">{formatMoney(row.invoiceTotal)}</span></div>
+            {showFees ? <div>Finance Fee Total: <span className="font-medium text-foreground">{formatMoney(row.financeFeeTotal)}</span></div> : null}
+          </div>
+        ))}
+        <div className="rounded-md border border-border bg-background p-3 text-xs font-semibold text-foreground">
+          Totals: {employeesTotal} Employees (Total), {formatMoney(invoiceTotal)}
+          {showFees ? `, ${formatMoney(financeFeeTotal)} Finance Fee Total` : ""}
+        </div>
+      </div>
+      <div className="hidden overflow-x-auto md:block print:block">
+        <table className="breakdown-table w-full text-xs text-muted-foreground">
+          <thead>
+            <tr className="text-left">
+              <th className="breakdown-col-dept py-1 pr-2 font-semibold text-foreground">Department</th>
+              <th className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
+              <th className="breakdown-col-value py-1 px-2 text-right font-semibold text-foreground">Invoice per Employee</th>
               {showFees ? (
-                <td className="breakdown-col-value py-1 px-2 text-right">{formatMoney(row.financeFeePerInvoice)}</td>
+                <th className="breakdown-col-value py-1 px-2 text-right font-semibold text-foreground">Finance Fee per Invoice</th>
               ) : null}
-              <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(row.invoiceTotal)}</td>
+              <th className="breakdown-col-total py-1 pl-2 text-right font-semibold text-foreground">Invoice Total</th>
               {showFees ? (
-                <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(row.financeFeeTotal)}</td>
+                <th className="breakdown-col-total py-1 pl-2 text-right font-semibold text-foreground">Finance Fee Total</th>
               ) : null}
             </tr>
-          ))}
-          <tr className="font-semibold text-foreground">
-            <td className="breakdown-col-dept py-1 pr-2">Totals</td>
-            <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{employeesTotal}</td>
-            <td className="breakdown-col-value py-1 px-2 text-right"></td>
-            {showFees ? <td className="breakdown-col-value py-1 px-2 text-right"></td> : null}
-            <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(invoiceTotal)}</td>
-            {showFees ? <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(financeFeeTotal)}</td> : null}
-          </tr>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td className="breakdown-col-dept py-1 pr-2 text-foreground">{row.departmentName}</td>
+                <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{row.employeeCount}</td>
+                <td className="breakdown-col-value py-1 px-2 text-right">{formatMoney(row.invoicePerEmployee)}</td>
+                {showFees ? (
+                  <td className="breakdown-col-value py-1 px-2 text-right">{formatMoney(row.financeFeePerInvoice)}</td>
+                ) : null}
+                <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(row.invoiceTotal)}</td>
+                {showFees ? (
+                  <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(row.financeFeeTotal)}</td>
+                ) : null}
+              </tr>
+            ))}
+            <tr className="font-semibold text-foreground">
+              <td className="breakdown-col-dept py-1 pr-2">Totals</td>
+              <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{employeesTotal}</td>
+              <td className="breakdown-col-value py-1 px-2 text-right"></td>
+              {showFees ? <td className="breakdown-col-value py-1 px-2 text-right"></td> : null}
+              <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(invoiceTotal)}</td>
+              {showFees ? <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(financeFeeTotal)}</td> : null}
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 });
@@ -1247,16 +1340,6 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
       isDepartmentBased &&
       estimate.departmentAllowanceBreakdown.length > 0 &&
       hasDepartmentAddOnsBreakdown(estimate.departmentAllowanceBreakdown);
-    const showPrintDepartmentEuBreakdown =
-      print &&
-      canShowDepartmentAllowanceBreakdown &&
-      canShowDepartmentAddOnsBreakdown &&
-      showDepartmentAllowanceBreakdown &&
-      showDepartmentAddOnsBreakdown;
-    const showPrintDepartmentAllowanceBreakdown =
-      print && canShowDepartmentAllowanceBreakdown && showDepartmentAllowanceBreakdown && !showPrintDepartmentEuBreakdown;
-    const showPrintDepartmentAddOnsBreakdown =
-      print && canShowDepartmentAddOnsBreakdown && showDepartmentAddOnsBreakdown && !showPrintDepartmentEuBreakdown;
     const departmentServiceBreakdown: DepartmentServiceBreakdownLine[] = estimate.departmentAllowanceBreakdown.map((row) => ({
       id: row.id,
       departmentName: row.departmentName,
@@ -1265,13 +1348,21 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
       serviceSubtotal: estimate.servicePerEmployee * row.employeeCount,
     }));
     const canShowDepartmentServiceBreakdown = isDepartmentBased && departmentServiceBreakdown.length > 0;
-    const showPrintDepartmentServiceBreakdown =
-      print && canShowDepartmentServiceBreakdown && showDepartmentServiceBreakdown;
-    const showPrintAddOnsServiceAlignmentMode =
-      print &&
-      showPrintDepartmentAddOnsBreakdown &&
-      !showPrintDepartmentAllowanceBreakdown &&
-      showPrintDepartmentServiceBreakdown;
+    const {
+      showPrintDepartmentEuBreakdown,
+      showPrintDepartmentAllowanceBreakdown,
+      showPrintDepartmentAddOnsBreakdown,
+      showPrintDepartmentServiceBreakdown,
+      showPrintAddOnsServiceAlignmentMode,
+    } = resolveDepartmentBreakdownPrintState({
+      print,
+      canShowDepartmentAllowanceBreakdown,
+      canShowDepartmentAddOnsBreakdown,
+      canShowDepartmentServiceBreakdown,
+      showDepartmentAllowanceBreakdown,
+      showDepartmentAddOnsBreakdown,
+      showDepartmentServiceBreakdown,
+    });
 
     return (
       <div className={print ? subtleCardPrintClass : subtleCardClass}>
@@ -1404,12 +1495,12 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
               <div>Contact an OSSO Program Specialist:</div>
             </div>
             <div className="mt-1">
-              <a href="mailto:team@onsightoptics.com" className="underline">
-                team@onsightoptics.com
+              <a href={`mailto:${ONSIGHT_EMAIL}`} className="underline">
+                {ONSIGHT_EMAIL}
               </a>{" "}
               <span className="px-1">|</span>
-              <a href="tel:619-402-1033" className="underline">
-                619-402-1033
+              <a href={`tel:${ONSIGHT_PHONE}`} className="underline">
+                {ONSIGHT_PHONE}
               </a>
             </div>
           </details>
@@ -1436,7 +1527,7 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
           <div className={`${PRINT_KEEP_TOGETHER_CLASSES.breakdownBlock} mt-3`}>
             <button
               type="button"
-              onClick={() => setShowDepartmentAllowanceBreakdown((prev) => !prev)}
+              onClick={toggleDepartmentAllowanceBreakdown}
               className="text-sm font-medium text-foreground underline underline-offset-4"
             >
               {showDepartmentAllowanceBreakdown ? "Hide Department Allowance Breakdown" : "Show Department Allowance Breakdown"}
@@ -1506,12 +1597,12 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
               <div>Contact an OSSO Program Specialist:</div>
             </div>
             <div className="mt-1">
-              <a href="mailto:team@onsightoptics.com" className="underline">
-                team@onsightoptics.com
+              <a href={`mailto:${ONSIGHT_EMAIL}`} className="underline">
+                {ONSIGHT_EMAIL}
               </a>{" "}
               <span className="px-1">|</span>
-              <a href="tel:619-402-1033" className="underline">
-                619-402-1033
+              <a href={`tel:${ONSIGHT_PHONE}`} className="underline">
+                {ONSIGHT_PHONE}
               </a>
             </div>
           </details>
@@ -1549,7 +1640,7 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
           <div className={`${PRINT_KEEP_TOGETHER_CLASSES.breakdownBlock} mt-3`}>
             <button
               type="button"
-              onClick={() => setShowDepartmentServiceBreakdown((prev) => !prev)}
+              onClick={toggleDepartmentServiceBreakdown}
               className="text-sm font-medium text-foreground underline underline-offset-4"
             >
               {showDepartmentServiceBreakdown
@@ -1726,7 +1817,7 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
               <div className={`${PRINT_KEEP_TOGETHER_CLASSES.breakdownBlock} mt-3 rounded-md border border-border bg-background p-3`}>
                 <button
                   type="button"
-                  onClick={() => setShowDepartmentPaymentBreakdown((prev) => !prev)}
+                  onClick={toggleDepartmentPaymentBreakdown}
                   className="text-sm font-medium text-foreground underline underline-offset-4"
                 >
                   {showDepartmentPaymentBreakdown ? "Hide Department Payment Breakdown" : departmentPaymentBreakdownLabel}
@@ -1981,15 +2072,31 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
   const [showDepartmentServiceBreakdown, setShowDepartmentServiceBreakdown] = useState(false);
   const [showDepartmentPaymentBreakdown, setShowDepartmentPaymentBreakdown] = useState(false);
   const [showCoveredClarification, setShowCoveredClarification] = useState(false);
-  const toggleDepartmentAddOnsBreakdown = useCallback(() => {
+  const toggleWithScrollLock = useCallback((setter: (fn: (prev: boolean) => boolean) => void) => {
     const currentScrollY = window.scrollY;
-    setShowDepartmentAddOnsBreakdown((prev) => !prev);
+    setter((prev) => !prev);
     requestAnimationFrame(() => {
       if (Math.abs(window.scrollY - currentScrollY) > 1) {
         window.scrollTo({ top: currentScrollY, left: 0, behavior: "auto" });
       }
     });
   }, []);
+  const toggleDepartmentAllowanceBreakdown = useCallback(
+    () => toggleWithScrollLock(setShowDepartmentAllowanceBreakdown),
+    [toggleWithScrollLock]
+  );
+  const toggleDepartmentAddOnsBreakdown = useCallback(
+    () => toggleWithScrollLock(setShowDepartmentAddOnsBreakdown),
+    [toggleWithScrollLock]
+  );
+  const toggleDepartmentServiceBreakdown = useCallback(
+    () => toggleWithScrollLock(setShowDepartmentServiceBreakdown),
+    [toggleWithScrollLock]
+  );
+  const toggleDepartmentPaymentBreakdown = useCallback(
+    () => toggleWithScrollLock(setShowDepartmentPaymentBreakdown),
+    [toggleWithScrollLock]
+  );
 
   return (
     <section aria-labelledby="quote-title">

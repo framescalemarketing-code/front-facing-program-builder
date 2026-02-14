@@ -16,7 +16,7 @@ test("page hero keeps mobile-first responsive spacing", () => {
 test("calculator sticky footer keeps responsive button grid", () => {
   const source = read("src/features/program-calculator/ProgramCalculatorPage.tsx");
   assert.match(source, /grid grid-cols-1 gap-2 sm:grid-cols-2/);
-  assert.match(source, /text-3xl font-semibold tracking-tight text-foreground sm:text-4xl/);
+  assert.match(source, /text-2xl font-semibold tracking-tight text-foreground sm:text-4xl/);
 });
 
 test("quote preview preserves print styles and responsive top actions", () => {

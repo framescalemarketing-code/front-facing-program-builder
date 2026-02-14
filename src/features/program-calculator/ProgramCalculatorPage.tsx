@@ -24,7 +24,9 @@ import type {
   ServiceTier,
 } from "@/lib/programDraft";
 
-const SHOWROOM_ADDRESS = "6780 Miramar Rd, San Diego, CA 92121";
+const SHOWROOM_ADDRESS = import.meta.env.VITE_SHOWROOM_ADDRESS ?? "6780 Miramar Rd, San Diego, CA 92121";
+const ONSIGHT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL ?? "team@onsightoptics.com";
+const ONSIGHT_PHONE = import.meta.env.VITE_SUPPORT_PHONE ?? "619-402-1033";
 
 const EU_PACKAGE_ADD_ON_ITEMS: Array<{
   key: EUPackageAddOnKey;
@@ -487,34 +489,49 @@ const DepartmentAllowanceBreakdown = memo(function DepartmentAllowanceBreakdown(
   allowanceTotal,
 }: DepartmentAllowanceBreakdownProps) {
   return (
-    <div className="mt-3 overflow-x-auto">
+    <div className="mt-3">
       <div className="mb-2 text-sm font-semibold text-foreground">Department Allowance Breakdown</div>
-      <table className="min-w-[760px] sm:min-w-full text-xs text-muted-foreground">
-        <thead>
-          <tr className="text-left">
-            <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Allowance per Employee</th>
-            <th className="py-1 pl-2 text-right font-semibold text-foreground">Subtotal</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
-              <td className="py-1 px-2 text-right">{row.employeeCount}</td>
-              <td className="py-1 px-2 text-right">{formatMoney(row.allowancePerEmployee)}</td>
-              <td className="py-1 pl-2 text-right">{formatMoney(row.allowanceTotal)}</td>
+      <div className="space-y-2 md:hidden">
+        {rows.map((row) => (
+          <div key={row.id} className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
+            <div className="text-sm font-semibold text-foreground">{row.departmentName}</div>
+            <div className="mt-1">Employees (Total): <span className="font-medium text-foreground">{row.employeeCount}</span></div>
+            <div>Allowance per Employee: <span className="font-medium text-foreground">{formatMoney(row.allowancePerEmployee)}</span></div>
+            <div>Subtotal: <span className="font-medium text-foreground">{formatMoney(row.allowanceTotal)}</span></div>
+          </div>
+        ))}
+        <div className="rounded-md border border-border bg-background p-3 text-xs font-semibold text-foreground">
+          Totals: {employeesTotal} Employees (Total), {formatMoney(allowanceTotal)}
+        </div>
+      </div>
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full text-xs text-muted-foreground">
+          <thead>
+            <tr className="text-left">
+              <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
+              <th className="py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
+              <th className="py-1 px-2 text-right font-semibold text-foreground">Allowance per Employee</th>
+              <th className="py-1 pl-2 text-right font-semibold text-foreground">Subtotal</th>
             </tr>
-          ))}
-          <tr className="font-semibold text-foreground">
-            <td className="py-1 pr-2">Totals</td>
-            <td className="py-1 px-2 text-right">{employeesTotal}</td>
-            <td className="py-1 px-2 text-right"></td>
-            <td className="py-1 pl-2 text-right">{formatMoney(allowanceTotal)}</td>
-          </tr>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
+                <td className="py-1 px-2 text-right">{row.employeeCount}</td>
+                <td className="py-1 px-2 text-right">{formatMoney(row.allowancePerEmployee)}</td>
+                <td className="py-1 pl-2 text-right">{formatMoney(row.allowanceTotal)}</td>
+              </tr>
+            ))}
+            <tr className="font-semibold text-foreground">
+              <td className="py-1 pr-2">Totals</td>
+              <td className="py-1 px-2 text-right">{employeesTotal}</td>
+              <td className="py-1 px-2 text-right"></td>
+              <td className="py-1 pl-2 text-right">{formatMoney(allowanceTotal)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 });
@@ -525,26 +542,37 @@ const DepartmentAddOnsBreakdown = memo(function DepartmentAddOnsBreakdown({
   rows: EstimateDepartmentLine[];
 }) {
   return (
-    <div className="mt-3 overflow-x-auto">
+    <div className="mt-3">
       <div className="mb-2 text-sm font-semibold text-foreground">Department Add-Ons Breakdown</div>
-      <table className="min-w-[760px] sm:min-w-full text-xs text-muted-foreground">
-        <thead>
-          <tr className="text-left">
-            <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
-            <th className="py-1 pl-2 font-semibold text-foreground">Selected Add-Ons</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
-              <td className="py-1 px-2 text-right">{row.employeeCount}</td>
-              <td className="py-1 pl-2">{row.selectedAddOnsLabels.length ? row.selectedAddOnsLabels.join(", ") : "None"}</td>
+      <div className="space-y-2 md:hidden">
+        {rows.map((row) => (
+          <div key={row.id} className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
+            <div className="text-sm font-semibold text-foreground">{row.departmentName}</div>
+            <div className="mt-1">Employees (Total): <span className="font-medium text-foreground">{row.employeeCount}</span></div>
+            <div>Selected Add-Ons: <span className="font-medium text-foreground">{row.selectedAddOnsLabels.length ? row.selectedAddOnsLabels.join(", ") : "None"}</span></div>
+          </div>
+        ))}
+      </div>
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full text-xs text-muted-foreground">
+          <thead>
+            <tr className="text-left">
+              <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
+              <th className="py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
+              <th className="py-1 pl-2 font-semibold text-foreground">Selected Add-Ons</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
+                <td className="py-1 px-2 text-right">{row.employeeCount}</td>
+                <td className="py-1 pl-2">{row.selectedAddOnsLabels.length ? row.selectedAddOnsLabels.join(", ") : "None"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 });
@@ -559,34 +587,49 @@ const DepartmentServiceBreakdown = memo(function DepartmentServiceBreakdown({
   serviceTotal: number;
 }) {
   return (
-    <div className="mt-3 overflow-x-auto">
+    <div className="mt-3">
       <div className="mb-2 text-sm font-semibold text-foreground">Service Tier Breakdown by Department</div>
-      <table className="min-w-[760px] sm:min-w-full text-xs text-muted-foreground">
-        <thead>
-          <tr className="text-left">
-            <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Service per Employee</th>
-            <th className="py-1 pl-2 text-right font-semibold text-foreground">Subtotal</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
-              <td className="py-1 px-2 text-right">{row.employeeCount}</td>
-              <td className="py-1 px-2 text-right">{formatMoney(row.servicePerEmployee)}</td>
-              <td className="py-1 pl-2 text-right">{formatMoney(row.serviceSubtotal)}</td>
+      <div className="space-y-2 md:hidden">
+        {rows.map((row) => (
+          <div key={row.id} className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
+            <div className="text-sm font-semibold text-foreground">{row.departmentName}</div>
+            <div className="mt-1">Employees (Total): <span className="font-medium text-foreground">{row.employeeCount}</span></div>
+            <div>Service per Employee: <span className="font-medium text-foreground">{formatMoney(row.servicePerEmployee)}</span></div>
+            <div>Subtotal: <span className="font-medium text-foreground">{formatMoney(row.serviceSubtotal)}</span></div>
+          </div>
+        ))}
+        <div className="rounded-md border border-border bg-background p-3 text-xs font-semibold text-foreground">
+          Totals: {employeesTotal} Employees (Total), {formatMoney(serviceTotal)}
+        </div>
+      </div>
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full text-xs text-muted-foreground">
+          <thead>
+            <tr className="text-left">
+              <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
+              <th className="py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
+              <th className="py-1 px-2 text-right font-semibold text-foreground">Service per Employee</th>
+              <th className="py-1 pl-2 text-right font-semibold text-foreground">Subtotal</th>
             </tr>
-          ))}
-          <tr className="font-semibold text-foreground">
-            <td className="py-1 pr-2">Totals</td>
-            <td className="py-1 px-2 text-right">{employeesTotal}</td>
-            <td className="py-1 px-2 text-right"></td>
-            <td className="py-1 pl-2 text-right">{formatMoney(serviceTotal)}</td>
-          </tr>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
+                <td className="py-1 px-2 text-right">{row.employeeCount}</td>
+                <td className="py-1 px-2 text-right">{formatMoney(row.servicePerEmployee)}</td>
+                <td className="py-1 pl-2 text-right">{formatMoney(row.serviceSubtotal)}</td>
+              </tr>
+            ))}
+            <tr className="font-semibold text-foreground">
+              <td className="py-1 pr-2">Totals</td>
+              <td className="py-1 px-2 text-right">{employeesTotal}</td>
+              <td className="py-1 px-2 text-right"></td>
+              <td className="py-1 pl-2 text-right">{formatMoney(serviceTotal)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 });
@@ -612,39 +655,56 @@ const DepartmentDiscountBreakdown = memo(function DepartmentDiscountBreakdown({
   const discountTotalMax = rows.reduce((sum, row) => sum + row.discountTotalMax, 0);
 
   return (
-    <div className="mt-3 overflow-x-auto">
-      <table className="min-w-[760px] sm:min-w-full text-xs text-muted-foreground">
-        <thead>
-          <tr className="text-left">
-            <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Invoice per Employee</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Discount Percent</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Max Discount per Invoice</th>
-            <th className="py-1 pl-2 text-right font-semibold text-foreground">Max Discount Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
-              <td className="py-1 px-2 text-right">{row.employeeCount}</td>
-              <td className="py-1 px-2 text-right">{formatMoney(row.invoicePerEmployee)}</td>
-              <td className="py-1 px-2 text-right">{`${(row.discountPct * 100).toFixed(0)}%`}</td>
-              <td className="py-1 px-2 text-right">{formatMoney(row.discountPerEmployeeMax)}</td>
-              <td className="py-1 pl-2 text-right">{formatMoney(row.discountTotalMax)}</td>
+    <div className="mt-3">
+      <div className="space-y-2 md:hidden">
+        {rows.map((row) => (
+          <div key={row.id} className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
+            <div className="text-sm font-semibold text-foreground">{row.departmentName}</div>
+            <div className="mt-1">Employees (Total): <span className="font-medium text-foreground">{row.employeeCount}</span></div>
+            <div>Invoice per Employee: <span className="font-medium text-foreground">{formatMoney(row.invoicePerEmployee)}</span></div>
+            <div>Discount Percent: <span className="font-medium text-foreground">{`${(row.discountPct * 100).toFixed(0)}%`}</span></div>
+            <div>Max Discount per Invoice: <span className="font-medium text-foreground">{formatMoney(row.discountPerEmployeeMax)}</span></div>
+            <div>Max Discount Total: <span className="font-medium text-foreground">{formatMoney(row.discountTotalMax)}</span></div>
+          </div>
+        ))}
+        <div className="rounded-md border border-border bg-background p-3 text-xs font-semibold text-foreground">
+          Totals: {employeesTotal} Employees (Total), {formatMoney(discountTotalMax)}
+        </div>
+      </div>
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full text-xs text-muted-foreground">
+          <thead>
+            <tr className="text-left">
+              <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
+              <th className="py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
+              <th className="py-1 px-2 text-right font-semibold text-foreground">Invoice per Employee</th>
+              <th className="py-1 px-2 text-right font-semibold text-foreground">Discount Percent</th>
+              <th className="py-1 px-2 text-right font-semibold text-foreground">Max Discount per Invoice</th>
+              <th className="py-1 pl-2 text-right font-semibold text-foreground">Max Discount Total</th>
             </tr>
-          ))}
-          <tr className="font-semibold text-foreground">
-            <td className="py-1 pr-2">Totals</td>
-            <td className="py-1 px-2 text-right">{employeesTotal}</td>
-            <td className="py-1 px-2 text-right"></td>
-            <td className="py-1 px-2 text-right"></td>
-            <td className="py-1 px-2 text-right"></td>
-            <td className="py-1 pl-2 text-right">{formatMoney(discountTotalMax)}</td>
-          </tr>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
+                <td className="py-1 px-2 text-right">{row.employeeCount}</td>
+                <td className="py-1 px-2 text-right">{formatMoney(row.invoicePerEmployee)}</td>
+                <td className="py-1 px-2 text-right">{`${(row.discountPct * 100).toFixed(0)}%`}</td>
+                <td className="py-1 px-2 text-right">{formatMoney(row.discountPerEmployeeMax)}</td>
+                <td className="py-1 pl-2 text-right">{formatMoney(row.discountTotalMax)}</td>
+              </tr>
+            ))}
+            <tr className="font-semibold text-foreground">
+              <td className="py-1 pr-2">Totals</td>
+              <td className="py-1 px-2 text-right">{employeesTotal}</td>
+              <td className="py-1 px-2 text-right"></td>
+              <td className="py-1 px-2 text-right"></td>
+              <td className="py-1 px-2 text-right"></td>
+              <td className="py-1 pl-2 text-right">{formatMoney(discountTotalMax)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 });
@@ -674,47 +734,65 @@ const DepartmentInvoiceBreakdown = memo(function DepartmentInvoiceBreakdown({
   const financeFeeTotal = rows.reduce((sum, row) => sum + row.financeFeeTotal, 0);
 
   return (
-    <div className="mt-3 overflow-x-auto">
-      <table className="min-w-[760px] sm:min-w-full text-xs text-muted-foreground">
-        <thead>
-          <tr className="text-left">
-            <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Invoice per Employee</th>
-            {showFees ? (
-              <th className="py-1 px-2 text-right font-semibold text-foreground">Finance Fee per Invoice</th>
-            ) : null}
-            <th className="py-1 pl-2 text-right font-semibold text-foreground">Invoice Total</th>
-            {showFees ? (
-              <th className="py-1 pl-2 text-right font-semibold text-foreground">Finance Fee Total</th>
-            ) : null}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
-              <td className="py-1 px-2 text-right">{row.employeeCount}</td>
-              <td className="py-1 px-2 text-right">{formatMoney(row.invoicePerEmployee)}</td>
+    <div className="mt-3">
+      <div className="space-y-2 md:hidden">
+        {rows.map((row) => (
+          <div key={row.id} className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
+            <div className="text-sm font-semibold text-foreground">{row.departmentName}</div>
+            <div className="mt-1">Employees (Total): <span className="font-medium text-foreground">{row.employeeCount}</span></div>
+            <div>Invoice per Employee: <span className="font-medium text-foreground">{formatMoney(row.invoicePerEmployee)}</span></div>
+            {showFees ? <div>Finance Fee per Invoice: <span className="font-medium text-foreground">{formatMoney(row.financeFeePerInvoice)}</span></div> : null}
+            <div>Invoice Total: <span className="font-medium text-foreground">{formatMoney(row.invoiceTotal)}</span></div>
+            {showFees ? <div>Finance Fee Total: <span className="font-medium text-foreground">{formatMoney(row.financeFeeTotal)}</span></div> : null}
+          </div>
+        ))}
+        <div className="rounded-md border border-border bg-background p-3 text-xs font-semibold text-foreground">
+          Totals: {employeesTotal} Employees (Total), {formatMoney(invoiceTotal)}
+          {showFees ? `, ${formatMoney(financeFeeTotal)} Finance Fee Total` : ""}
+        </div>
+      </div>
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full text-xs text-muted-foreground">
+          <thead>
+            <tr className="text-left">
+              <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
+              <th className="py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
+              <th className="py-1 px-2 text-right font-semibold text-foreground">Invoice per Employee</th>
               {showFees ? (
-                <td className="py-1 px-2 text-right">{formatMoney(row.financeFeePerInvoice)}</td>
+                <th className="py-1 px-2 text-right font-semibold text-foreground">Finance Fee per Invoice</th>
               ) : null}
-              <td className="py-1 pl-2 text-right">{formatMoney(row.invoiceTotal)}</td>
+              <th className="py-1 pl-2 text-right font-semibold text-foreground">Invoice Total</th>
               {showFees ? (
-                <td className="py-1 pl-2 text-right">{formatMoney(row.financeFeeTotal)}</td>
+                <th className="py-1 pl-2 text-right font-semibold text-foreground">Finance Fee Total</th>
               ) : null}
             </tr>
-          ))}
-          <tr className="font-semibold text-foreground">
-            <td className="py-1 pr-2">Totals</td>
-            <td className="py-1 px-2 text-right">{employeesTotal}</td>
-            <td className="py-1 px-2 text-right"></td>
-            {showFees ? <td className="py-1 px-2 text-right"></td> : null}
-            <td className="py-1 pl-2 text-right">{formatMoney(invoiceTotal)}</td>
-            {showFees ? <td className="py-1 pl-2 text-right">{formatMoney(financeFeeTotal)}</td> : null}
-          </tr>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
+                <td className="py-1 px-2 text-right">{row.employeeCount}</td>
+                <td className="py-1 px-2 text-right">{formatMoney(row.invoicePerEmployee)}</td>
+                {showFees ? (
+                  <td className="py-1 px-2 text-right">{formatMoney(row.financeFeePerInvoice)}</td>
+                ) : null}
+                <td className="py-1 pl-2 text-right">{formatMoney(row.invoiceTotal)}</td>
+                {showFees ? (
+                  <td className="py-1 pl-2 text-right">{formatMoney(row.financeFeeTotal)}</td>
+                ) : null}
+              </tr>
+            ))}
+            <tr className="font-semibold text-foreground">
+              <td className="py-1 pr-2">Totals</td>
+              <td className="py-1 px-2 text-right">{employeesTotal}</td>
+              <td className="py-1 px-2 text-right"></td>
+              {showFees ? <td className="py-1 px-2 text-right"></td> : null}
+              <td className="py-1 pl-2 text-right">{formatMoney(invoiceTotal)}</td>
+              {showFees ? <td className="py-1 pl-2 text-right">{formatMoney(financeFeeTotal)}</td> : null}
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 });
@@ -733,6 +811,18 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
   const [showDeptAddOnsBreakdown, setShowDeptAddOnsBreakdown] = useState(false);
   const [showServiceTierDeptBreakdown, setShowServiceTierDeptBreakdown] = useState(false);
   const [showDeptPaymentBreakdown, setShowDeptPaymentBreakdown] = useState(false);
+  const toggleBreakdownWithScrollLock = useCallback(
+    (setter: (fn: (prev: boolean) => boolean) => void) => {
+      const currentScrollY = window.scrollY;
+      setter((prev) => !prev);
+      requestAnimationFrame(() => {
+        if (Math.abs(window.scrollY - currentScrollY) > 1) {
+          window.scrollTo({ top: currentScrollY, left: 0, behavior: "auto" });
+        }
+      });
+    },
+    []
+  );
 
   const departmentDiscountBreakdown = useMemo(() => {
     return estimate.departmentBreakdown.map((row) => {
@@ -897,7 +987,7 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                   <button
                     type="button"
                     className="text-sm font-medium text-foreground underline underline-offset-4"
-                    onClick={() => setShowDeptBreakdown((prev) => !prev)}
+                    onClick={() => toggleBreakdownWithScrollLock(setShowDeptBreakdown)}
                   >
                     {showDeptBreakdown ? "Hide Department Allowance Breakdown" : "Show Department Allowance Breakdown"}
                   </button>
@@ -916,7 +1006,7 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                   <button
                     type="button"
                     className="text-sm font-medium text-foreground underline underline-offset-4"
-                    onClick={() => setShowDeptAddOnsBreakdown((prev) => !prev)}
+                    onClick={() => toggleBreakdownWithScrollLock(setShowDeptAddOnsBreakdown)}
                   >
                     {showDeptAddOnsBreakdown ? "Hide Department Add-Ons Breakdown" : "Show Department Add-Ons Breakdown"}
                   </button>
@@ -982,12 +1072,12 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                     <div>Contact an OSSO Program Specialist:</div>
                   </div>
                   <div className="mt-1">
-                    <a href="mailto:team@onsightoptics.com" className="underline">
-                      team@onsightoptics.com
+                    <a href={`mailto:${ONSIGHT_EMAIL}`} className="underline">
+                      {ONSIGHT_EMAIL}
                     </a>{" "}
                     <span className="px-1">|</span>
-                    <a href="tel:619-402-1033" className="underline">
-                      619-402-1033
+                    <a href={`tel:${ONSIGHT_PHONE}`} className="underline">
+                      {ONSIGHT_PHONE}
                     </a>
                   </div>
                 </details>
@@ -1013,7 +1103,7 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                   <button
                     type="button"
                     className="text-sm font-medium text-foreground underline underline-offset-4"
-                    onClick={() => setShowServiceTierDeptBreakdown((prev) => !prev)}
+                    onClick={() => toggleBreakdownWithScrollLock(setShowServiceTierDeptBreakdown)}
                   >
                     {showServiceTierDeptBreakdown
                       ? "Hide Department Service Tier Breakdown"
@@ -1213,7 +1303,7 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                       <button
                         type="button"
                         className="text-sm font-medium text-foreground underline underline-offset-4"
-                        onClick={() => setShowDeptPaymentBreakdown((prev) => !prev)}
+                        onClick={() => toggleBreakdownWithScrollLock(setShowDeptPaymentBreakdown)}
                       >
                         {showDeptPaymentBreakdown ? "Hide Department Payment Breakdown" : departmentPaymentBreakdownLabel}
                       </button>
@@ -1441,7 +1531,8 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
   }
 
   function onChangeLocationAdditionalVisits(idx: number, rawValue: string) {
-    const nextVisits = clampInt(Number(rawValue));
+    const normalizedRaw = rawValue.replace(/[^\d]/g, "");
+    const nextVisits = normalizedRaw === "" ? 0 : clampInt(Number(normalizedRaw));
     setCalculator((prev) => ({
       ...prev,
       addOns: { ...prev.addOns, extraSiteVisits: 0 },
@@ -1542,8 +1633,8 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
     setCalculator((prev) => ({
       ...prev,
       eligibleEmployees: 1,
-      selectedEU: "Compliance",
-      selectedTier: "Essential",
+      selectedEU: "",
+      selectedTier: "",
       departmentAllowances: [],
       departmentConfigs: isDepartmentBased ? [makeDepartmentConfigRow(), makeDepartmentConfigRow()] : [],
       addOns: { ...prev.addOns, extraSiteVisits: 0 },
@@ -1721,7 +1812,7 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
       return;
     }
 
-    updateLocation(idx, { status: "routing", statusMessage: "Calculating driving distanceâ€¦" });
+    updateLocation(idx, { status: "routing", statusMessage: "Calculating driving distance..." });
 
     const timers = debounceTimersRef.current;
     if (timers[idx]) window.clearTimeout(timers[idx]);
@@ -2688,10 +2779,10 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
                           <label className="space-y-2">
                             <div className="text-sm font-medium text-foreground">Additional Onsite Visits</div>
                             <input
-                              type="number"
-                              min={0}
-                              step={1}
-                              value={clampInt(loc.additionalOnsiteVisits)}
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={clampInt(loc.additionalOnsiteVisits) === 0 ? "" : String(clampInt(loc.additionalOnsiteVisits))}
                               onChange={(e) => onChangeLocationAdditionalVisits(idx, e.target.value)}
                               className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background focus:border-transparent"
                               placeholder="0"
