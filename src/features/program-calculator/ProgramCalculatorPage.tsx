@@ -359,6 +359,7 @@ type EstimateDepartmentLine = {
 
 type EstimateModel = {
   employees: number;
+  locationCount: number;
   onboardingBase: number;
   additionalSitesCount: number;
   onboardingAdditionalSitesFeePerSite: number;
@@ -1053,11 +1054,17 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                   <div>
                     Base Onboarding Fee: <span className="font-medium text-foreground">{formatMoney(estimate.onboardingBase)}</span>
                   </div>
+                  <div>
+                    Total Locations: <span className="font-medium text-foreground">{estimate.locationCount}</span>
+                  </div>
                 </div>
               ) : (
                 <div className="mt-3 space-y-1 text-sm text-muted-foreground">
                   <div>
                     Base Onboarding Fee: <span className="font-medium text-foreground">{formatMoney(estimate.onboardingBase)}</span>
+                  </div>
+                  <div>
+                    Total Locations: <span className="font-medium text-foreground">{estimate.locationCount}</span>
                   </div>
                   <div>Additional Locations Count: {estimate.additionalSitesCount}</div>
                   <div>
@@ -1755,8 +1762,8 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
 
     const includedVisits = safeSelectedTier ? PRICING.standardVisitsByTier[safeSelectedTier] : 0;
 
-    const locationCountForVisits = Math.max(1, deferredLocations.length);
-    const includedVisitsAcrossLocations = includedVisits * locationCountForVisits;
+    const locationCount = Math.max(1, deferredLocations.length);
+    const includedVisitsAcrossLocations = includedVisits * locationCount;
     const legacyExtraVisits = deferredAddOns.extraSiteVisits === "" ? 0 : clampInt(deferredAddOns.extraSiteVisits);
     const locationExtraVisits = deferredLocations.map((loc) => clampInt(loc.additionalOnsiteVisits));
     const hasLocationVisitOverrides = locationExtraVisits.some((v) => v > 0);
@@ -1863,6 +1870,7 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
 
     return {
       employees,
+      locationCount,
 
       onboardingBase,
       additionalSitesCount,

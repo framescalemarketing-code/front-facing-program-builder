@@ -1377,6 +1377,9 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
         <div>
           Base Onboarding Fee: <span className="font-medium text-foreground">{formatMoney(estimate.onboardingBase)}</span>
         </div>
+        <div>
+          Total Locations: <span className="font-medium text-foreground">{estimate.locationCount}</span>
+        </div>
         {estimate.additionalSitesCount > 0 ? (
           <>
             <div>
