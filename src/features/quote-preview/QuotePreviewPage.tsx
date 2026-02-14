@@ -1,7 +1,7 @@
 ﻿// components/P02c_QuotePreview.tsx
 "use client";
 
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import type { NavigateFn, NavSource, PageId } from "@/app/routerTypes";
 import { SectionWrap } from "@/components/layout/SectionWrap";
 import { primaryButtonClass, secondaryButtonClass } from "@/components/ui/buttonStyles";
@@ -9,6 +9,7 @@ import { LiveGuidance } from "@/components/LiveGuidance";
 import { useProgramDraft } from "@/hooks/useProgramDraft";
 import { calculateCompanywideAllowance, includeEuAddOnsInAllowance } from "@/lib/allowanceMath";
 import { validateContact } from "@/lib/contactValidation";
+import { maxCompatibleCoveredEuAddOnsAmount } from "@/lib/coveredEuAddOnMaximum";
 import { PRICING } from "@/lib/pricing";
 import { buildQuotePdfBase64 } from "@/lib/quotePdf";
 import { defaultDraft } from "@/lib/programDraft";
@@ -81,11 +82,6 @@ function formatMoney(amount: number) {
     currency: "USD",
     maximumFractionDigits: 0,
   }).format(amount);
-}
-
-function formatAddOnLabelWithAmount(label: string) {
-  const match = EU_PACKAGE_ADD_ON_ITEMS.find((item) => item.label === label);
-  return match ? `${match.label} ${formatMoney(match.amount)}` : label;
 }
 
 function formatMoneyCents(amount: number) {
@@ -218,29 +214,35 @@ const DepartmentAllowanceBreakdownTable = memo(function DepartmentAllowanceBreak
   return (
     <div className="mt-3 overflow-x-auto">
       <div className="mb-2 text-sm font-semibold text-foreground">Department Allowance Breakdown</div>
-      <table className="min-w-full text-xs text-muted-foreground">
+      <table className="breakdown-table min-w-[760px] sm:min-w-full text-xs text-muted-foreground">
+        <colgroup>
+          <col className="breakdown-col-dept" />
+          <col className="breakdown-col-employees" />
+          <col className="breakdown-col-value" />
+          <col className="breakdown-col-total" />
+        </colgroup>
         <thead>
           <tr className="text-left">
-            <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Allowance per Employee</th>
-            <th className="py-1 pl-2 text-right font-semibold text-foreground">Subtotal</th>
+            <th className="breakdown-col-dept py-1 pr-2 font-semibold text-foreground">Department</th>
+            <th className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
+            <th className="breakdown-col-value py-1 px-2 text-right font-semibold text-foreground">Allowance per Employee</th>
+            <th className="breakdown-col-total py-1 pl-2 text-right font-semibold text-foreground">Subtotal</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.id}>
-              <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
-              <td className="py-1 px-2 text-right">{row.employeeCount}</td>
-              <td className="py-1 px-2 text-right">{formatMoney(row.allowancePerEmployee)}</td>
-              <td className="py-1 pl-2 text-right">{formatMoney(row.allowanceSubtotal)}</td>
+              <td className="breakdown-col-dept py-1 pr-2 text-foreground">{row.departmentName}</td>
+              <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{row.employeeCount}</td>
+              <td className="breakdown-col-value py-1 px-2 text-right">{formatMoney(row.allowancePerEmployee)}</td>
+              <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(row.allowanceSubtotal)}</td>
             </tr>
           ))}
           <tr className="font-semibold text-foreground">
-            <td className="py-1 pr-2">Totals</td>
-            <td className="py-1 px-2 text-right">{employeesTotal}</td>
-            <td className="py-1 px-2 text-right"></td>
-            <td className="py-1 pl-2 text-right">{formatMoney(allowanceTotal)}</td>
+            <td className="breakdown-col-dept py-1 pr-2">Totals</td>
+            <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{employeesTotal}</td>
+            <td className="breakdown-col-value py-1 px-2 text-right"></td>
+            <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(allowanceTotal)}</td>
           </tr>
         </tbody>
       </table>
@@ -250,28 +252,88 @@ const DepartmentAllowanceBreakdownTable = memo(function DepartmentAllowanceBreak
 
 const DepartmentAddOnsBreakdownTable = memo(function DepartmentAddOnsBreakdownTable({
   rows,
+  alignWithService = false,
 }: {
   rows: DepartmentAllowanceBreakdownLine[];
+  alignWithService?: boolean;
 }) {
   return (
     <div className="mt-3 overflow-x-auto">
       <div className="mb-2 text-sm font-semibold text-foreground">Department Add-Ons Breakdown</div>
-      <table className="min-w-full text-xs text-muted-foreground">
+      <table
+        className={`breakdown-table min-w-[760px] sm:min-w-full text-sm text-muted-foreground ${alignWithService ? "table-fixed" : ""}`}
+        style={alignWithService ? { tableLayout: "fixed" } : undefined}
+      >
+        <colgroup>
+          <col className="breakdown-col-dept" />
+          <col className="breakdown-col-employees" />
+          <col className="breakdown-col-addons" />
+        </colgroup>
         <thead>
           <tr className="text-left">
-            <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees</th>
-            <th className="py-1 pl-2 font-semibold text-foreground">Selected Add-Ons</th>
+            <th className="breakdown-col-dept py-1.5 pr-3 font-semibold text-foreground">Department</th>
+            <th className="breakdown-col-employees breakdown-col-num py-1.5 px-4 text-right font-semibold text-foreground">Employees (Total)</th>
+            <th className="breakdown-col-addons py-1.5 pl-4 font-semibold text-foreground">Selected Add-Ons</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.id}>
-              <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
-              <td className="py-1 px-2 text-right">{row.employeeCount}</td>
-              <td className="py-1 pl-2">{row.selectedAddOnsLabels.length ? row.selectedAddOnsLabels.join(", ") : "None"}</td>
+              <td className="breakdown-col-dept py-1.5 pr-3 align-top text-foreground">{row.departmentName}</td>
+              <td className="breakdown-col-employees breakdown-col-num py-1.5 px-4 text-right align-top">{row.employeeCount}</td>
+              <td className="breakdown-col-addons py-1.5 pl-4 align-top">{row.selectedAddOnsLabels.length ? row.selectedAddOnsLabels.join(", ") : "None"}</td>
             </tr>
           ))}
+        </tbody>
+      </table>
+    </div>
+  );
+});
+
+const DepartmentEuBreakdownTable = memo(function DepartmentEuBreakdownTable({
+  rows,
+  employeesTotal,
+  allowanceTotal,
+}: DepartmentAllowanceBreakdownTableProps) {
+  return (
+    <div className="mt-3 overflow-x-auto">
+      <div className="mb-2 text-sm font-semibold text-foreground">Department EU Breakdown</div>
+      <table className="breakdown-table department-eu-breakdown-table min-w-[980px] sm:min-w-full table-fixed text-sm text-muted-foreground">
+        <colgroup>
+          <col className="breakdown-col-dept" />
+          <col className="breakdown-col-employees" />
+          <col className="breakdown-col-addons" />
+          <col className="breakdown-col-value" />
+          <col className="breakdown-col-total" />
+        </colgroup>
+        <thead>
+          <tr className="text-left">
+            <th className="breakdown-col-dept py-2 pr-4 font-semibold text-foreground">Department</th>
+            <th className="breakdown-col-employees breakdown-col-num department-eu-employees py-2 px-4 text-right font-semibold text-foreground">Employees (Total)</th>
+            <th className="breakdown-col-addons department-eu-addons py-2 pl-6 font-semibold text-foreground">Selected Add-Ons</th>
+            <th className="breakdown-col-value py-2 px-5 text-right font-semibold text-foreground">Allowance per Employee</th>
+            <th className="breakdown-col-total py-2 pl-5 text-right font-semibold text-foreground">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.id}>
+              <td className="breakdown-col-dept py-2 pr-4 align-top text-foreground">{row.departmentName}</td>
+              <td className="breakdown-col-employees breakdown-col-num department-eu-employees py-2 px-4 text-right align-top">{row.employeeCount}</td>
+              <td className="breakdown-col-addons department-eu-addons py-2 pl-6 align-top leading-relaxed break-words">
+                {row.selectedAddOnsLabels.length ? row.selectedAddOnsLabels.join(", ") : "None"}
+              </td>
+              <td className="breakdown-col-value py-2 px-5 text-right align-top">{formatMoney(row.allowancePerEmployee)}</td>
+              <td className="breakdown-col-total py-2 pl-5 text-right align-top">{formatMoney(row.allowanceSubtotal)}</td>
+            </tr>
+          ))}
+          <tr className="font-semibold text-foreground">
+            <td className="breakdown-col-dept py-2 pr-4">Totals</td>
+            <td className="breakdown-col-employees breakdown-col-num department-eu-employees py-2 px-4 text-right">{employeesTotal}</td>
+            <td className="breakdown-col-addons department-eu-addons py-2 pl-6"></td>
+            <td className="breakdown-col-value py-2 px-5 text-right"></td>
+            <td className="breakdown-col-total py-2 pl-5 text-right">{formatMoney(allowanceTotal)}</td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -282,37 +344,56 @@ const DepartmentServiceBreakdownTable = memo(function DepartmentServiceBreakdown
   rows,
   employeesTotal,
   serviceTotal,
+  alignWithEuCombined = false,
+  alignWithAddOnsOnly = false,
 }: {
   rows: DepartmentServiceBreakdownLine[];
   employeesTotal: number;
   serviceTotal: number;
+  alignWithEuCombined?: boolean;
+  alignWithAddOnsOnly?: boolean;
 }) {
+  const useFixedAlignment = alignWithEuCombined || alignWithAddOnsOnly;
+  const includeAddOnsSpacerColumn = alignWithEuCombined || alignWithAddOnsOnly;
   return (
     <div className="mt-3 overflow-x-auto">
       <div className="mb-2 text-sm font-semibold text-foreground">Service Tier Breakdown by Department</div>
-      <table className="min-w-full text-xs text-muted-foreground">
+      <table
+        className={`breakdown-table min-w-[760px] sm:min-w-full text-xs text-muted-foreground ${useFixedAlignment ? "table-fixed" : ""}`}
+        style={useFixedAlignment ? { tableLayout: "fixed" } : undefined}
+      >
+        <colgroup>
+          <col className="breakdown-col-dept" />
+          <col className="breakdown-col-employees" />
+          {includeAddOnsSpacerColumn ? <col className="breakdown-col-addons" /> : null}
+          <col className="breakdown-col-value" />
+          <col className="breakdown-col-total" />
+        </colgroup>
         <thead>
           <tr className="text-left">
-            <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Service per Employee</th>
-            <th className="py-1 pl-2 text-right font-semibold text-foreground">Subtotal</th>
+            <th className="breakdown-col-dept py-1 pr-2 font-semibold text-foreground">Department</th>
+            <th className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
+            {includeAddOnsSpacerColumn ? <th className="breakdown-col-addons py-1 pl-2 font-semibold text-foreground"></th> : null}
+            <th className="breakdown-col-value py-1 px-2 text-right font-semibold text-foreground">Service per Employee</th>
+            <th className="breakdown-col-total py-1 pl-2 text-right font-semibold text-foreground">Subtotal</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.id}>
-              <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
-              <td className="py-1 px-2 text-right">{row.employeeCount}</td>
-              <td className="py-1 px-2 text-right">{formatMoney(row.servicePerEmployee)}</td>
-              <td className="py-1 pl-2 text-right">{formatMoney(row.serviceSubtotal)}</td>
+              <td className="breakdown-col-dept py-1 pr-2 text-foreground">{row.departmentName}</td>
+              <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{row.employeeCount}</td>
+              {includeAddOnsSpacerColumn ? <td className="breakdown-col-addons py-1 pl-2"></td> : null}
+              <td className="breakdown-col-value py-1 px-2 text-right">{formatMoney(row.servicePerEmployee)}</td>
+              <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(row.serviceSubtotal)}</td>
             </tr>
           ))}
           <tr className="font-semibold text-foreground">
-            <td className="py-1 pr-2">Totals</td>
-            <td className="py-1 px-2 text-right">{employeesTotal}</td>
-            <td className="py-1 px-2 text-right"></td>
-            <td className="py-1 pl-2 text-right">{formatMoney(serviceTotal)}</td>
+            <td className="breakdown-col-dept py-1 pr-2">Totals</td>
+            <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{employeesTotal}</td>
+            {includeAddOnsSpacerColumn ? <td className="breakdown-col-addons py-1 pl-2"></td> : null}
+            <td className="breakdown-col-value py-1 px-2 text-right"></td>
+            <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(serviceTotal)}</td>
           </tr>
         </tbody>
       </table>
@@ -340,35 +421,35 @@ const DepartmentDiscountBreakdownTable = memo(function DepartmentDiscountBreakdo
 
   return (
     <div className="mt-3 overflow-x-auto">
-      <table className="min-w-full text-xs text-muted-foreground">
+      <table className="breakdown-table min-w-[980px] sm:min-w-full text-xs text-muted-foreground">
         <thead>
           <tr className="text-left">
-            <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Invoice per Employee</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Discount Percent</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Max Discount per Invoice</th>
-            <th className="py-1 pl-2 text-right font-semibold text-foreground">Max Discount Total</th>
+            <th className="breakdown-col-dept py-1 pr-2 font-semibold text-foreground">Department</th>
+            <th className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
+            <th className="breakdown-col-value py-1 px-2 text-right font-semibold text-foreground">Invoice per Employee</th>
+            <th className="breakdown-col-percent py-1 px-2 text-right font-semibold text-foreground">Discount Percent</th>
+            <th className="breakdown-col-value py-1 px-2 text-right font-semibold text-foreground">Max Discount per Invoice</th>
+            <th className="breakdown-col-total py-1 pl-2 text-right font-semibold text-foreground">Max Discount Total</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.id}>
-              <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
-              <td className="py-1 px-2 text-right">{row.employeeCount}</td>
-              <td className="py-1 px-2 text-right">{formatMoney(row.invoicePerEmployee)}</td>
-              <td className="py-1 px-2 text-right">{`${(row.discountPct * 100).toFixed(0)}%`}</td>
-              <td className="py-1 px-2 text-right">{formatMoney(row.discountPerEmployeeMax)}</td>
-              <td className="py-1 pl-2 text-right">{formatMoney(row.discountTotalMax)}</td>
+              <td className="breakdown-col-dept py-1 pr-2 text-foreground">{row.departmentName}</td>
+              <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{row.employeeCount}</td>
+              <td className="breakdown-col-value py-1 px-2 text-right">{formatMoney(row.invoicePerEmployee)}</td>
+              <td className="breakdown-col-percent py-1 px-2 text-right">{`${(row.discountPct * 100).toFixed(0)}%`}</td>
+              <td className="breakdown-col-value py-1 px-2 text-right">{formatMoney(row.discountPerEmployeeMax)}</td>
+              <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(row.discountTotalMax)}</td>
             </tr>
           ))}
           <tr className="font-semibold text-foreground">
-            <td className="py-1 pr-2">Totals</td>
-            <td className="py-1 px-2 text-right">{employeesTotal}</td>
-            <td className="py-1 px-2 text-right"></td>
-            <td className="py-1 px-2 text-right"></td>
-            <td className="py-1 px-2 text-right"></td>
-            <td className="py-1 pl-2 text-right">{formatMoney(discountTotalMax)}</td>
+            <td className="breakdown-col-dept py-1 pr-2">Totals</td>
+            <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{employeesTotal}</td>
+            <td className="breakdown-col-value py-1 px-2 text-right"></td>
+            <td className="breakdown-col-percent py-1 px-2 text-right"></td>
+            <td className="breakdown-col-value py-1 px-2 text-right"></td>
+            <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(discountTotalMax)}</td>
           </tr>
         </tbody>
       </table>
@@ -402,43 +483,43 @@ const DepartmentInvoiceBreakdownTable = memo(function DepartmentInvoiceBreakdown
 
   return (
     <div className="mt-3 overflow-x-auto">
-      <table className="min-w-full text-xs text-muted-foreground">
+      <table className="breakdown-table min-w-[980px] sm:min-w-full text-xs text-muted-foreground">
         <thead>
           <tr className="text-left">
-            <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Invoice per Employee</th>
+            <th className="breakdown-col-dept py-1 pr-2 font-semibold text-foreground">Department</th>
+            <th className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
+            <th className="breakdown-col-value py-1 px-2 text-right font-semibold text-foreground">Invoice per Employee</th>
             {showFees ? (
-              <th className="py-1 px-2 text-right font-semibold text-foreground">Finance Fee per Invoice</th>
+              <th className="breakdown-col-value py-1 px-2 text-right font-semibold text-foreground">Finance Fee per Invoice</th>
             ) : null}
-            <th className="py-1 pl-2 text-right font-semibold text-foreground">Invoice Total</th>
+            <th className="breakdown-col-total py-1 pl-2 text-right font-semibold text-foreground">Invoice Total</th>
             {showFees ? (
-              <th className="py-1 pl-2 text-right font-semibold text-foreground">Finance Fee Total</th>
+              <th className="breakdown-col-total py-1 pl-2 text-right font-semibold text-foreground">Finance Fee Total</th>
             ) : null}
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.id}>
-              <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
-              <td className="py-1 px-2 text-right">{row.employeeCount}</td>
-              <td className="py-1 px-2 text-right">{formatMoney(row.invoicePerEmployee)}</td>
+              <td className="breakdown-col-dept py-1 pr-2 text-foreground">{row.departmentName}</td>
+              <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{row.employeeCount}</td>
+              <td className="breakdown-col-value py-1 px-2 text-right">{formatMoney(row.invoicePerEmployee)}</td>
               {showFees ? (
-                <td className="py-1 px-2 text-right">{formatMoney(row.financeFeePerInvoice)}</td>
+                <td className="breakdown-col-value py-1 px-2 text-right">{formatMoney(row.financeFeePerInvoice)}</td>
               ) : null}
-              <td className="py-1 pl-2 text-right">{formatMoney(row.invoiceTotal)}</td>
+              <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(row.invoiceTotal)}</td>
               {showFees ? (
-                <td className="py-1 pl-2 text-right">{formatMoney(row.financeFeeTotal)}</td>
+                <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(row.financeFeeTotal)}</td>
               ) : null}
             </tr>
           ))}
           <tr className="font-semibold text-foreground">
-            <td className="py-1 pr-2">Totals</td>
-            <td className="py-1 px-2 text-right">{employeesTotal}</td>
-            <td className="py-1 px-2 text-right"></td>
-            {showFees ? <td className="py-1 px-2 text-right"></td> : null}
-            <td className="py-1 pl-2 text-right">{formatMoney(invoiceTotal)}</td>
-            {showFees ? <td className="py-1 pl-2 text-right">{formatMoney(financeFeeTotal)}</td> : null}
+            <td className="breakdown-col-dept py-1 pr-2">Totals</td>
+            <td className="breakdown-col-employees breakdown-col-num py-1 px-2 text-right">{employeesTotal}</td>
+            <td className="breakdown-col-value py-1 px-2 text-right"></td>
+            {showFees ? <td className="breakdown-col-value py-1 px-2 text-right"></td> : null}
+            <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(invoiceTotal)}</td>
+            {showFees ? <td className="breakdown-col-total py-1 pl-2 text-right">{formatMoney(financeFeeTotal)}</td> : null}
           </tr>
         </tbody>
       </table>
@@ -633,7 +714,7 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
     const coveredSelectedAddOnsLabels = coveredSelectedAddOns.map(
       (item) => `${item.label} ${formatMoney(item.amount)}`
     );
-    const coveredAllAddOnsPerEmployee = EU_PACKAGE_ADD_ON_ITEMS.reduce((sum, item) => sum + item.amount, 0);
+    const coveredAllAddOnsPerEmployee = maxCompatibleCoveredEuAddOnsAmount(EU_PACKAGE_ADD_ON_ITEMS);
     const coveredExampleFloorPerEmployee = safeSelectedEU === "Covered" ? euBaseAllowance : 0;
     const coveredExampleFloorTotal = coveredExampleFloorPerEmployee * employees;
     const coveredExampleCeilingPerEmployee =
@@ -900,14 +981,14 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
     setIsPrinting(true);
   }
 
-  const subtleCardClass = "rounded-md bg-secondary/30 p-4";
+  const subtleCardClass = "rounded-md bg-secondary/30 p-3 sm:p-4";
   const subtleCardPrintClass = "quote-print-card rounded-md bg-secondary/30";
   const cardTitleClass = `text-sm font-semibold text-foreground ${PRINT_KEEP_TOGETHER_CLASSES.sectionHeader}`;
-  const rowTextClass = "mt-2 grid gap-1 text-sm text-muted-foreground";
+  const rowTextClass = "mt-2 grid gap-1.5 text-sm leading-6 text-muted-foreground";
 
   const QuoteHeader = ({ tight }: { tight: boolean }) => (
     <div className={tight ? "quote-print-header" : "px-4 py-4 sm:px-6 sm:py-5"}>
-      <div className="flex items-start justify-between gap-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
         <div className="flex items-start gap-3">
           {brandLogoUrl ? (
             <img src={brandLogoUrl} alt="On-Sight Safety Optics" className="mt-0.5 h-9 w-auto" />
@@ -923,7 +1004,7 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
           </div>
         </div>
 
-        <div className="space-y-1 text-right">
+        <div className="space-y-1 text-left sm:text-right">
           <div className="text-sm font-semibold text-foreground">Showroom Reference</div>
           <div className="text-xs text-muted-foreground">{SHOWROOM_ADDRESS}</div>
 
@@ -1006,10 +1087,6 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
 
   const CompactSelectedOptionsCard = ({ print }: { print: boolean }) => {
     const containerClass = print ? subtleCardPrintClass : subtleCardClass;
-    const canShowDepartmentAddOnsBreakdown =
-      isDepartmentBased &&
-      estimate.departmentAllowanceBreakdown.length > 0 &&
-      hasDepartmentAddOnsBreakdown(estimate.departmentAllowanceBreakdown);
 
     return (
       <div className={containerClass}>
@@ -1037,20 +1114,6 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
             )}
           </div>
         </div>
-        {canShowDepartmentAddOnsBreakdown ? (
-          <div className={`${PRINT_KEEP_TOGETHER_CLASSES.breakdownBlock} mt-3`}>
-            <button
-              type="button"
-              onClick={() => setShowDepartmentAddOnsBreakdown((prev) => !prev)}
-              className="text-sm font-medium text-foreground underline underline-offset-4"
-            >
-              {showDepartmentAddOnsBreakdown ? "Hide Department Add-Ons Breakdown" : "Show Department Add-Ons Breakdown"}
-            </button>
-            {showDepartmentAddOnsBreakdown ? (
-              <DepartmentAddOnsBreakdownTable rows={estimate.departmentAllowanceBreakdown} />
-            ) : null}
-          </div>
-        ) : null}
       </div>
     );
   };
@@ -1180,6 +1243,20 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
 
   const ProgramInputsCard = ({ print }: { print: boolean }) => {
     const canShowDepartmentAllowanceBreakdown = isDepartmentBased && estimate.departmentAllowanceBreakdown.length > 0;
+    const canShowDepartmentAddOnsBreakdown =
+      isDepartmentBased &&
+      estimate.departmentAllowanceBreakdown.length > 0 &&
+      hasDepartmentAddOnsBreakdown(estimate.departmentAllowanceBreakdown);
+    const showPrintDepartmentEuBreakdown =
+      print &&
+      canShowDepartmentAllowanceBreakdown &&
+      canShowDepartmentAddOnsBreakdown &&
+      showDepartmentAllowanceBreakdown &&
+      showDepartmentAddOnsBreakdown;
+    const showPrintDepartmentAllowanceBreakdown =
+      print && canShowDepartmentAllowanceBreakdown && showDepartmentAllowanceBreakdown && !showPrintDepartmentEuBreakdown;
+    const showPrintDepartmentAddOnsBreakdown =
+      print && canShowDepartmentAddOnsBreakdown && showDepartmentAddOnsBreakdown && !showPrintDepartmentEuBreakdown;
     const departmentServiceBreakdown: DepartmentServiceBreakdownLine[] = estimate.departmentAllowanceBreakdown.map((row) => ({
       id: row.id,
       departmentName: row.departmentName,
@@ -1188,13 +1265,20 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
       serviceSubtotal: estimate.servicePerEmployee * row.employeeCount,
     }));
     const canShowDepartmentServiceBreakdown = isDepartmentBased && departmentServiceBreakdown.length > 0;
+    const showPrintDepartmentServiceBreakdown =
+      print && canShowDepartmentServiceBreakdown && showDepartmentServiceBreakdown;
+    const showPrintAddOnsServiceAlignmentMode =
+      print &&
+      showPrintDepartmentAddOnsBreakdown &&
+      !showPrintDepartmentAllowanceBreakdown &&
+      showPrintDepartmentServiceBreakdown;
 
     return (
       <div className={print ? subtleCardPrintClass : subtleCardClass}>
       <div className={cardTitleClass}>Program Inputs</div>
       <div className={rowTextClass}>
         <div>
-          {isDepartmentBased ? "Employees (Total)" : "Eligible Employees"}:{" "}
+          {"Employees (Total)"}:{" "}
           <span className="font-medium text-foreground">{estimate.employees}</span>
         </div>
         {isDepartmentBased ? (
@@ -1208,15 +1292,12 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
         <div>
           Service Tier: <span className="font-medium text-foreground">{estimate.selectedTier || "Not Selected"}</span>
         </div>
-        <div className="pt-2">
-          Locations: <span className="font-medium text-foreground">{estimate.locationCount}</span>
-        </div>
       </div>
       <div className="mt-4 rounded-md border border-border bg-background p-3">
         <div className="text-sm font-semibold text-foreground">{`EU Package: ${estimate.selectedEU || "Not Selected"}`}</div>
         <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
           <div>
-            {isDepartmentBased ? "Employees (Total)" : "Employees"}:{" "}
+            {"Employees (Total)"}:{" "}
             <span className="font-medium text-foreground">{estimate.employees}</span>
           </div>
           {!isDepartmentBased && estimate.selectedEU !== "Covered" ? (
@@ -1245,37 +1326,6 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
                 Available allowance per Employee:{" "}
                 <span className="font-medium text-foreground">{formatMoney(estimate.coveredExampleCeilingPerEmployee)}</span>
               </div>
-              <div className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                Different employees can choose different combinations of included options. Total covered value varies by selection.
-              </div>
-              {!isDepartmentBased ? (
-                <>
-                  <div className="mt-2 text-xs font-semibold text-foreground">Example combination:</div>
-                  <div className="text-xs leading-relaxed text-muted-foreground">
-                    Select options to simulate an employee selecting combinations.
-                  </div>
-                  <div className="text-xs leading-relaxed text-muted-foreground">
-                    Base allowance of{" "}
-                    <span className="font-medium text-foreground">{formatMoney(estimate.coveredExampleFloorPerEmployee)}</span>
-                    {estimate.coveredSelectedAddOnsLabels.length > 0 ? (
-                      <>
-                        {" "}
-                        +{" "}
-                        <span className="font-medium text-foreground">
-                          {estimate.coveredSelectedAddOnsLabels
-                            .map((label) => formatAddOnLabelWithAmount(label))
-                            .join(" + ")}
-                        </span>
-                      </>
-                    ) : null}{" "}
-                    = <span className="font-medium text-foreground">{formatMoney(estimate.coveredExampleCombinationPerEmployee)}</span>
-                  </div>
-                  <div className="text-xs leading-relaxed text-muted-foreground">
-                    Multiplied by employees for a subtotal:{" "}
-                    <span className="font-medium text-foreground">{formatMoney(estimate.coveredExampleCombinationTotal)}</span>
-                  </div>
-                </>
-              ) : null}
             </>
           ) : null}
         </div>
@@ -1297,9 +1347,62 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
             Allowance Total: <span className="font-medium text-foreground">{formatMoney(estimate.allowanceTotal)}</span>
           </div>
         )}
-        {estimate.selectedEU === "Covered" ? (
-          <details className="mt-2 text-xs text-muted-foreground">
-            <summary className="cursor-pointer text-foreground/80">Need clarification? Contact an OSSO Program Specialist.</summary>
+        {estimate.selectedEU === "Covered" && !isDepartmentBased ? (
+          <details
+            className="mt-2 text-xs text-muted-foreground"
+            open={showCoveredClarification}
+            onToggle={(event) => setShowCoveredClarification(event.currentTarget.open)}
+          >
+            <summary className="cursor-pointer text-foreground/80">Need clarification? See how Covered allowance works.</summary>
+            <div className="mt-2 space-y-2 leading-relaxed">
+              <div>
+                The Covered EU Package means employees have the base allowance of Complete and can choose{" "}
+                <span className="italic">any</span> combination of any included add-ons.
+              </div>
+              <div className="text-[11px] leading-relaxed">
+                *Disclaimer: Lens pairing and configuration logic still apply. Blue Light + Anti-Reflective cannot be combined
+                with standard Anti-Reflective, and Polarized Sun Glasses + Transitions should be selected as Transitions
+                Polarized.
+              </div>
+              <div>
+                <span className="font-medium text-foreground">Allowance Total</span> is the configured base coverage.
+              </div>
+              <div>
+                <span className="font-medium text-foreground">Allowance Total (Available)</span> reflects the full-coverage
+                package value when included add-ons are maximized within lens compatibility rules.
+              </div>
+              {isDepartmentBased ? (
+                <div>
+                  Department-based mode uses each department&apos;s configured allowance as the base. Use the Department
+                  Allowance Breakdown for each department&apos;s totals.
+                </div>
+              ) : (
+                <>
+                  <div className="font-semibold text-foreground">Example combination:</div>
+                  {estimate.coveredSelectedAddOnsLabels.length > 0 ? (
+                    <>
+                      <div>
+                        Base allowance of{" "}
+                        <span className="font-medium text-foreground">{formatMoney(estimate.coveredExampleFloorPerEmployee)}</span>{" "}
+                        +{" "}
+                        <span className="font-medium text-foreground">{estimate.coveredSelectedAddOnsLabels.join(" + ")}</span>{" "}
+                        ={" "}
+                        <span className="font-medium text-foreground">
+                          {formatMoney(estimate.coveredExampleCombinationPerEmployee)}
+                        </span>
+                      </div>
+                      <div>
+                        Multiplied by employees for a subtotal:{" "}
+                        <span className="font-medium text-foreground">{formatMoney(estimate.coveredExampleCombinationTotal)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div>Select at least one included EU add-on to see an example combination.</div>
+                  )}
+                </>
+              )}
+              <div>Contact an OSSO Program Specialist:</div>
+            </div>
             <div className="mt-1">
               <a href="mailto:team@onsightoptics.com" className="underline">
                 team@onsightoptics.com
@@ -1311,7 +1414,25 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
             </div>
           </details>
         ) : null}
-        {canShowDepartmentAllowanceBreakdown ? (
+        {showPrintDepartmentEuBreakdown ? (
+          <div className={`${PRINT_KEEP_TOGETHER_CLASSES.breakdownBlock} mt-3`}>
+            <DepartmentEuBreakdownTable
+              rows={estimate.departmentAllowanceBreakdown}
+              employeesTotal={estimate.employees}
+              allowanceTotal={estimate.allowanceTotal}
+            />
+          </div>
+        ) : null}
+        {showPrintDepartmentAllowanceBreakdown ? (
+          <div className={`${PRINT_KEEP_TOGETHER_CLASSES.breakdownBlock} mt-3`}>
+            <DepartmentAllowanceBreakdownTable
+              rows={estimate.departmentAllowanceBreakdown}
+              employeesTotal={estimate.employees}
+              allowanceTotal={estimate.allowanceTotal}
+            />
+          </div>
+        ) : null}
+        {!print && canShowDepartmentAllowanceBreakdown ? (
           <div className={`${PRINT_KEEP_TOGETHER_CLASSES.breakdownBlock} mt-3`}>
             <button
               type="button"
@@ -1329,13 +1450,79 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
             ) : null}
           </div>
         ) : null}
+        {showPrintDepartmentAddOnsBreakdown ? (
+          <div className={`${PRINT_KEEP_TOGETHER_CLASSES.breakdownBlock} mt-3`}>
+            <DepartmentAddOnsBreakdownTable
+              rows={estimate.departmentAllowanceBreakdown}
+              alignWithService={showPrintAddOnsServiceAlignmentMode}
+            />
+          </div>
+        ) : null}
+        {!print && canShowDepartmentAddOnsBreakdown ? (
+          <div className={`${PRINT_KEEP_TOGETHER_CLASSES.breakdownBlock} mt-3`}>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                toggleDepartmentAddOnsBreakdown();
+              }}
+              className="text-sm font-medium text-foreground underline underline-offset-4"
+            >
+              {showDepartmentAddOnsBreakdown ? "Hide Department Add-Ons Breakdown" : "Show Department Add-Ons Breakdown"}
+            </button>
+            {showDepartmentAddOnsBreakdown ? (
+              <DepartmentAddOnsBreakdownTable rows={estimate.departmentAllowanceBreakdown} />
+            ) : null}
+          </div>
+        ) : null}
+        {estimate.selectedEU === "Covered" && isDepartmentBased ? (
+          <details
+            className="mt-2 text-xs text-muted-foreground"
+            open={showCoveredClarification}
+            onToggle={(event) => setShowCoveredClarification(event.currentTarget.open)}
+          >
+            <summary className="cursor-pointer text-foreground/80">Need clarification? See how Covered allowance works.</summary>
+            <div className="mt-2 space-y-2 leading-relaxed">
+              <div>
+                The Covered EU Package means employees have the base allowance of Complete and can choose{" "}
+                <span className="italic">any</span> combination of any included add-ons.
+              </div>
+              <div className="text-[11px] leading-relaxed">
+                *Disclaimer: Lens pairing and configuration logic still apply. Blue Light + Anti-Reflective cannot be combined
+                with standard Anti-Reflective, and Polarized Sun Glasses + Transitions should be selected as Transitions
+                Polarized.
+              </div>
+              <div>
+                <span className="font-medium text-foreground">Allowance Total</span> is the configured base coverage.
+              </div>
+              <div>
+                <span className="font-medium text-foreground">Allowance Total (Available)</span> reflects the full-coverage
+                package value when included add-ons are maximized within lens compatibility rules.
+              </div>
+              <div>
+                Department-based mode uses each department&apos;s configured allowance as the base. Use the Department
+                Allowance Breakdown for each department&apos;s totals.
+              </div>
+              <div>Contact an OSSO Program Specialist:</div>
+            </div>
+            <div className="mt-1">
+              <a href="mailto:team@onsightoptics.com" className="underline">
+                team@onsightoptics.com
+              </a>{" "}
+              <span className="px-1">|</span>
+              <a href="tel:619-402-1033" className="underline">
+                619-402-1033
+              </a>
+            </div>
+          </details>
+        ) : null}
       </div>
 
       <div className="mt-4 rounded-md border border-border bg-background p-3">
         <div className="text-sm font-semibold text-foreground">{`Service Tier: ${estimate.selectedTier || "Not Selected"}`}</div>
         <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
           <div>
-            {isDepartmentBased ? "Employees (Total)" : "Employees"}:{" "}
+            {"Employees (Total)"}:{" "}
             <span className="font-medium text-foreground">{estimate.employees}</span>
           </div>
           <div>
@@ -1347,7 +1534,18 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
           Service Total: <span className="font-medium text-foreground">{formatMoney(estimate.serviceTotal)}</span>
         </div>
 
-        {canShowDepartmentServiceBreakdown ? (
+        {showPrintDepartmentServiceBreakdown ? (
+          <div className={`${PRINT_KEEP_TOGETHER_CLASSES.breakdownBlock} mt-3`}>
+              <DepartmentServiceBreakdownTable
+                rows={departmentServiceBreakdown}
+                employeesTotal={estimate.employees}
+                serviceTotal={estimate.serviceTotal}
+                alignWithEuCombined={showPrintDepartmentEuBreakdown}
+                alignWithAddOnsOnly={showPrintAddOnsServiceAlignmentMode}
+              />
+            </div>
+          ) : null}
+        {!print && canShowDepartmentServiceBreakdown ? (
           <div className={`${PRINT_KEEP_TOGETHER_CLASSES.breakdownBlock} mt-3`}>
             <button
               type="button"
@@ -1363,6 +1561,7 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
                 rows={departmentServiceBreakdown}
                 employeesTotal={estimate.employees}
                 serviceTotal={estimate.serviceTotal}
+                alignWithEuCombined={false}
               />
             ) : null}
           </div>
@@ -1378,24 +1577,20 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
       <div className={cardTitleClass}>Onboarding</div>
       <div className={rowTextClass}>
         <div>
-          Base Onboarding Fee: <span className="font-medium text-foreground">{formatMoney(estimate.onboardingBase)}</span>
+          Additional Locations: <span className="font-medium text-foreground">{estimate.additionalSitesCount}</span>
         </div>
         <div>
           Total Locations: <span className="font-medium text-foreground">{estimate.locationCount}</span>
         </div>
-        {estimate.additionalSitesCount > 0 ? (
-          <>
-            <div>
-              Additional Locations Count: <span className="font-medium text-foreground">{estimate.additionalSitesCount}</span>
-            </div>
-            <div>
-              Per Additional Location Fee:{" "}
-              <span className="font-medium text-foreground">{formatMoney(estimate.onboardingAdditionalSitesFeePerSite)}</span>
-            </div>
-          </>
-        ) : null}
+        <div>
+          Base Onboarding Setup: <span className="font-medium text-foreground">{formatMoney(estimate.onboardingBase)}</span>
+        </div>
+        <div>
+          Per Additional Location Setup:{" "}
+          <span className="font-medium text-foreground">{formatMoney(estimate.onboardingAdditionalSitesFeePerSite)}</span>
+        </div>
         <div className="pt-2">
-          Onboarding Fees Total: <span className="font-medium text-foreground">{formatMoney(estimate.onboardingFee)}</span>
+          Onboarding Total: <span className="font-medium text-foreground">{formatMoney(estimate.onboardingFee)}</span>
         </div>
       </div>
     </div>
@@ -1441,6 +1636,8 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
 
     const showDepartmentPaymentBreakdownToggle =
       showDepartmentDiscountBreakdown || showDepartmentInvoiceBreakdown;
+    const showPrintDepartmentPaymentBreakdown =
+      print && showDepartmentPaymentBreakdownToggle && showDepartmentPaymentBreakdown;
 
     const departmentPaymentBreakdownLabel = showDepartmentDiscountBreakdown
       ? "Show Department Discount Breakdown"
@@ -1455,15 +1652,16 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
       estimate.coveredExampleFloorPerEmployee > 0;
     const invoiceTotalSummaryLabel = hasMaxDiscount ? "Invoice Total (With Max Discount)" : "Invoice Total (With Fees)";
     const invoiceTotalBeforeLabel = estimate.financeFeePerInvoice > 0 ? "Invoice Total (Before Fees)" : "Invoice Total (Before Discount)";
+    const paymentTermsHeaderLabel = `Payment Terms: ${estimate.paymentTerms || "Not Selected"}`;
 
     return (
       <div className={print ? subtleCardPrintClass : subtleCardClass}>
-        <div className={cardTitleClass}>Payment Terms</div>
+        <div className={cardTitleClass}>{paymentTermsHeaderLabel}</div>
         {isDepartmentBased ? (
           <>
             <div className={rowTextClass}>
               <div>
-                Payment Terms: <span className="font-medium text-foreground">{estimate.paymentTerms}</span>
+                Employees (Total): <span className="font-medium text-foreground">{estimate.employees}</span>
               </div>
               {!isNet30 ? (
                 <div>
@@ -1515,7 +1713,16 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
               </div>
             )}
 
-            {showDepartmentPaymentBreakdownToggle ? (
+            {showPrintDepartmentPaymentBreakdown ? (
+              <div className={`${PRINT_KEEP_TOGETHER_CLASSES.breakdownBlock} mt-3 rounded-md border border-border bg-background p-3`}>
+                {showDepartmentDiscountBreakdown ? (
+                  <DepartmentDiscountBreakdownTable rows={departmentDiscountBreakdown} />
+                ) : showDepartmentInvoiceBreakdown ? (
+                  <DepartmentInvoiceBreakdownTable rows={departmentInvoiceBreakdown} showFees={showDepartmentInvoiceFees} />
+                ) : null}
+              </div>
+            ) : null}
+            {!print && showDepartmentPaymentBreakdownToggle ? (
               <div className={`${PRINT_KEEP_TOGETHER_CLASSES.breakdownBlock} mt-3 rounded-md border border-border bg-background p-3`}>
                 <button
                   type="button"
@@ -1547,7 +1754,7 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
           <>
             <div className={rowTextClass}>
               <div>
-                Terms: <span className="font-medium text-foreground">{estimate.paymentTerms}</span>
+                Employees (Total): <span className="font-medium text-foreground">{estimate.employees}</span>
               </div>
               {!isNet30 ? (
                 <div>
@@ -1773,6 +1980,16 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
   const [showDepartmentAddOnsBreakdown, setShowDepartmentAddOnsBreakdown] = useState(false);
   const [showDepartmentServiceBreakdown, setShowDepartmentServiceBreakdown] = useState(false);
   const [showDepartmentPaymentBreakdown, setShowDepartmentPaymentBreakdown] = useState(false);
+  const [showCoveredClarification, setShowCoveredClarification] = useState(false);
+  const toggleDepartmentAddOnsBreakdown = useCallback(() => {
+    const currentScrollY = window.scrollY;
+    setShowDepartmentAddOnsBreakdown((prev) => !prev);
+    requestAnimationFrame(() => {
+      if (Math.abs(window.scrollY - currentScrollY) > 1) {
+        window.scrollTo({ top: currentScrollY, left: 0, behavior: "auto" });
+      }
+    });
+  }, []);
 
   return (
     <section aria-labelledby="quote-title">
@@ -1871,6 +2088,76 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
             gap: 8px;
           }
 
+          .print-only .breakdown-table {
+            width: 100%;
+            table-layout: fixed;
+          }
+
+          .print-only .breakdown-table th,
+          .print-only .breakdown-table td {
+            padding-top: 4px !important;
+            padding-bottom: 4px !important;
+            vertical-align: top;
+          }
+
+          .print-only .breakdown-table .breakdown-col-dept {
+            width: 170px;
+          }
+
+          .print-only .breakdown-table th.breakdown-col-dept,
+          .print-only .breakdown-table td.breakdown-col-dept {
+            padding-right: 10px !important;
+          }
+
+          .print-only .breakdown-table .breakdown-col-employees {
+            width: 88px;
+            text-align: right;
+          }
+
+          .print-only .breakdown-table th.breakdown-col-employees,
+          .print-only .breakdown-table td.breakdown-col-employees {
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+          }
+
+          .print-only .breakdown-table .breakdown-col-addons {
+            word-break: break-word;
+            line-height: 1.25;
+          }
+
+          .print-only .breakdown-table .breakdown-col-value {
+            width: 122px;
+            text-align: right;
+          }
+
+          .print-only .breakdown-table .breakdown-col-percent {
+            width: 90px;
+            text-align: right;
+          }
+
+          .print-only .breakdown-table .breakdown-col-total {
+            width: 122px;
+            text-align: right;
+          }
+
+          .print-only .breakdown-table .breakdown-col-num {
+            font-variant-numeric: tabular-nums;
+          }
+
+          .print-only .department-eu-breakdown-table th,
+          .print-only .department-eu-breakdown-table td {
+            padding-top: 5px !important;
+            padding-bottom: 5px !important;
+          }
+
+          .print-only .department-eu-breakdown-table .department-eu-employees {
+            padding-right: 18px !important;
+          }
+
+          .print-only .department-eu-breakdown-table .department-eu-addons {
+            padding-left: 18px !important;
+          }
+
           .quote-print-body table td,
           .quote-print-body table th {
             color: #0f172a !important;
@@ -1890,7 +2177,8 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
             display: table-row-group;
           }
 
-          .print-doc td {
+          .print-doc > thead > tr > td,
+          .print-doc > tbody > tr > td {
             padding: 0;
             vertical-align: top;
           }
@@ -1971,7 +2259,7 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
       <div className="no-print">
         <div className="mx-auto w-full max-w-screen-2xl px-4 sm:px-6 lg:px-8">
           <div data-pdf-exclude="true" className="py-10">
-            <h1 id="quote-title" className="text-3xl font-semibold tracking-tight text-foreground">
+            <h1 id="quote-title" className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
               Quote Preview
             </h1>
             <p className="mt-2 max-w-3xl text-muted-foreground">
@@ -1996,7 +2284,7 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
                 </button>
               </div>
 
-              <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 lg:ml-auto">
+              <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3 lg:ml-auto lg:w-auto">
                 <button type="button" onClick={printQuoteTwoPages} className={`${secondaryButtonClass} w-full sm:w-auto`}>
                   Print Page as PDF
                 </button>

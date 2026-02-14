@@ -7,6 +7,7 @@ import { PageHero } from "@/components/layout/PageHero";
 import { SectionWrap } from "@/components/layout/SectionWrap";
 import { destructiveButtonClass, primaryButtonClass, secondaryButtonClass } from "@/components/ui/buttonStyles";
 import { useProgramDraft } from "@/hooks/useProgramDraft";
+import { incompatibleCoveredEuAddOnsFor, maxCompatibleCoveredEuAddOnsAmount } from "@/lib/coveredEuAddOnMaximum";
 import { isOptionRestricted } from "@/lib/dependencyRules";
 import { calculateCompanywideAllowance, includeEuAddOnsInAllowance } from "@/lib/allowanceMath";
 import { geocodeWithNominatim, routeWithOSRM } from "@/lib/distanceRouting";
@@ -143,6 +144,8 @@ const DepartmentRowEditor = memo(function DepartmentRowEditor({
   onRemove,
   onToggleAddOn,
 }: DepartmentRowEditorProps) {
+  const selectedDepartmentAddOns = row.selections.euPackageAddOns;
+
   return (
     <div className="space-y-3 rounded-md border border-border bg-background p-3">
       <div className="grid gap-3 sm:grid-cols-12 sm:items-end">
@@ -167,7 +170,7 @@ const DepartmentRowEditor = memo(function DepartmentRowEditor({
         </label>
 
         <label className="space-y-2 sm:col-span-4">
-          <div className="text-sm font-medium text-foreground">Estimated Employees</div>
+          <div className="text-sm font-medium text-foreground">Employees (Total)</div>
           <input
             type="text"
             inputMode="numeric"
@@ -208,42 +211,78 @@ const DepartmentRowEditor = memo(function DepartmentRowEditor({
 
       <div className="space-y-2">
         <div className="text-sm font-semibold text-foreground">EU Package Add-Ons</div>
-        <div className="space-y-2">
-          {euAddOnItems.map((item) => (
-            <label
-              key={item.key}
-              className={`flex items-start gap-3 rounded-md border border-border bg-card p-3 ${
-                item.isRestricted ? "opacity-70" : ""
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={Boolean(row.selections.euPackageAddOns[item.key])}
-                onChange={(e) => onToggleAddOn(row.id, item.key, e.target.checked)}
-                disabled={item.isRestricted}
-                className="mt-1"
-              />
-              <div className="space-y-1">
-                <div className="text-sm text-foreground">
-                  {item.label}{" "}
-                  <span className="text-muted-foreground">
-                    (<span className="font-medium text-foreground/80">{formatMoney(item.amount)} per Employee</span>)
-                  </span>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {euAddOnItems.map((item) => {
+            const isSelected = Boolean(selectedDepartmentAddOns[item.key]);
+            const conflictingSelectedKeys = !isSelected
+              ? incompatibleCoveredEuAddOnsFor(item.key).filter((conflictKey) =>
+                  Boolean(selectedDepartmentAddOns[conflictKey])
+                )
+              : [];
+            const hasCompatibilityConflict = conflictingSelectedKeys.length > 0;
+            const isAntiReflectiveScratchConflictForAntiReflective =
+              (item.key === "antiReflectiveStd" || item.key === "blueLightAntiReflective") &&
+              conflictingSelectedKeys.includes("extraScratchCoating");
+            const isAntiReflectiveScratchConflictForExtraScratch =
+              item.key === "extraScratchCoating" &&
+              (conflictingSelectedKeys.includes("antiReflectiveStd") ||
+                conflictingSelectedKeys.includes("blueLightAntiReflective"));
+            const hasAntiReflectiveScratchConflict =
+              isAntiReflectiveScratchConflictForAntiReflective || isAntiReflectiveScratchConflictForExtraScratch;
+            const isDisabled = item.isRestricted || hasCompatibilityConflict;
+
+            return (
+              <label
+                key={item.key}
+                className={`flex items-start gap-3 rounded-md border border-border bg-card p-3 ${
+                  isDisabled ? "opacity-70" : ""
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={(e) => onToggleAddOn(row.id, item.key, e.target.checked)}
+                  disabled={isDisabled}
+                  className="mt-1"
+                />
+                <div className="space-y-1">
+                  <div className="text-sm text-foreground">
+                    <span className="font-medium">{item.label}</span>
+                    {item.isRestricted ? (
+                      <span className="ml-2 rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive">
+                        Restricted
+                      </span>
+                    ) : hasCompatibilityConflict ? (
+                      <span className="ml-2 rounded-full border border-border bg-secondary/60 px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                        {hasAntiReflectiveScratchConflict
+                          ? isAntiReflectiveScratchConflictForExtraScratch
+                            ? "Included in AR"
+                            : "Scratch Coating Included"
+                          : "Incompatible"}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="text-xs text-muted-foreground">{EU_ADD_ON_DESCRIPTIONS[item.key]}</div>
+                  <div className="text-xs text-muted-foreground">
+                    Price: <span className="font-medium text-foreground/80">{formatMoney(item.amount)} per Employee</span>
+                  </div>
                   {item.isRestricted ? (
-                    <span className="ml-2 rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive">
-                      Restricted
-                    </span>
+                    <div className="text-xs text-muted-foreground">
+                      Available only with documented medical necessity and case-by-case approval.
+                    </div>
+                  ) : hasCompatibilityConflict ? (
+                    <div className="text-xs text-muted-foreground">
+                      {hasAntiReflectiveScratchConflict
+                        ? isAntiReflectiveScratchConflictForExtraScratch
+                          ? "Not applicable: AR already includes scratch coating."
+                          : "AR includes scratch coating."
+                        : "Unavailable with the current department add-on selections."}
+                    </div>
                   ) : null}
                 </div>
-                <div className="text-xs text-muted-foreground">{EU_ADD_ON_DESCRIPTIONS[item.key]}</div>
-                {item.isRestricted ? (
-                  <div className="text-xs text-muted-foreground">
-                    Available only with documented medical necessity and case-by-case approval.
-                  </div>
-                ) : null}
-              </div>
-            </label>
-          ))}
+              </label>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -450,11 +489,11 @@ const DepartmentAllowanceBreakdown = memo(function DepartmentAllowanceBreakdown(
   return (
     <div className="mt-3 overflow-x-auto">
       <div className="mb-2 text-sm font-semibold text-foreground">Department Allowance Breakdown</div>
-      <table className="min-w-full text-xs text-muted-foreground">
+      <table className="min-w-[760px] sm:min-w-full text-xs text-muted-foreground">
         <thead>
           <tr className="text-left">
             <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees</th>
+            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
             <th className="py-1 px-2 text-right font-semibold text-foreground">Allowance per Employee</th>
             <th className="py-1 pl-2 text-right font-semibold text-foreground">Subtotal</th>
           </tr>
@@ -488,11 +527,11 @@ const DepartmentAddOnsBreakdown = memo(function DepartmentAddOnsBreakdown({
   return (
     <div className="mt-3 overflow-x-auto">
       <div className="mb-2 text-sm font-semibold text-foreground">Department Add-Ons Breakdown</div>
-      <table className="min-w-full text-xs text-muted-foreground">
+      <table className="min-w-[760px] sm:min-w-full text-xs text-muted-foreground">
         <thead>
           <tr className="text-left">
             <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees</th>
+            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
             <th className="py-1 pl-2 font-semibold text-foreground">Selected Add-Ons</th>
           </tr>
         </thead>
@@ -522,11 +561,11 @@ const DepartmentServiceBreakdown = memo(function DepartmentServiceBreakdown({
   return (
     <div className="mt-3 overflow-x-auto">
       <div className="mb-2 text-sm font-semibold text-foreground">Service Tier Breakdown by Department</div>
-      <table className="min-w-full text-xs text-muted-foreground">
+      <table className="min-w-[760px] sm:min-w-full text-xs text-muted-foreground">
         <thead>
           <tr className="text-left">
             <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees</th>
+            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
             <th className="py-1 px-2 text-right font-semibold text-foreground">Service per Employee</th>
             <th className="py-1 pl-2 text-right font-semibold text-foreground">Subtotal</th>
           </tr>
@@ -574,11 +613,11 @@ const DepartmentDiscountBreakdown = memo(function DepartmentDiscountBreakdown({
 
   return (
     <div className="mt-3 overflow-x-auto">
-      <table className="min-w-full text-xs text-muted-foreground">
+      <table className="min-w-[760px] sm:min-w-full text-xs text-muted-foreground">
         <thead>
           <tr className="text-left">
             <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees</th>
+            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
             <th className="py-1 px-2 text-right font-semibold text-foreground">Invoice per Employee</th>
             <th className="py-1 px-2 text-right font-semibold text-foreground">Discount Percent</th>
             <th className="py-1 px-2 text-right font-semibold text-foreground">Max Discount per Invoice</th>
@@ -636,11 +675,11 @@ const DepartmentInvoiceBreakdown = memo(function DepartmentInvoiceBreakdown({
 
   return (
     <div className="mt-3 overflow-x-auto">
-      <table className="min-w-full text-xs text-muted-foreground">
+      <table className="min-w-[760px] sm:min-w-full text-xs text-muted-foreground">
         <thead>
           <tr className="text-left">
             <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
-            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees</th>
+            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees (Total)</th>
             <th className="py-1 px-2 text-right font-semibold text-foreground">Invoice per Employee</th>
             {showFees ? (
               <th className="py-1 px-2 text-right font-semibold text-foreground">Finance Fee per Invoice</th>
@@ -752,6 +791,7 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
   const invoiceTotalWithMaxDiscount = estimate.invoiceTotal - estimate.discountTotalMax + estimate.financeFeeTotal;
   const invoiceTotalSummaryLabel = hasMaxDiscount ? "Invoice Total (With Max Discount)" : "Invoice Total (With Fees)";
   const invoiceTotalBeforeLabel = estimate.financeFeePerInvoice > 0 ? "Invoice Total (Before Fees)" : "Invoice Total (Before Discount)";
+  const paymentTermsHeaderLabel = `Payment Terms: ${estimate.paymentTerms || "Not Selected"}`;
 
   const departmentServiceBreakdown = useMemo<DepartmentServiceBreakdownLine[]>(() => {
     return estimate.departmentBreakdown.map((row) => ({
@@ -774,7 +814,7 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
   return (
     <div className="lg:col-span-5">
       <div className="lg:sticky lg:top-6 rounded-lg border border-border bg-card overflow-hidden">
-        <div className="px-6 py-5">
+        <div className="px-4 py-4 sm:px-6 sm:py-5">
           <div className="space-y-1">
             <div className="text-lg font-semibold text-foreground">Estimate Breakdown</div>
             <div className="text-xs text-muted-foreground">Everything updates automatically based on your inputs.</div>
@@ -787,7 +827,7 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
               <div className="text-sm font-semibold text-foreground">{`EU Package: ${estimate.selectedEU || "Not Selected"}`}</div>
               <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
                 <div>
-                  {estimate.isDepartmentBased ? "Total Employees" : "Employees"}:{" "}
+                  {"Employees (Total)"}:{" "}
                   <span className="text-foreground font-medium">{estimate.employees}</span>
                 </div>
                 {!estimate.isDepartmentBased ? (
@@ -800,31 +840,6 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                       <div>
                         Available allowance per Employee:{" "}
                         <span className="text-foreground font-medium">{formatMoney(estimate.coveredExampleCeilingPerEmployee)}</span>
-                      </div>
-                      <div className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                        Different employees can choose different combinations of included options. Total covered value varies by selection.
-                      </div>
-                      <div className="mt-2 text-xs font-semibold text-foreground">Example combination:</div>
-                      <div className="text-xs leading-relaxed text-muted-foreground">
-                        Select options to simulate an employee selecting combinations.
-                      </div>
-                      <div className="text-xs leading-relaxed text-muted-foreground">
-                        Base allowance of{" "}
-                        <span className="font-medium text-foreground">{formatMoney(estimate.coveredExampleFloorPerEmployee)}</span>
-                        {estimate.coveredSelectedAddOnsLabels.length > 0 ? (
-                          <>
-                            {" "}
-                            +{" "}
-                            <span className="font-medium text-foreground">
-                              {estimate.coveredSelectedAddOnsLabels.join(" + ")}
-                            </span>
-                          </>
-                        ) : null}{" "}
-                        = <span className="font-medium text-foreground">{formatMoney(estimate.coveredExampleCombinationPerEmployee)}</span>
-                      </div>
-                      <div className="text-xs leading-relaxed text-muted-foreground">
-                        Multiplied by employees for a subtotal:{" "}
-                        <span className="font-medium text-foreground">{formatMoney(estimate.coveredExampleCombinationTotal)}</span>
                       </div>
                     </>
                   ) : (
@@ -856,9 +871,6 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                       Available allowance per Employee:{" "}
                       <span className="text-foreground font-medium">{formatMoney(estimate.coveredExampleCeilingPerEmployee)}</span>
                     </div>
-                    <div className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                      Different employees can choose different combinations of included options. Total covered value varies by selection.
-                    </div>
                   </>
                 ) : null}
               </div>
@@ -880,21 +892,6 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                   Allowance Total: <span className="font-medium text-foreground">{formatMoney(estimate.allowanceTotal)}</span>
                 </div>
               )}
-              {estimate.selectedEU === "Covered" ? (
-                <details className="mt-2 text-xs text-muted-foreground">
-                  <summary className="cursor-pointer text-foreground/80">Need clarification? Contact an OSSO Program Specialist.</summary>
-                  <div className="mt-1">
-                    <a href="mailto:team@onsightoptics.com" className="underline">
-                      team@onsightoptics.com
-                    </a>{" "}
-                    <span className="px-1">|</span>
-                    <a href="tel:619-402-1033" className="underline">
-                      619-402-1033
-                    </a>
-                  </div>
-                </details>
-              ) : null}
-
               {estimate.isDepartmentBased && estimate.departmentBreakdown.length > 0 ? (
                 <div className="mt-4 rounded-md bg-secondary p-3">
                   <button
@@ -926,16 +923,85 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                   {showDeptAddOnsBreakdown ? <DepartmentAddOnsBreakdown rows={estimate.departmentBreakdown} /> : null}
                 </div>
               ) : null}
+              {estimate.selectedEU === "Covered" ? (
+                <details className="mt-2 text-xs text-muted-foreground">
+                  <summary className="cursor-pointer text-foreground/80">Need clarification? See how Covered allowance works.</summary>
+                  <div className="mt-2 space-y-2 leading-relaxed">
+                    <div>
+                      The Covered EU Package means employees have the base allowance of Complete and can choose{" "}
+                      <span className="italic">any</span> combination of any included add-ons.
+                    </div>
+                    <div className="text-[11px] leading-relaxed">
+                      *Disclaimer: Lens pairing and configuration logic still apply. Blue Light + Anti-Reflective cannot be
+                      combined with standard Anti-Reflective, and Polarized Sun Glasses + Transitions should be selected as
+                      Transitions Polarized.
+                    </div>
+                    <div>
+                      <span className="font-medium text-foreground">Allowance Total</span> is the configured base coverage.
+                    </div>
+                    <div>
+                      <span className="font-medium text-foreground">Allowance Total (Available)</span> reflects the full-coverage
+                      package value when included add-ons are maximized within lens compatibility rules.
+                    </div>
+                    {estimate.isDepartmentBased ? (
+                      <div>
+                        Department-based mode uses each department&apos;s configured allowance as the base. Use the Department
+                        Allowance Breakdown for each department&apos;s totals.
+                      </div>
+                    ) : (
+                      <>
+                        <div className="font-semibold text-foreground">Example combination:</div>
+                        {estimate.coveredSelectedAddOnsLabels.length > 0 ? (
+                          <>
+                            <div>
+                              Base allowance of{" "}
+                              <span className="font-medium text-foreground">
+                                {formatMoney(estimate.coveredExampleFloorPerEmployee)}
+                              </span>{" "}
+                              +{" "}
+                              <span className="font-medium text-foreground">
+                                {estimate.coveredSelectedAddOnsLabels.join(" + ")}
+                              </span>{" "}
+                              ={" "}
+                              <span className="font-medium text-foreground">
+                                {formatMoney(estimate.coveredExampleCombinationPerEmployee)}
+                              </span>
+                            </div>
+                            <div>
+                              Multiplied by employees for a subtotal:{" "}
+                              <span className="font-medium text-foreground">
+                                {formatMoney(estimate.coveredExampleCombinationTotal)}
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          <div>Select at least one included EU add-on to see an example combination.</div>
+                        )}
+                      </>
+                    )}
+                    <div>Contact an OSSO Program Specialist:</div>
+                  </div>
+                  <div className="mt-1">
+                    <a href="mailto:team@onsightoptics.com" className="underline">
+                      team@onsightoptics.com
+                    </a>{" "}
+                    <span className="px-1">|</span>
+                    <a href="tel:619-402-1033" className="underline">
+                      619-402-1033
+                    </a>
+                  </div>
+                </details>
+              ) : null}
             </div>
 
             <div className="rounded-md bg-secondary/30 p-4">
               <div className="text-sm font-semibold text-foreground">{`Service Tier: ${estimate.selectedTier || "Not Selected"}`}</div>
               <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
                 <div>
-                  Service per Employee: <span className="text-foreground font-medium">{formatMoney(estimate.servicePerEmployee)}</span>
+                  Employees (Total): <span className="text-foreground font-medium">{estimate.employees}</span>
                 </div>
                 <div>
-                  Employees: <span className="text-foreground font-medium">{estimate.employees}</span>
+                  Service per Employee: <span className="text-foreground font-medium">{formatMoney(estimate.servicePerEmployee)}</span>
                 </div>
               </div>
               <div className="mt-3 text-sm text-muted-foreground">
@@ -1081,16 +1147,16 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                 </div>
               )}
               <div className="mt-3 text-xs text-muted-foreground">Onboarding Fees Total</div>
-              <div className="mt-1 text-3xl font-semibold tracking-tight text-foreground">{formatMoney(estimate.onboardingFee)}</div>
+              <div className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{formatMoney(estimate.onboardingFee)}</div>
             </div>
             
             <div className="rounded-md bg-secondary/30 p-4">
-              <div className="text-sm font-semibold text-foreground">Payment Terms</div>
+              <div className="text-sm font-semibold text-foreground">{paymentTermsHeaderLabel}</div>
               {estimate.isDepartmentBased ? (
                 <>
                   <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
                     <div>
-                      Terms: <span className="text-foreground font-medium">{estimate.paymentTerms}</span>
+                      Employees (Total): <span className="text-foreground font-medium">{estimate.employees}</span>
                     </div>
                     {!isNet30 ? (
                       <div>
@@ -1173,7 +1239,7 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                 <>
                   <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
                     <div>
-                      Terms: <span className="text-foreground font-medium">{estimate.paymentTerms}</span>
+                      Employees (Total): <span className="text-foreground font-medium">{estimate.employees}</span>
                     </div>
                     {!isNet30 ? (
                       <div>
@@ -1257,11 +1323,11 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
           </div>
         </div>
 
-        <div className="lg:sticky lg:bottom-0 border-t border-border bg-card/95 px-6 py-4 backdrop-blur supports-[backdrop-filter]:bg-card/90">
+        <div className="lg:sticky lg:bottom-0 border-t border-border bg-card/95 px-4 py-4 sm:px-6 backdrop-blur supports-[backdrop-filter]:bg-card/90">
           <div className="flex flex-col gap-3">
             <div className="min-w-0">
               <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total Estimate</div>
-              <div className="mt-1 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">{formatMoney(estimate.grandTotal)}</div>
+              <div className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-4xl">{formatMoney(estimate.grandTotal)}</div>
             </div>
 
             <div className="w-full">
@@ -1408,14 +1474,20 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
       ...prev,
       departmentConfigs: (prev.departmentConfigs ?? []).map((row) => {
         if (row.id !== rowId) return row;
+        const nextEuAddOns = {
+          ...row.selections.euPackageAddOns,
+          [key]: next,
+        };
+        if (next) {
+          for (const conflictKey of incompatibleCoveredEuAddOnsFor(key)) {
+            nextEuAddOns[conflictKey] = false;
+          }
+        }
         return {
           ...row,
           selections: {
             ...row.selections,
-            euPackageAddOns: {
-              ...row.selections.euPackageAddOns,
-              [key]: next,
-            },
+            euPackageAddOns: nextEuAddOns,
           },
         };
       }),
@@ -1800,7 +1872,7 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
     const coveredSelectedAddOnsLabels = coveredSelectedAddOns.map(
       (item) => `${item.label} ${formatMoney(item.amount)}`
     );
-    const coveredAllAddOnsPerEmployee = EU_PACKAGE_ADD_ON_ITEMS.reduce((sum, item) => sum + item.amount, 0);
+    const coveredAllAddOnsPerEmployee = maxCompatibleCoveredEuAddOnsAmount(EU_PACKAGE_ADD_ON_ITEMS);
     const coveredExampleFloorPerEmployee = safeSelectedEU === "Covered" ? euBaseAllowance : 0;
     const coveredExampleFloorTotal = coveredExampleFloorPerEmployee * employees;
     const coveredExampleCeilingPerEmployee =
@@ -2033,7 +2105,7 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
           Departments: <span className="font-medium text-foreground">{departmentConfigs.length}</span>
         </div>
         <div>
-          Total employees: <span className="font-medium text-foreground">{departmentSummary.totalEmployees}</span>
+          Employees (Total): <span className="font-medium text-foreground">{departmentSummary.totalEmployees}</span>
         </div>
       </div>
 
@@ -2293,20 +2365,20 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
               </div>
             </div>
           ) : null}
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <button
               type="button"
               onClick={() => onNavigate("builder", "internal")}
-              className={secondaryButtonClass}
+              className={`${secondaryButtonClass} w-full sm:w-auto`}
             >
               Back to Program Builder
             </button>
-            <div className="flex flex-col items-end gap-2">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
               <button
                 type="button"
                 onClick={onContinueToQuote}
                 disabled={continueDisabled}
-                className={`${primaryButtonClass} ${continueDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
+                className={`${primaryButtonClass} w-full sm:w-auto ${continueDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
               >
                 Continue to Quote Preview
               </button>
@@ -2316,7 +2388,7 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
             </div>
           </div>
 
-        <div className="mt-8 grid gap-10 lg:grid-cols-12">
+        <div className="mt-8 grid gap-8 sm:gap-10 lg:grid-cols-12">
             <div className="lg:col-span-7">
               <div className="space-y-10">
                 <div className="space-y-3">
@@ -2381,7 +2453,7 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
                       departmentConfigsEditor
                     ) : (
                       <label className="space-y-2">
-                        <div className="text-sm font-medium text-foreground">Estimated Eligible Employees</div>
+                        <div className="text-sm font-medium text-foreground">Employees (Total)</div>
                         <input
                           type="number"
                           min={0}
@@ -2444,10 +2516,7 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
                               />
                               <div className="space-y-1">
                                 <div className="text-sm text-foreground">
-                                  {item.label}{" "}
-                                  <span className="text-muted-foreground">
-                                    (<span className="font-medium text-foreground/80">{formatMoney(item.amount)} per Employee</span>)
-                                  </span>
+                                  <span className="font-medium">{item.label}</span>
                                   {isRestricted ? (
                                     <span className="ml-2 rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive">
                                       Restricted
@@ -2455,6 +2524,9 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
                                   ) : null}
                                 </div>
                                 <div className="text-xs text-muted-foreground">{EU_ADD_ON_DESCRIPTIONS[item.key]}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  Price: <span className="font-medium text-foreground/80">{formatMoney(item.amount)} per Employee</span>
+                                </div>
                                 {isRestricted ? (
                                   <div className="text-xs text-muted-foreground">
                                     Available only with documented medical necessity and case-by-case approval.
