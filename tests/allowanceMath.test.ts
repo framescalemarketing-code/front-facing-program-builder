@@ -4,7 +4,6 @@ import { calculateCompanywideAllowance } from "../src/lib/allowanceMath.js";
 
 test("Complete package with zero add ons uses base allowance only", () => {
   const result = calculateCompanywideAllowance({
-    selectedEU: "Complete",
     baseEUAllowance: 435,
     euPackageAddOnsPerEmployee: 0,
     employees: 12,
@@ -17,7 +16,6 @@ test("Complete package with zero add ons uses base allowance only", () => {
 
 test("Complete package with multiple add ons includes add ons in allowance", () => {
   const result = calculateCompanywideAllowance({
-    selectedEU: "Complete",
     baseEUAllowance: 435,
     euPackageAddOnsPerEmployee: 185,
     employees: 10,
@@ -31,7 +29,6 @@ test("Complete package with multiple add ons includes add ons in allowance", () 
 
 test("Non-Complete package with add ons includes add ons as control case", () => {
   const result = calculateCompanywideAllowance({
-    selectedEU: "Comfort",
     baseEUAllowance: 290,
     euPackageAddOnsPerEmployee: 90,
     employees: 4,

@@ -4,7 +4,10 @@
 import type { NavigateFn } from "@/app/routerTypes";
 import { PageHero } from "@/components/layout/PageHero";
 import { SectionWrap } from "@/components/layout/SectionWrap";
+import { destructiveButtonClass, primaryButtonClass } from "@/components/ui/buttonStyles";
 import { useProgramDraft } from "@/hooks/useProgramDraft";
+import { formatPhoneAsUs, isValidEmailFormat, isValidPhoneFormat, validateContact } from "@/lib/contactValidation";
+import { createDefaultDraft } from "@/lib/programDraft";
 import type {
   BuilderGuidelines,
   SideShieldType,
@@ -14,16 +17,10 @@ import type {
 } from "@/lib/programDraft";
 
 export function ProgramBuilderPage({ onNavigate }: { onNavigate: NavigateFn }) {
-  const { draft, setBuilder, setCalculator, clear } = useProgramDraft();
+  const { draft, setBuilder, setCalculator } = useProgramDraft();
 
   const sectionTitleClass = "text-2xl font-semibold tracking-tight text-foreground";
-  const sectionSubtextClass = "text-sm text-muted-foreground leading-relaxed";
-
-  const primaryButtonClass =
-    "inline-flex items-center justify-center rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:opacity-95 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background";
-
-  const destructiveButtonClass =
-    "inline-flex items-center justify-center rounded-lg bg-destructive px-5 py-2.5 text-sm font-semibold text-destructive-foreground shadow-md hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background";
+  const sectionSubtextClass = "text-sm text-muted-foreground leading-relaxed max-w-3xl";
 
   const inputClass =
     "w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background";
@@ -32,14 +29,19 @@ export function ProgramBuilderPage({ onNavigate }: { onNavigate: NavigateFn }) {
   const coverageType = (guidelines.coverageType ?? "prescription_only") as CoverageType;
   const allowanceScope = (guidelines.allowanceScope ?? "companywide") as AllowanceScope;
   const contact = draft.calculator.contact;
+  const contactValidation = validateContact(contact);
 
-  const contactComplete = Boolean(
-    contact.fullName?.trim() &&
-      contact.companyName?.trim() &&
-      contact.email?.trim() &&
-      contact.phone?.trim()
-  );
-  const contactBlockMessage = contactComplete ? "" : "Complete all contact details to continue.";
+  const contactComplete = contactValidation.isValid;
+  const contactBlockMessage =
+    contactValidation.missing.length > 0
+      ? `Complete all contact details to continue: ${contactValidation.missing.join(", ")}.`
+      : contactValidation.invalid.length > 0
+        ? `Fix invalid contact fields to continue: ${contactValidation.invalid.join(", ")}.`
+        : "";
+  const emailHasText = Boolean(contact.email?.trim());
+  const phoneHasText = Boolean(contact.phone?.trim());
+  const emailInvalid = emailHasText && !isValidEmailFormat(contact.email);
+  const phoneInvalid = phoneHasText && !isValidPhoneFormat(contact.phone);
 
   function setGuidelinesPatch(patch: Partial<BuilderGuidelines>) {
     setBuilder((prev) => ({ ...prev, guidelines: { ...prev.guidelines, ...patch } }));
@@ -49,15 +51,21 @@ export function ProgramBuilderPage({ onNavigate }: { onNavigate: NavigateFn }) {
     setCalculator((prev) => ({ ...prev, contact: { ...prev.contact, ...patch } }));
   }
 
-  function clearAllBuilder() {
-    clear.builder();
+  function clearBuilderPage() {
+    const defaults = createDefaultDraft();
+    setBuilder(() => defaults.builder);
+    setCalculator((prev) => ({ ...prev, contact: defaults.calculator.contact }));
   }
 
   return (
     <section aria-labelledby="builder-title">
-      <PageHero id="builder-title" title="Program Builder" subtitle="Define program guidelines. Then continue to the Program Calculator." />
+      <PageHero
+        id="builder-title"
+        title="Program Builder"
+        subtitle="Set up your program details first, then continue to pricing and quote preview."
+      />
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionWrap>
           <div className="flex flex-wrap items-center justify-end gap-3">
             <div className="flex flex-col items-end gap-2">
@@ -67,7 +75,7 @@ export function ProgramBuilderPage({ onNavigate }: { onNavigate: NavigateFn }) {
                 disabled={!contactComplete}
                 className={primaryButtonClass}
               >
-              Continue To Program Calculator
+              Continue to Program Calculator
               </button>
               {!contactComplete ? (
                 <div className="text-xs font-medium text-destructive">{contactBlockMessage}</div>
@@ -81,7 +89,7 @@ export function ProgramBuilderPage({ onNavigate }: { onNavigate: NavigateFn }) {
                 <div className="space-y-3">
                   <div className="space-y-2">
                     <h2 className={sectionTitleClass}>Contact Details</h2>
-                    <p className={sectionSubtextClass}>These details carry through to the calculator and quote preview.</p>
+                    <p className={sectionSubtextClass}>Enter who this quote is for. These details follow through to pricing and the final quote.</p>
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -108,21 +116,34 @@ export function ProgramBuilderPage({ onNavigate }: { onNavigate: NavigateFn }) {
                     <label className="space-y-2">
                       <div className="text-sm font-medium text-foreground">Email</div>
                       <input
+                        type="email"
+                        autoComplete="email"
                         value={contact.email}
                         onChange={(e) => setContactPatch({ email: e.target.value })}
                         className={inputClass}
                         placeholder="name@company.com"
                       />
+                      {emailInvalid ? (
+                        <div className="text-xs font-medium text-destructive">Enter a valid email format (name@company.com).</div>
+                      ) : null}
                     </label>
 
                     <label className="space-y-2">
                       <div className="text-sm font-medium text-foreground">Phone</div>
                       <input
+                        type="tel"
+                        autoComplete="tel"
+                        inputMode="tel"
+                        pattern="^\d{3}-\d{3}-\d{4}$"
+                        maxLength={12}
                         value={contact.phone}
-                        onChange={(e) => setContactPatch({ phone: e.target.value })}
+                        onChange={(e) => setContactPatch({ phone: formatPhoneAsUs(e.target.value) })}
                         className={inputClass}
-                        placeholder="Phone number"
+                        placeholder="123-456-7890"
                       />
+                      {phoneInvalid ? (
+                        <div className="text-xs font-medium text-destructive">Enter a valid phone format: 123-456-7890.</div>
+                      ) : null}
                     </label>
                   </div>
                 </div>
@@ -131,7 +152,7 @@ export function ProgramBuilderPage({ onNavigate }: { onNavigate: NavigateFn }) {
                   <div className="space-y-2">
                     <h2 className={sectionTitleClass}>Program Guidelines</h2>
                     <p className={sectionSubtextClass}>
-                      Configure policy and operational settings. These values define the program rules independent of pricing inputs.
+                      Set your core program rules here. These controls define eligibility and policy behavior before pricing.
                     </p>
                   </div>
 
@@ -161,7 +182,7 @@ export function ProgramBuilderPage({ onNavigate }: { onNavigate: NavigateFn }) {
                     </label>
 
                     <div className="sm:col-span-2 space-y-3">
-                      <div className="text-sm font-semibold text-foreground">Coverage And Allowance Rules</div>
+                      <div className="text-sm font-semibold text-foreground">Coverage and Allowance Rules</div>
                       <div className="grid gap-4 sm:grid-cols-2">
                         <label className="space-y-2">
                           <div className="text-sm font-medium text-foreground">Coverage Type</div>
@@ -282,15 +303,15 @@ export function ProgramBuilderPage({ onNavigate }: { onNavigate: NavigateFn }) {
             </div>
 
             <div className="lg:col-span-5">
-              <div className="sticky top-6 rounded-lg border border-border bg-card overflow-hidden">
-                <div className="px-6 py-5">
+              <div className="lg:sticky lg:top-6 rounded-lg border border-border bg-card overflow-hidden">
+                <div className="px-4 py-4 sm:px-6 sm:py-5">
                   <div className="space-y-1">
                     <div className="text-lg font-semibold text-foreground">Program Preview</div>
                     <div className="text-xs text-muted-foreground">This is a lightweight preview for internal review before pricing.</div>
                   </div>
                 </div>
 
-                <div className="px-6 pb-6 space-y-6">
+                <div className="space-y-6 px-4 pb-4 sm:px-6 sm:pb-6">
                   <div className="rounded-md bg-secondary/30 p-4">
                     <div className="text-sm font-semibold text-foreground">Contact</div>
                     <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
@@ -366,15 +387,25 @@ export function ProgramBuilderPage({ onNavigate }: { onNavigate: NavigateFn }) {
                   ) : null}
                 </div>
 
-                <div className="border-t border-border bg-card px-6 py-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <button type="button" onClick={clearAllBuilder} className={destructiveButtonClass}>
-                      Clear Program
-                    </button>
+                <div className="border-t border-border bg-card px-4 py-4 sm:px-6">
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
+                      <button type="button" onClick={clearBuilderPage} className={`${destructiveButtonClass} w-full sm:w-auto`}>
+                        Clear Program
+                      </button>
 
-                    <button type="button" onClick={() => onNavigate("calculator", "builder_continue")} className={primaryButtonClass}>
-                      Continue To Program Calculator
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => onNavigate("calculator", "builder_continue")}
+                        disabled={!contactComplete}
+                        className={`${primaryButtonClass} w-full sm:w-auto`}
+                      >
+                        Continue to Program Calculator
+                      </button>
+                    </div>
+                    {!contactComplete ? (
+                      <div className="text-xs font-medium text-destructive sm:text-right">{contactBlockMessage}</div>
+                    ) : null}
                   </div>
                 </div>
               </div>

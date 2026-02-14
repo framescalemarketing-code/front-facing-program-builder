@@ -1,8 +1,8 @@
-export function includeEuAddOnsInAllowance(selectedEU) {
-    return selectedEU !== "Covered";
+export function includeEuAddOnsInAllowance() {
+    return true;
 }
-export function calculateCompanywideAllowance({ selectedEU, baseEUAllowance, euPackageAddOnsPerEmployee, employees, }) {
-    const includeAddOns = includeEuAddOnsInAllowance(selectedEU);
+export function calculateCompanywideAllowance({ baseEUAllowance, euPackageAddOnsPerEmployee, employees, }) {
+    const includeAddOns = includeEuAddOnsInAllowance();
     const addOnsInAllowance = includeAddOns ? euPackageAddOnsPerEmployee : 0;
     const allowancePerEmployee = baseEUAllowance + addOnsInAllowance;
     const allowanceTotal = allowancePerEmployee * Math.max(0, employees);

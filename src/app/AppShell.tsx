@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import type { NavigateFn, NavSource, PageId } from "./routerTypes";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 
@@ -40,7 +40,7 @@ export function AppShell(props: { pages: Record<PageId, React.ComponentType<Page
         className="border-b border-border bg-card text-card-foreground app-shell-header no-print"
         data-pdf-exclude="true"
       >
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <a href="/" className="flex items-center gap-3">
               <img
@@ -59,12 +59,20 @@ export function AppShell(props: { pages: Record<PageId, React.ComponentType<Page
             </a>
             <div className="text-sm font-semibold">On-Sight Safety Optics</div>
           </div>
-          <div className="text-xs text-muted-foreground">Internal Quote Tool</div>
+          <div className="hidden text-xs text-muted-foreground sm:block">Internal Quote Tool</div>
         </div>
       </header>
 
       <main id="main-content" className="bg-background">
-        <Current onNavigate={onNavigate} />
+        <Suspense
+          fallback={
+            <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+              <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">Loading page...</div>
+            </div>
+          }
+        >
+          <Current onNavigate={onNavigate} />
+        </Suspense>
       </main>
 
       <SiteFooter />

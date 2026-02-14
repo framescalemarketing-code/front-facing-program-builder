@@ -1,82 +1,79 @@
-# React + TypeScript + Vite
+# OSSO Internal Quote Tool
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Internal React + TypeScript app for:
+- Program Builder
+- Program Calculator
+- Quote Preview + print-ready output
 
-Currently, two official plugins are available:
+## Local Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+1. Install dependencies:
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+2. Start dev server:
+```bash
+npm run dev
 ```
 
-## Brand Font Assets
+3. Build production bundle:
+```bash
+npm run build
+```
 
-The app is configured to use `Univers LT Std` from local font files in `public/fonts/`.
+## Environment Variables
 
-- Preferred: `UniversLTStd.woff2`, `UniversLTStdBold.woff2`
-- Supported fallback: `UniversLTStd.otf/.ttf`, `UniversLTStdBold.otf/.ttf`
+Frontend (`Vite`):
+- `VITE_SHOWROOM_ADDRESS`
+- `VITE_SUPPORT_EMAIL`
+- `VITE_SUPPORT_PHONE`
+- `VITE_BRAND_LOGO_URL`
+- `VITE_API_BASE_URL` (only needed when quote submit is enabled)
+- `VITE_ENABLE_QUOTE_SUBMIT` (`true`/`false`, defaults to `false`)
 
-If you currently only have `.otf` or `.ttf`, you can keep using them. For better performance, convert to `.woff2` later and place the generated files in the same folder.
+Backend (`Vercel functions`, only relevant if submit is enabled):
+- `RESEND_API_KEY`
+- `FROM_EMAIL`
+- `TO_EMAIL`
+- `RESEND_TEST_MODE`
+- `CORS_ALLOW_ORIGIN`
+- `APPLE_MAPS_JWT`
+
+## Quote Submit Feature Flag
+
+Submit UI/actions are behind:
+- `VITE_ENABLE_QUOTE_SUBMIT`
+
+Default behavior is disabled (`false`) to keep the workflow print-first.
+
+## Print/PDF Behavior
+
+Quote Preview print output is grouped in this order:
+1. Contact + Guidelines + Notes + Selected Options
+2. Locations and visits
+3. Program Inputs + Payment Terms
+4. Total Estimate
+
+Additional print rules:
+- Page header (logo/name/details) repeats on new printed pages.
+- Large sections can flow across pages to minimize blank pages.
+- Item-level blocks (locations and breakdown blocks) avoid mid-item splitting where possible.
+
+## Validation
+
+Contact validation includes:
+- Email format (`name@company.com`)
+- Phone format (`###-###-####`)
+- Auto-formatting for phone input while typing
+
+## Quality Commands
+
+```bash
+npm run lint
+npm run test
+```
+
+Test pipeline:
+- `npm run test:build` compiles test targets into `.tmp-tests`
+- `npm run test` runs `node:test` on compiled test files

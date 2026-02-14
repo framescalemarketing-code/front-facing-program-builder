@@ -2,19 +2,25 @@
 "use client";
 
 import { memo, useEffect, useMemo, useState } from "react";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas-pro";
 import type { NavigateFn, NavSource, PageId } from "@/app/routerTypes";
-import { PageHero } from "@/components/layout/PageHero";
 import { SectionWrap } from "@/components/layout/SectionWrap";
+import { primaryButtonClass, secondaryButtonClass } from "@/components/ui/buttonStyles";
 import { LiveGuidance } from "@/components/LiveGuidance";
 import { useProgramDraft } from "@/hooks/useProgramDraft";
 import { calculateCompanywideAllowance, includeEuAddOnsInAllowance } from "@/lib/allowanceMath";
+import { validateContact } from "@/lib/contactValidation";
+import { PRICING } from "@/lib/pricing";
+import { buildQuotePdfBase64 } from "@/lib/quotePdf";
 import { defaultDraft } from "@/lib/programDraft";
+import {
+  departmentAllowanceSummaryValues,
+  departmentInvoicePerEmployeeValues,
+  hasDepartmentAddOnsBreakdown,
+  PRINT_KEEP_TOGETHER_CLASSES,
+} from "@/lib/quotePreviewRules";
 import type {  EUPackage,
   EUPackageAddOnKey,  DepartmentConfigRow,
   PaymentDiscount,
-  PaymentTerms,
   ServiceTier,
 } from "@/lib/programDraft";
 
@@ -29,65 +35,7 @@ const REMOTE_LOGO_FALLBACK =
 
 const SUBMIT_KEY = "osso_quote_preview_submission_v6";
 const QUOTE_ID_PREFIX = "Q";
-
-const PRICING = {
-  onboardingFeeSingleSiteStandard: 1200,
-  onboardingFeeAdditionalSite: 500,
-
-  extraSiteVisitFee: 60,
-
-  euAllowancePerEmployee: {
-    Compliance: 235,
-    Comfort: 290,
-    Complete: 435,
-    Covered: 435,
-  } satisfies Record<EUPackage, number>,
-
-  serviceFeePerEmployee: {
-    Essential: 65,
-    Access: 85,
-    Premier: 105,
-    Enterprise: 155,
-  } satisfies Record<ServiceTier, number>,
-
-  standardVisitsByTier: {
-    Essential: 2,
-    Access: 6,
-    Premier: 12,
-    Enterprise: 24,
-  } satisfies Record<ServiceTier, number>,
-
-  euPackageAddOnsPerEmployee: {
-    polarized: 135,
-    antiFog: 50,
-    antiReflectiveStd: 55,
-    blueLightAntiReflective: 100,
-    tint: 40,
-    transitions: 135,
-    transitionsPolarized: 165,
-    extraScratchCoating: 50,
-  } satisfies Record<EUPackageAddOnKey, number>,
-
-  travel: {
-    includedOneWayMiles: 50,
-    dollarsPerMileOver: 1,
-    roundTripMultiplier: 2,
-  },
-
-  financeFeesPerInvoice: {
-    NET30: 0,
-    NET45: 15,
-    NET60: 30,
-    NET75: 45,
-    NET90: 60,
-  } satisfies Record<PaymentTerms, number>,
-
-  paymentDiscounts: {
-    none: 0,
-    "2_15_NET30": 0.02,
-    "3_10_NET30": 0.03,
-  } satisfies Record<PaymentDiscount, number>,
-};
+const ENABLE_QUOTE_SUBMIT = (import.meta.env.VITE_ENABLE_QUOTE_SUBMIT ?? "false").toLowerCase() === "true";
 
 const EU_PACKAGE_ADD_ON_ITEMS: Array<{ key: EUPackageAddOnKey; label: string; amount: number }> = [
   { key: "antiFog" as EUPackageAddOnKey, label: "Anti-Fog", amount: PRICING.euPackageAddOnsPerEmployee.antiFog },
@@ -138,130 +86,6 @@ function formatMoney(amount: number) {
 function formatAddOnLabelWithAmount(label: string) {
   const match = EU_PACKAGE_ADD_ON_ITEMS.find((item) => item.label === label);
   return match ? `${match.label} ${formatMoney(match.amount)}` : label;
-}
-
-type BuildQuotePdfArgs = {
-  quoteId: string;
-  createdAtIso?: string;
-  showroomReference?: string;
-  estimate?: unknown;
-  contact?: unknown;
-  program?: unknown;
-  selectedOptions?: unknown;
-  guidelines?: unknown;
-};
-
-async function buildQuotePdfBase64({ quoteId }: BuildQuotePdfArgs) {
-  const root = document.querySelector("#quote-pdf-root") as HTMLElement | null;
-  if (!root) throw new Error("Quote preview root not found for PDF generation.");
-
-  const rootWidth = Math.max(1, Math.round(root.scrollWidth || root.clientWidth || root.getBoundingClientRect().width || 1024));
-
-  const scratch = document.createElement("div");
-  scratch.setAttribute("data-pdf-scratch", "true");
-  scratch.style.position = "absolute";
-  scratch.style.left = "-99999px";
-  scratch.style.top = "0";
-  scratch.style.width = `${rootWidth}px`;
-  scratch.style.pointerEvents = "none";
-  scratch.style.background = "#ffffff";
-
-  const clone = root.cloneNode(true) as HTMLElement;
-  clone.style.display = "block";
-  clone.style.width = `${rootWidth}px`;
-  clone.style.background = "#ffffff";
-  scratch.appendChild(clone);
-
-  // Normalize colors to computed RGB so html2canvas doesn't trip on oklab/oklch values
-  const inlineComputedColors = (el: HTMLElement) => {
-    const computed = window.getComputedStyle(el);
-    const colorProps = [
-      "color",
-      "background-color",
-      "border-color",
-      "border-top-color",
-      "border-right-color",
-      "border-bottom-color",
-      "border-left-color",
-      "outline-color",
-    ];
-    colorProps.forEach((prop) => {
-      const v = computed.getPropertyValue(prop);
-      if (v) el.style.setProperty(prop, v);
-    });
-
-    // Strip gradients / shadows that may use oklab/oklch
-    el.style.setProperty("background-image", "none");
-    el.style.setProperty("box-shadow", "none");
-    el.style.setProperty("text-shadow", "none");
-
-    Array.from(el.children).forEach((child) => inlineComputedColors(child as HTMLElement));
-  };
-  inlineComputedColors(clone);
-
-  document.body.appendChild(scratch);
-
-  try {
-    const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
-    const marginPt = 36;
-    const pdfWidth = doc.internal.pageSize.getWidth();
-    const pdfHeight = doc.internal.pageSize.getHeight();
-    const contentWidth = pdfWidth - marginPt * 2;
-    const contentHeight = pdfHeight - marginPt * 2;
-
-    const canvas = await html2canvas(clone, {
-      scale: 2,
-      backgroundColor: "#ffffff",
-      useCORS: true,
-      logging: false,
-      windowWidth: clone.scrollWidth,
-      onclone: (clonedDoc) => {
-        const html = clonedDoc.documentElement;
-        const body = clonedDoc.body;
-
-        html.style.setProperty("color-scheme", "light");
-        body.style.setProperty("background", "#ffffff");
-
-        html.classList.remove("dark");
-        body.classList.remove("dark");
-
-        const style = clonedDoc.createElement("style");
-        style.textContent = `
-          html, body { background: #ffffff !important; color: #0f172a !important; }
-          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          .app-shell-header { display: none !important; }
-          .no-print { display: none !important; }
-          [data-pdf-exclude="true"] { display: none !important; }
-          [data-pdf-root="quote"] { background: #ffffff !important; }
-          [data-pdf-root="quote"] * { filter: none !important; backdrop-filter: none !important; }
-          body > :not([data-pdf-scratch="true"]) { display: none !important; }
-        `;
-        clonedDoc.head.appendChild(style);
-      },
-    });
-
-    const imgData = canvas.toDataURL("image/png");
-    const imgHeight = (canvas.height * contentWidth) / canvas.width;
-    let y = marginPt;
-
-    doc.addImage(imgData, "PNG", marginPt, y, contentWidth, imgHeight, undefined, "FAST");
-
-    while (y + imgHeight > pdfHeight - marginPt) {
-      y -= contentHeight;
-      doc.addPage();
-      doc.addImage(imgData, "PNG", marginPt, y, contentWidth, imgHeight, undefined, "FAST");
-    }
-
-    const dataUri = doc.output("datauristring");
-    const base64 = dataUri.split(",")[1] ?? "";
-    const tail = (quoteId ?? "").slice(-4).replace(/[^A-Za-z0-9]/g, "");
-    const filename = tail ? `OSSOQ${tail}.pdf` : "OSSOQ.pdf";
-    return { pdfBase64: base64, pdfFilename: filename };
-  } finally {
-    if (scratch.parentNode) {
-      scratch.parentNode.removeChild(scratch);
-    }
-  }
 }
 
 function formatMoneyCents(amount: number) {
@@ -399,8 +223,7 @@ const DepartmentAllowanceBreakdownTable = memo(function DepartmentAllowanceBreak
           <tr className="text-left">
             <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
             <th className="py-1 px-2 text-right font-semibold text-foreground">Employees</th>
-            <th className="py-1 px-2 font-semibold text-foreground">Add Ons</th>
-                        <th className="py-1 px-2 text-right font-semibold text-foreground">Allowance per Employee</th>
+            <th className="py-1 px-2 text-right font-semibold text-foreground">Allowance per Employee</th>
             <th className="py-1 pl-2 text-right font-semibold text-foreground">Subtotal</th>
           </tr>
         </thead>
@@ -409,7 +232,6 @@ const DepartmentAllowanceBreakdownTable = memo(function DepartmentAllowanceBreak
             <tr key={row.id}>
               <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
               <td className="py-1 px-2 text-right">{row.employeeCount}</td>
-              <td className="py-1 px-2">{row.selectedAddOnsLabels.length ? row.selectedAddOnsLabels.join(", ") : ""}</td>
               <td className="py-1 px-2 text-right">{formatMoney(row.allowancePerEmployee)}</td>
               <td className="py-1 pl-2 text-right">{formatMoney(row.allowanceSubtotal)}</td>
             </tr>
@@ -417,10 +239,39 @@ const DepartmentAllowanceBreakdownTable = memo(function DepartmentAllowanceBreak
           <tr className="font-semibold text-foreground">
             <td className="py-1 pr-2">Totals</td>
             <td className="py-1 px-2 text-right">{employeesTotal}</td>
-            <td className="py-1 px-2"></td>
             <td className="py-1 px-2 text-right"></td>
             <td className="py-1 pl-2 text-right">{formatMoney(allowanceTotal)}</td>
           </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+});
+
+const DepartmentAddOnsBreakdownTable = memo(function DepartmentAddOnsBreakdownTable({
+  rows,
+}: {
+  rows: DepartmentAllowanceBreakdownLine[];
+}) {
+  return (
+    <div className="mt-3 overflow-x-auto">
+      <div className="mb-2 text-sm font-semibold text-foreground">Department Add-Ons Breakdown</div>
+      <table className="min-w-full text-xs text-muted-foreground">
+        <thead>
+          <tr className="text-left">
+            <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
+            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees</th>
+            <th className="py-1 pl-2 font-semibold text-foreground">Selected Add-Ons</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.id}>
+              <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
+              <td className="py-1 px-2 text-right">{row.employeeCount}</td>
+              <td className="py-1 pl-2">{row.selectedAddOnsLabels.length ? row.selectedAddOnsLabels.join(", ") : "None"}</td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
@@ -596,7 +447,6 @@ const DepartmentInvoiceBreakdownTable = memo(function DepartmentInvoiceBreakdown
 });
 
 export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
-  const ENABLE_QUOTE_SUBMIT = false;
   const { draft } = useProgramDraft();
   const [actionMessage, setActionMessage] = useState("");
   const [isPrinting, setIsPrinting] = useState(false);
@@ -659,7 +509,10 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
   const coverageType = guidelines.coverageType ?? "prescription_only";
   const allowanceScope = guidelines.allowanceScope ?? "companywide";
   const isDepartmentBased = allowanceScope === "department_based";
-  const departmentConfigs: DepartmentConfigRow[] = calculator.departmentConfigs ?? [];
+  const departmentConfigs: DepartmentConfigRow[] = useMemo(
+    () => calculator.departmentConfigs ?? [],
+    [calculator.departmentConfigs]
+  );
 
   const selectedAddOns = useMemo(() => {
     if (isDepartmentBased) {
@@ -684,15 +537,14 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
 
   const submitValidationMessage = useMemo(() => {
     const contact = calculator.contact;
-    const missing: string[] = [];
+    const contactValidation = validateContact(contact);
 
-    if (!isNonEmpty(contact.fullName)) missing.push("Full Name");
-    if (!isNonEmpty(contact.companyName)) missing.push("Company Name");
-    if (!isNonEmpty(contact.email)) missing.push("Email");
-    if (!isNonEmpty(contact.phone)) missing.push("Phone");
+    if (contactValidation.missing.length > 0) {
+      return `Complete all contact fields before submitting: ${contactValidation.missing.join(", ")}.`;
+    }
 
-    if (missing.length > 0) {
-      return `Complete all contact fields before submitting: ${missing.join(", ")}.`;
+    if (contactValidation.invalid.length > 0) {
+      return `Fix invalid contact fields before submitting: ${contactValidation.invalid.join(", ")}.`;
     }
 
     const hasAtLeastOneLocation = calculator.locations.some((loc) => isLocationComplete(loc));
@@ -710,13 +562,14 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
     const selectedEU = calculator.selectedEU;
     const selectedTier = calculator.selectedTier;
 
-    const safeSelectedEU: EUPackage = selectedEU ? (selectedEU as EUPackage) : "Compliance";
-    const safeSelectedTier: ServiceTier = selectedTier ? (selectedTier as ServiceTier) : "Essential";
-    const baseEUAllowance = PRICING.euAllowancePerEmployee[safeSelectedEU];
+    const hasProgramSelections = Boolean(selectedEU) && Boolean(selectedTier);
+    const safeSelectedEU: EUPackage | "" = selectedEU ? (selectedEU as EUPackage) : "";
+    const safeSelectedTier: ServiceTier | "" = selectedTier ? (selectedTier as ServiceTier) : "";
+    const baseEUAllowance = safeSelectedEU ? PRICING.euAllowancePerEmployee[safeSelectedEU] : 0;
 
-    const includeAddOnsInAllowance = includeEuAddOnsInAllowance();
+    const includeAddOnsInAllowance = hasProgramSelections && includeEuAddOnsInAllowance();
 
-    const departmentRows = departmentConfigs ?? [];
+    const departmentRows = departmentConfigs;
 
     const departmentAllowanceBreakdown = isDepartmentBased
       ? departmentRows.map((row, index) => {
@@ -741,21 +594,33 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
     const locations = calculator.locations ?? [];
     const locationCount = Math.max(1, locations.length);
 
-    const onboardingBase = PRICING.onboardingFeeSingleSiteStandard;
+    const onboardingBase = hasProgramSelections ? PRICING.onboardingFeeSingleSiteStandard : 0;
     const additionalSitesCount = Math.max(0, locationCount - 1);
-    const onboardingFee = onboardingBase + additionalSitesCount * PRICING.onboardingFeeAdditionalSite;
+    const onboardingAdditionalSitesFeePerSite = hasProgramSelections ? PRICING.onboardingFeeAdditionalSite : 0;
+    const onboardingFee = onboardingBase + additionalSitesCount * onboardingAdditionalSitesFeePerSite;
 
-    const includedVisits = PRICING.standardVisitsByTier[safeSelectedTier];
+    const includedVisits = safeSelectedTier ? PRICING.standardVisitsByTier[safeSelectedTier] : 0;
 
-    const extraVisitsRaw = calculatorAddOns.extraSiteVisits === "" ? 0 : calculatorAddOns.extraSiteVisits;
-    const extraVisits = clampInt(extraVisitsRaw);
-    const totalVisits = includedVisits + extraVisits;
+    const includedVisitsAcrossLocations = includedVisits * locationCount;
+    const legacyExtraVisits = calculatorAddOns.extraSiteVisits === "" ? 0 : clampInt(calculatorAddOns.extraSiteVisits);
+    const locationExtraVisits = locations.map((loc) => clampInt(loc.additionalOnsiteVisits));
+    const hasLocationVisitOverrides = locationExtraVisits.some((v) => v > 0);
+    const normalizedLocationExtraVisits =
+      hasLocationVisitOverrides || legacyExtraVisits === 0
+        ? locationExtraVisits
+        : locationExtraVisits.map((v, idx) => (idx === 0 ? v + legacyExtraVisits : v));
+    const extraVisits = hasProgramSelections
+      ? normalizedLocationExtraVisits.reduce((sum, visits) => sum + visits, 0)
+      : 0;
+    const totalVisits = includedVisitsAcrossLocations + extraVisits;
 
-    const extraVisitsFee = extraVisits * PRICING.extraSiteVisitFee;
+    const extraVisitsFee = hasProgramSelections ? extraVisits * PRICING.extraSiteVisitFee : 0;
 
-    const euPackageAddOnsPerEmployeeGlobal = EU_PACKAGE_ADD_ON_ITEMS.reduce((sum, item) => {
-      return sum + (calculatorAddOns.euPackageAddOns[item.key] ? item.amount : 0);
-    }, 0);
+    const euPackageAddOnsPerEmployeeGlobal = hasProgramSelections
+      ? EU_PACKAGE_ADD_ON_ITEMS.reduce((sum, item) => {
+          return sum + (calculatorAddOns.euPackageAddOns[item.key] ? item.amount : 0);
+        }, 0)
+      : 0;
 
     let allowancePerEmployee: number;
     let allowanceTotal: number;
@@ -792,44 +657,50 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
       allowanceTotal = allowance.allowanceTotal;
     }
 
-    const tierBaseServicePerEmployee = PRICING.serviceFeePerEmployee[safeSelectedTier];
+    const tierBaseServicePerEmployee = safeSelectedTier ? PRICING.serviceFeePerEmployee[safeSelectedTier] : 0;
 
     const servicePerEmployee = tierBaseServicePerEmployee;
     const serviceTotal = tierBaseServicePerEmployee * employees;
 
-    const validMiles = locations
-      .map((l) => Math.max(0, Number.isFinite(l.oneWayMiles) ? l.oneWayMiles : 0))
-      .filter((miles) => miles > 0);
-
-    const minOneWayMiles = validMiles.length ? Math.min(...validMiles) : 0;
-
-    const travelPricingForQuote = travelTotalForLocation(minOneWayMiles, totalVisits);
-    const travelTotal = travelPricingForQuote.total;
-
-    const travelByLocation = locations.map((loc) => {
-      const tm = travelTotalForLocation(loc.oneWayMiles, totalVisits);
+    const travelByLocation = locations.map((loc, idx) => {
+      const locationExtraVisits = hasProgramSelections ? (normalizedLocationExtraVisits[idx] ?? 0) : 0;
+      const locationTotalVisits = hasProgramSelections ? includedVisits + locationExtraVisits : 0;
+      const additionalVisitFees = locationExtraVisits * PRICING.extraSiteVisitFee;
+      const tm = hasProgramSelections
+        ? travelTotalForLocation(loc.oneWayMiles, locationTotalVisits)
+        : {
+            oneWay: 0,
+            billableRoundTripMiles: 0,
+            feePerVisit: 0,
+            total: 0,
+          };
       return {
         label: loc.label,
         address: formatLocationAddress(loc),
         autoDistance: Boolean(loc.autoDistance),
         oneWayMiles: tm.oneWay,
         oneWayMinutes: clampInt(loc.oneWayMinutes),
-        totalVisits,
+        includedVisits,
+        extraVisits: locationExtraVisits,
+        totalVisits: locationTotalVisits,
         billableRoundTripMiles: tm.billableRoundTripMiles,
         feePerVisit: tm.feePerVisit,
         total: tm.total,
+        additionalVisitFees,
+        locationSubtotal: tm.total + additionalVisitFees,
       };
     });
+    const travelTotal = travelByLocation.reduce((sum, row) => sum + row.total, 0);
 
     const subtotal = onboardingFee + allowanceTotal + serviceTotal + extraVisitsFee + travelTotal;
 
     const paymentTerms = calculator.paymentTerms;
     const paymentDiscount = calculator.paymentDiscount;
 
-    const financeFeePerInvoice = PRICING.financeFeesPerInvoice[paymentTerms];
+    const financeFeePerInvoice = hasProgramSelections ? PRICING.financeFeesPerInvoice[paymentTerms] : 0;
     const financeFeeTotal = financeFeePerInvoice * employees;
 
-    const discountAllowed = paymentTerms === "NET30";
+    const discountAllowed = hasProgramSelections && paymentTerms === "NET30";
     const discountPct = discountAllowed ? PRICING.paymentDiscounts[paymentDiscount] : 0;
 
     const invoicePerEmployee = allowancePerEmployee + servicePerEmployee;
@@ -847,6 +718,9 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
 
       locationCount,
 
+      onboardingBase,
+      additionalSitesCount,
+      onboardingAdditionalSitesFeePerSite,
       onboardingFee,
 
       euBaseAllowance,
@@ -896,7 +770,7 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
       isDepartmentBased,
       departmentAllowanceBreakdown,
     };
-  }, [calculator, calculatorAddOns, departmentConfigs, isDepartmentBased]);
+  }, [calculator, calculatorAddOns, isDepartmentBased, departmentConfigs]);
 
   const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").trim().replace(/\/$/, "");
   const envValidationMessage = ENABLE_QUOTE_SUBMIT && !apiBaseUrl
@@ -910,6 +784,7 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
   }
 
   async function submitQuote() {
+    if (!ENABLE_QUOTE_SUBMIT) return;
     setActionMessage("");
 
     if (envValidationMessage) {
@@ -1025,19 +900,13 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
     setIsPrinting(true);
   }
 
-  const secondaryButtonClass =
-    "inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background";
-
-  const primaryButtonClass =
-    "inline-flex items-center justify-center rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:opacity-95 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background";
-
   const subtleCardClass = "rounded-md bg-secondary/30 p-4";
   const subtleCardPrintClass = "quote-print-card rounded-md bg-secondary/30";
-  const cardTitleClass = "text-sm font-semibold text-foreground";
+  const cardTitleClass = `text-sm font-semibold text-foreground ${PRINT_KEEP_TOGETHER_CLASSES.sectionHeader}`;
   const rowTextClass = "mt-2 grid gap-1 text-sm text-muted-foreground";
 
   const QuoteHeader = ({ tight }: { tight: boolean }) => (
-    <div className={tight ? "quote-print-header" : "px-6 py-5"}>
+    <div className={tight ? "quote-print-header" : "px-4 py-4 sm:px-6 sm:py-5"}>
       <div className="flex items-start justify-between gap-6">
         <div className="flex items-start gap-3">
           {brandLogoUrl ? (
@@ -1137,6 +1006,10 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
 
   const CompactSelectedOptionsCard = ({ print }: { print: boolean }) => {
     const containerClass = print ? subtleCardPrintClass : subtleCardClass;
+    const canShowDepartmentAddOnsBreakdown =
+      isDepartmentBased &&
+      estimate.departmentAllowanceBreakdown.length > 0 &&
+      hasDepartmentAddOnsBreakdown(estimate.departmentAllowanceBreakdown);
 
     return (
       <div className={containerClass}>
@@ -1144,10 +1017,10 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
 
         <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <div className="text-xs font-semibold text-foreground">EU Package Add Ons</div>
+            <div className="text-xs font-semibold text-foreground">EU Package Add-Ons</div>
             {estimate.selectedEU === "Covered" ? (
               <div className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Covered includes all EU Package add ons.
+                Covered includes all EU Package add-ons.
               </div>
             ) : null}
             {selectedAddOns.length === 0 ? (
@@ -1164,24 +1037,82 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
             )}
           </div>
         </div>
+        {canShowDepartmentAddOnsBreakdown ? (
+          <div className={`${PRINT_KEEP_TOGETHER_CLASSES.breakdownBlock} mt-3`}>
+            <button
+              type="button"
+              onClick={() => setShowDepartmentAddOnsBreakdown((prev) => !prev)}
+              className="text-sm font-medium text-foreground underline underline-offset-4"
+            >
+              {showDepartmentAddOnsBreakdown ? "Hide Department Add-Ons Breakdown" : "Show Department Add-Ons Breakdown"}
+            </button>
+            {showDepartmentAddOnsBreakdown ? (
+              <DepartmentAddOnsBreakdownTable rows={estimate.departmentAllowanceBreakdown} />
+            ) : null}
+          </div>
+        ) : null}
       </div>
     );
   };
 
   const LocationsCard = ({ print }: { print: boolean }) => (
     <div className={print ? subtleCardPrintClass : subtleCardClass}>
-      <div className={cardTitleClass}>Locations And Travel Surcharge</div>
+      <div className={cardTitleClass}>Locations and Additional Visits</div>
 
       {(calculator.locations ?? []).length === 0 ? (
-        <div className="mt-2 text-sm text-muted-foreground">No locations provided.</div>
+        <div className={`${PRINT_KEEP_TOGETHER_CLASSES.sectionLead} mt-2 text-sm text-muted-foreground`}>No locations provided.</div>
       ) : (
         <>
+          {(() => {
+            const locationCountForVisits = Math.max(1, estimate.travelByLocation.length);
+            const hasMultipleLocations = locationCountForVisits > 1;
+            const totalLocationVisits = estimate.totalVisits;
+            return (
+          <div className={`${PRINT_KEEP_TOGETHER_CLASSES.sectionLead} mt-2`}>
+            <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
+              <div>
+                {hasMultipleLocations
+                  ? `Your selected service tier includes a standard number of visits per year. This includes ${estimate.includedVisits} visit${estimate.includedVisits === 1 ? "" : "s"} for each location.`
+                  : "Your selected service tier includes a standard number of visits per year."}
+              </div>
+              <div>
+                Visits Included In Service Tier: <span className="font-medium text-foreground">{estimate.includedVisits}</span>
+              </div>
+              <div>
+                Additional Visits: <span className="font-medium text-foreground">{estimate.extraVisits}</span>
+              </div>
+              {hasMultipleLocations ? (
+                <div>
+                  Included Visits Across Locations: <span className="font-medium text-foreground">{estimate.includedVisits * locationCountForVisits}</span>
+                </div>
+              ) : null}
+              <div>
+                Total Visits:{" "}
+                <span className="font-medium text-foreground">{hasMultipleLocations ? totalLocationVisits : estimate.totalVisits}</span>
+              </div>
+              <div>
+                {estimate.extraVisits} Additional Visit(s) x{" "}
+                <span className="font-medium text-foreground">{formatMoney(PRICING.extraSiteVisitFee)}</span>
+              </div>
+            </div>
+            <div className="mt-3 text-sm text-muted-foreground">
+              Additional Visit Fees: <span className="font-semibold text-foreground">{formatMoney(estimate.extraVisitsFee)}</span>
+            </div>
+          </div>
+            );
+          })()}
+
           <div className="mt-2 grid gap-2">
             {estimate.travelByLocation.map((loc) => (
-              <div key={loc.label} className="rounded-md border border-border bg-background p-3">
+              <div
+                key={loc.label}
+                className={`${PRINT_KEEP_TOGETHER_CLASSES.locationItem} rounded-md border border-border bg-background p-3`}
+              >
                 <div className="flex items-center justify-between gap-3">
-                  <div className="text-sm font-semibold text-foreground">{loc.label}</div>
-                  <div className="text-sm font-semibold text-foreground">{formatMoneyCents(loc.total)}</div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {loc.label}
+                  </div>
+                  <div className="text-sm font-semibold text-foreground">{`Additional Visits: ${loc.extraVisits}`}</div>
                 </div>
 
                 <div className="mt-1 text-xs text-muted-foreground">
@@ -1222,17 +1153,19 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
                     </span>
                   </div>
                 </div>
+
+                <div className="mt-3 text-sm font-semibold text-foreground">{formatMoneyCents(loc.locationSubtotal)}</div>
               </div>
             ))}
           </div>
 
-          <div className="mt-3 rounded-md border border-border bg-background p-3">
+          <div className={`${PRINT_KEEP_TOGETHER_CLASSES.locationSummary} mt-3 rounded-md border border-border bg-background p-3`}>
             <div className="flex items-center justify-between gap-3">
               <div className="text-sm font-semibold text-foreground">
-                Total Travel Surcharge
+                Travel Surcharge & Additional Visit Total
               </div>
               <div className="text-sm font-semibold text-foreground">
-                {formatMoneyCents(estimate.travelTotal)}
+                {formatMoneyCents(estimate.travelByLocation.reduce((sum, loc) => sum + loc.locationSubtotal, 0))}
               </div>
             </div>
           </div>
@@ -1243,8 +1176,6 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
 
 
   const ProgramInputsCard = ({ print }: { print: boolean }) => {
-    const [showDepartmentAllowanceBreakdown, setShowDepartmentAllowanceBreakdown] = useState(print);
-    const [showDepartmentServiceBreakdown, setShowDepartmentServiceBreakdown] = useState(print);
     const canShowDepartmentAllowanceBreakdown = isDepartmentBased && estimate.departmentAllowanceBreakdown.length > 0;
     const departmentServiceBreakdown: DepartmentServiceBreakdownLine[] = estimate.departmentAllowanceBreakdown.map((row) => ({
       id: row.id,
@@ -1269,27 +1200,18 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
           </div>
         ) : null}
         <div>
-          Service Tier: <span className="font-medium text-foreground">{estimate.selectedTier}</span>
+          EU Package: <span className="font-medium text-foreground">{estimate.selectedEU || "Not Selected"}</span>
         </div>
         <div>
-          Included Visits: <span className="font-medium text-foreground">{estimate.includedVisits}</span>
-        </div>
-        <div>
-          Additional Visits: <span className="font-medium text-foreground">{estimate.extraVisits}</span>
-        </div>
-        <div>
-          Total Visits: <span className="font-medium text-foreground">{estimate.totalVisits}</span>
+          Service Tier: <span className="font-medium text-foreground">{estimate.selectedTier || "Not Selected"}</span>
         </div>
         <div className="pt-2">
           Locations: <span className="font-medium text-foreground">{estimate.locationCount}</span>
         </div>
       </div>
       <div className="mt-4 rounded-md border border-border bg-background p-3">
-        <div className="text-sm font-semibold text-foreground">EU Package</div>
+        <div className="text-sm font-semibold text-foreground">{`EU Package: ${estimate.selectedEU || "Not Selected"}`}</div>
         <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
-          <div>
-            EU Package: <span className="font-medium text-foreground">{estimate.selectedEU}</span>
-          </div>
           <div>
             {isDepartmentBased ? "Employees (Total)" : "Employees"}:{" "}
             <span className="font-medium text-foreground">{estimate.employees}</span>
@@ -1355,17 +1277,21 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
           ) : null}
         </div>
         {estimate.selectedEU === "Covered" ? (
-          <div className="mt-3 space-y-1 text-lg font-semibold text-foreground">
+          <div className="mt-3 space-y-1 text-sm text-muted-foreground">
             <div>
-              {`Total: ${formatMoney(
-                isDepartmentBased ? estimate.allowanceTotal : estimate.coveredExampleFloorTotal
-              )}`}
+              Allowance Total:{" "}
+              <span className="font-medium text-foreground">
+                {formatMoney(isDepartmentBased ? estimate.allowanceTotal : estimate.coveredExampleFloorTotal)}
+              </span>
             </div>
-            <div>{`Total (Available Allowance): ${formatMoney(estimate.coveredExampleCeilingTotal)}`}</div>
+            <div>
+              Allowance Total (Available):{" "}
+              <span className="font-medium text-foreground">{formatMoney(estimate.coveredExampleCeilingTotal)}</span>
+            </div>
           </div>
         ) : (
-          <div className="mt-3 text-lg font-semibold text-foreground">
-            {isDepartmentBased ? `Total Allowance Cost: ${formatMoney(estimate.allowanceTotal)}` : formatMoney(estimate.allowanceTotal)}
+          <div className="mt-3 text-sm text-muted-foreground">
+            Allowance Total: <span className="font-medium text-foreground">{formatMoney(estimate.allowanceTotal)}</span>
           </div>
         )}
         {estimate.selectedEU === "Covered" ? (
@@ -1383,10 +1309,10 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
           </details>
         ) : null}
         {canShowDepartmentAllowanceBreakdown ? (
-          <div className="mt-3">
+          <div className={`${PRINT_KEEP_TOGETHER_CLASSES.breakdownBlock} mt-3`}>
             <button
               type="button"
-              onClick={() => (!print ? setShowDepartmentAllowanceBreakdown((prev) => !prev) : undefined)}
+              onClick={() => setShowDepartmentAllowanceBreakdown((prev) => !prev)}
               className="text-sm font-medium text-foreground underline underline-offset-4"
             >
               {showDepartmentAllowanceBreakdown ? "Hide Department Allowance Breakdown" : "Show Department Allowance Breakdown"}
@@ -1403,11 +1329,8 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
       </div>
 
       <div className="mt-4 rounded-md border border-border bg-background p-3">
-        <div className="text-sm font-semibold text-foreground">Service Tier</div>
+        <div className="text-sm font-semibold text-foreground">{`Service Tier: ${estimate.selectedTier || "Not Selected"}`}</div>
         <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
-          <div>
-            Service Tier: <span className="font-medium text-foreground">{estimate.selectedTier}</span>
-          </div>
           <div>
             Service per Employee:{" "}
             <span className="font-medium text-foreground">{formatMoney(estimate.servicePerEmployee)}</span>
@@ -1417,20 +1340,20 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
             <span className="font-medium text-foreground">{estimate.employees}</span>
           </div>
         </div>
-        <div className="mt-3 text-lg font-semibold text-foreground">
-          {isDepartmentBased ? `Total Service Cost: ${formatMoney(estimate.serviceTotal)}` : formatMoney(estimate.serviceTotal)}
+        <div className="mt-3 text-sm text-muted-foreground">
+          Service Total: <span className="font-medium text-foreground">{formatMoney(estimate.serviceTotal)}</span>
         </div>
 
         {canShowDepartmentServiceBreakdown ? (
-          <div className="mt-3">
+          <div className={`${PRINT_KEEP_TOGETHER_CLASSES.breakdownBlock} mt-3`}>
             <button
               type="button"
-              onClick={() => (!print ? setShowDepartmentServiceBreakdown((prev) => !prev) : undefined)}
+              onClick={() => setShowDepartmentServiceBreakdown((prev) => !prev)}
               className="text-sm font-medium text-foreground underline underline-offset-4"
             >
               {showDepartmentServiceBreakdown
-                ? "Hide Service Tier Breakdown by Department"
-                : "Show Service Tier Breakdown by Department"}
+                ? "Hide Department Service Tier Breakdown"
+                : "Show Department Service Tier Breakdown"}
             </button>
             {showDepartmentServiceBreakdown ? (
               <DepartmentServiceBreakdownTable
@@ -1442,44 +1365,65 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
           </div>
         ) : null}
       </div>
+
     </div>
     );
   };
 
-  const PaymentTermsCard = ({ print }: { print: boolean }) => {
-    const [showDepartmentPaymentBreakdown, setShowDepartmentPaymentBreakdown] = useState(print);
-    const departmentDiscountBreakdown = useMemo(() => {
-      return estimate.departmentAllowanceBreakdown.map((row) => {
-        const invoicePerEmployee = row.allowancePerEmployee + estimate.servicePerEmployee;
-        const discountPerEmployeeMax = invoicePerEmployee * estimate.discountPct;
-        const discountTotalMax = invoicePerEmployee * row.employeeCount * estimate.discountPct;
-        return {
-          id: row.id,
-          departmentName: row.departmentName,
-          employeeCount: row.employeeCount,
-          invoicePerEmployee,
-          discountPct: estimate.discountPct,
-          discountPerEmployeeMax,
-          discountTotalMax,
-        };
-      });
-    }, [estimate.departmentAllowanceBreakdown, estimate.discountPct, estimate.servicePerEmployee]);
+  const OnboardingFeesCard = ({ print }: { print: boolean }) => (
+    <div className={print ? subtleCardPrintClass : subtleCardClass}>
+      <div className={cardTitleClass}>Onboarding</div>
+      <div className={rowTextClass}>
+        <div>
+          Base Onboarding Fee: <span className="font-medium text-foreground">{formatMoney(estimate.onboardingBase)}</span>
+        </div>
+        {estimate.additionalSitesCount > 0 ? (
+          <>
+            <div>
+              Additional Locations Count: <span className="font-medium text-foreground">{estimate.additionalSitesCount}</span>
+            </div>
+            <div>
+              Per Additional Location Fee:{" "}
+              <span className="font-medium text-foreground">{formatMoney(estimate.onboardingAdditionalSitesFeePerSite)}</span>
+            </div>
+          </>
+        ) : null}
+        <div className="pt-2">
+          Onboarding Fees Total: <span className="font-medium text-foreground">{formatMoney(estimate.onboardingFee)}</span>
+        </div>
+      </div>
+    </div>
+  );
 
-    const departmentInvoiceBreakdown = useMemo(() => {
-      return estimate.departmentAllowanceBreakdown.map((row) => {
-        const invoicePerEmployee = row.allowancePerEmployee + estimate.servicePerEmployee;
-        const financeFeePerInvoice = estimate.financeFeePerInvoice;
-        return {
-          id: row.id,
-          departmentName: row.departmentName,
-          employeeCount: row.employeeCount,
-          invoicePerEmployee,
-          invoiceTotal: invoicePerEmployee * row.employeeCount,
-          financeFeePerInvoice,
-          financeFeeTotal: financeFeePerInvoice * row.employeeCount,
-        };
-      });
-    }, [estimate.departmentAllowanceBreakdown, estimate.servicePerEmployee, estimate.financeFeePerInvoice]);
+  const PaymentTermsCard = ({ print }: { print: boolean }) => {
+    const departmentDiscountBreakdown = estimate.departmentAllowanceBreakdown.map((row) => {
+      const invoicePerEmployee = row.allowancePerEmployee + estimate.servicePerEmployee;
+      const discountPerEmployeeMax = invoicePerEmployee * estimate.discountPct;
+      const discountTotalMax = invoicePerEmployee * row.employeeCount * estimate.discountPct;
+      return {
+        id: row.id,
+        departmentName: row.departmentName,
+        employeeCount: row.employeeCount,
+        invoicePerEmployee,
+        discountPct: estimate.discountPct,
+        discountPerEmployeeMax,
+        discountTotalMax,
+      };
+    });
+
+    const departmentInvoiceBreakdown = estimate.departmentAllowanceBreakdown.map((row) => {
+      const invoicePerEmployee = row.allowancePerEmployee + estimate.servicePerEmployee;
+      const financeFeePerInvoice = estimate.financeFeePerInvoice;
+      return {
+        id: row.id,
+        departmentName: row.departmentName,
+        employeeCount: row.employeeCount,
+        invoicePerEmployee,
+        invoiceTotal: invoicePerEmployee * row.employeeCount,
+        financeFeePerInvoice,
+        financeFeeTotal: financeFeePerInvoice * row.employeeCount,
+      };
+    });
 
     const showDepartmentDiscountBreakdown =
       isDepartmentBased && estimate.discountPct > 0 && departmentDiscountBreakdown.length > 0;
@@ -1499,6 +1443,10 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
     const isNet30 = estimate.paymentTerms === "NET30";
     const hasMaxDiscount = estimate.discountPct > 0;
     const invoiceTotalWithMaxDiscount = estimate.invoiceTotal - estimate.discountTotalMax + estimate.financeFeeTotal;
+    const showCoveredBaseAllowanceNote =
+      calculator.selectedEU === "Covered" ||
+      estimate.selectedEU === "Covered" ||
+      estimate.coveredExampleFloorPerEmployee > 0;
     const invoiceTotalSummaryLabel = hasMaxDiscount ? "Invoice Total (With Max Discount)" : "Invoice Total (With Fees)";
     const invoiceTotalBeforeLabel = estimate.financeFeePerInvoice > 0 ? "Invoice Total (Before Fees)" : "Invoice Total (Before Discount)";
 
@@ -1560,10 +1508,10 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
             )}
 
             {showDepartmentPaymentBreakdownToggle ? (
-              <div className="mt-3 rounded-md border border-border bg-background p-3">
+              <div className={`${PRINT_KEEP_TOGETHER_CLASSES.breakdownBlock} mt-3 rounded-md border border-border bg-background p-3`}>
                 <button
                   type="button"
-                  onClick={() => (!print ? setShowDepartmentPaymentBreakdown((prev) => !prev) : undefined)}
+                  onClick={() => setShowDepartmentPaymentBreakdown((prev) => !prev)}
                   className="text-sm font-medium text-foreground underline underline-offset-4"
                 >
                   {showDepartmentPaymentBreakdown ? "Hide Department Payment Breakdown" : departmentPaymentBreakdownLabel}
@@ -1576,6 +1524,15 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
                   ) : null
                 ) : null}
               </div>
+            ) : null}
+            {hasMaxDiscount ? (
+              <div className="mt-3 text-xs text-muted-foreground">
+                Discount is shown as a maximum based on the per Employee invoice amount. Total discount scales with your employee count.
+                Actual discount can be lower if some pairs price below the per Employee allowance.
+              </div>
+            ) : null}
+            {showCoveredBaseAllowanceNote ? (
+              <div className="mt-3 text-xs text-muted-foreground">Estimates show base allowance totals only.</div>
             ) : null}
           </>
         ) : (
@@ -1665,7 +1622,7 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
                 Actual discount can be lower if some pairs price below the per Employee allowance.
               </div>
             ) : null}
-            {estimate.selectedEU === "Covered" ? (
+            {showCoveredBaseAllowanceNote ? (
               <div className="mt-3 text-xs text-muted-foreground">Estimates show base allowance totals only.</div>
             ) : null}
           </>
@@ -1674,25 +1631,31 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
     );
   };
 
+  const EstimateNoticeCard = ({ print }: { print: boolean }) => (
+    <div className={print ? subtleCardPrintClass : subtleCardClass}>
+      <div className={cardTitleClass}>Estimate Notice</div>
+      <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+        This quote preview provides an estimate. Final pricing and program scope are confirmed after On-Sight Safety
+        Optics reviews your locations, onsite requirements, hazard and compliance needs, frame and lens requirements,
+        travel distance, and support coverage.
+      </p>
+      <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+        Supplemental requests, including additional products, services, reporting, special handling, or policy
+        exceptions, are scoped and priced separately. For coverage, timelines, and total cost, review this estimate
+        with an OSSO Program Specialist before treating it as final.
+      </p>
+    </div>
+  );
+
   const TotalEstimateCard = ({ print }: { print: boolean }) => {
-    const departmentAllowanceSummary = useMemo(
-      () => estimate.departmentAllowanceBreakdown.map((row, index) => ({ label: `D${index + 1}`, allowancePerEmployee: row.allowancePerEmployee })),
-      [estimate.departmentAllowanceBreakdown]
-    );
-    const departmentAllowanceSummaryVisible = useMemo(() => departmentAllowanceSummary.slice(0, 5), [departmentAllowanceSummary]);
+    const departmentAllowanceSummary = departmentAllowanceSummaryValues(estimate.departmentAllowanceBreakdown);
+    const departmentAllowanceSummaryVisible = departmentAllowanceSummary.slice(0, 5);
     const departmentAllowanceSummaryHiddenCount = Math.max(0, departmentAllowanceSummary.length - departmentAllowanceSummaryVisible.length);
-    const departmentInvoicePerEmployeeSummary = useMemo(
-      () =>
-        estimate.departmentAllowanceBreakdown.map((row, index) => ({
-          label: `D${index + 1}`,
-          invoicePerEmployee: row.allowancePerEmployee + estimate.servicePerEmployee,
-        })),
-      [estimate.departmentAllowanceBreakdown, estimate.servicePerEmployee]
+    const departmentInvoicePerEmployeeSummary = departmentInvoicePerEmployeeValues(
+      estimate.departmentAllowanceBreakdown,
+      estimate.servicePerEmployee
     );
-    const departmentInvoicePerEmployeeVisible = useMemo(
-      () => departmentInvoicePerEmployeeSummary.slice(0, 5),
-      [departmentInvoicePerEmployeeSummary]
-    );
+    const departmentInvoicePerEmployeeVisible = departmentInvoicePerEmployeeSummary.slice(0, 5);
     const departmentInvoicePerEmployeeHiddenCount = Math.max(
       0,
       departmentInvoicePerEmployeeSummary.length - departmentInvoicePerEmployeeVisible.length
@@ -1748,10 +1711,9 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
           {isDepartmentBased && departmentAllowanceSummaryVisible.length > 0 ? (
             <>
               <span>Allowance per Employee: </span>
-              {departmentAllowanceSummaryVisible.map((item, index) => (
-                <span key={item.label}>
-                  <span>{item.label} </span>
-                  <span className="font-medium text-foreground">{formatMoney(item.allowancePerEmployee)}</span>
+              {departmentAllowanceSummaryVisible.map((allowancePerEmployee, index) => (
+                <span key={`allowance-${index}-${allowancePerEmployee}`}>
+                  <span className="font-medium text-foreground">{formatMoney(allowancePerEmployee)}</span>
                   {index < departmentAllowanceSummaryVisible.length - 1 ? ", " : ""}
                 </span>
               ))}
@@ -1770,10 +1732,9 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
           {isDepartmentBased && departmentInvoicePerEmployeeVisible.length > 0 ? (
             <>
               <span>Invoice per Employee: </span>
-              {departmentInvoicePerEmployeeVisible.map((item, index) => (
-                <span key={item.label}>
-                  <span>{item.label} </span>
-                  <span className="font-medium text-foreground">{formatMoney(item.invoicePerEmployee)}</span>
+              {departmentInvoicePerEmployeeVisible.map((invoicePerEmployee, index) => (
+                <span key={`invoice-${index}-${invoicePerEmployee}`}>
+                  <span className="font-medium text-foreground">{formatMoney(invoicePerEmployee)}</span>
                   {index < departmentInvoicePerEmployeeVisible.length - 1 ? ", " : ""}
                 </span>
               ))}
@@ -1798,6 +1759,10 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
   }, [envValidationMessage, submitValidationMessage]);
 
   const submitDisabled = isSubmitting || Boolean(envValidationMessage) || Boolean(submitValidationMessage);
+  const [showDepartmentAllowanceBreakdown, setShowDepartmentAllowanceBreakdown] = useState(false);
+  const [showDepartmentAddOnsBreakdown, setShowDepartmentAddOnsBreakdown] = useState(false);
+  const [showDepartmentServiceBreakdown, setShowDepartmentServiceBreakdown] = useState(false);
+  const [showDepartmentPaymentBreakdown, setShowDepartmentPaymentBreakdown] = useState(false);
 
   return (
     <section aria-labelledby="quote-title">
@@ -1805,7 +1770,7 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
         @media print {
           @page {
             size: letter;
-            margin: 0.4in;
+            margin: 0.32in;
           }
 
           body {
@@ -1825,7 +1790,6 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
             display: block !important;
             position: relative;
             z-index: 1;
-            zoom: 0.90;
           }
 
           .print-hide {
@@ -1848,15 +1812,15 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
           }
 
           .quote-print-header {
-            padding: 10px 12px;
+            padding: 8px 10px;
           }
 
           .quote-print-card {
-            padding: 8px 8px;
+            padding: 7px 7px;
           }
 
           .quote-print-body {
-            padding: 10px 10px;
+            padding: 8px 8px;
           }
 
           .quote-print-body .text-sm {
@@ -1884,17 +1848,104 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
             border-radius: 12px;
           }
 
+          .print-only .quote-print-card {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+
           .quote-print-gap {
-            gap: 12px;
+            gap: 10px;
           }
 
           .quote-print-stack {
-            gap: 10px;
+            gap: 8px;
           }
 
           .quote-print-body table td,
           .quote-print-body table th {
             color: #0f172a !important;
+          }
+
+          .print-doc {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+          }
+
+          .print-doc thead {
+            display: table-header-group;
+          }
+
+          .print-doc tbody {
+            display: table-row-group;
+          }
+
+          .print-doc td {
+            padding: 0;
+            vertical-align: top;
+          }
+
+          .print-doc-body {
+            padding-top: 8px;
+          }
+
+          .print-section-stack {
+            display: grid;
+            gap: 8px;
+          }
+
+          .print-section {
+            break-inside: auto;
+            page-break-inside: auto;
+          }
+
+          .print-only .text-sm {
+            font-size: 11px !important;
+            line-height: 1.15rem !important;
+          }
+
+          .print-only .text-xs {
+            font-size: 10px !important;
+            line-height: 1rem !important;
+          }
+
+          .print-only .text-lg {
+            font-size: 19px !important;
+            line-height: 1.35rem !important;
+          }
+
+          .print-only table tr {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+
+          .print-only .print-location-item,
+          .print-only .print-location-summary,
+          .print-only .print-breakdown-block {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+
+          .print-only .print-section-header {
+            break-after: avoid;
+            page-break-after: avoid;
+          }
+
+          .print-only .print-section-lead {
+            break-before: avoid;
+            page-break-before: avoid;
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+
+          .print-only .print-financial-group {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+
+          .print-only .print-force-page-start {
+            break-before: page;
+            page-break-before: always;
           }
         }
 
@@ -1908,39 +1959,40 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
 
 
       <div className="no-print">
-        <div data-pdf-exclude="true">
-          <PageHero
-            id="quote-title"
-            title="Quote Preview"
-            subtitle="Review everything selected, then download a PDF or submit the quote."
-          />
-        </div>
-
         <div className="mx-auto w-full max-w-screen-2xl px-4 sm:px-6 lg:px-8">
+          <div data-pdf-exclude="true" className="py-10">
+            <h1 id="quote-title" className="text-3xl font-semibold tracking-tight text-foreground">
+              Quote Preview
+            </h1>
+            <p className="mt-2 max-w-3xl text-muted-foreground">
+              Review your full estimate, confirm scope and totals, then print or submit the quote when everything is ready.
+            </p>
+          </div>
+
           <SectionWrap>
             <LiveGuidance id={guidanceId} message={guidanceMessage} />
 
             <div
               data-pdf-exclude="true"
-              className="flex flex-wrap items-center justify-between gap-3"
+              className="flex flex-col gap-3 lg:flex-row lg:items-center"
               aria-describedby={guidanceId}
             >
-              <div className="flex flex-wrap items-center gap-3">
-                <button type="button" onClick={() => nav("calculator", "internal")} className={secondaryButtonClass}>
-                  Back To Program Calculator
+              <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+                <button type="button" onClick={() => nav("calculator", "internal")} className={`${secondaryButtonClass} w-full sm:w-auto`}>
+                  Back to Program Calculator
                 </button>
-                <button type="button" onClick={() => nav("builder", "internal")} className={secondaryButtonClass}>
-                  Back To Program Builder
+                <button type="button" onClick={() => nav("builder", "internal")} className={`${secondaryButtonClass} w-full sm:w-auto`}>
+                  Back to Program Builder
                 </button>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <button type="button" onClick={printQuoteTwoPages} className={secondaryButtonClass}>
+              <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 lg:ml-auto">
+                <button type="button" onClick={printQuoteTwoPages} className={`${secondaryButtonClass} w-full sm:w-auto`}>
                   Print Page as PDF
                 </button>
 
                 {ENABLE_QUOTE_SUBMIT ? (
-                  <button type="button" onClick={submitQuote} className={primaryButtonClass} disabled={submitDisabled}>
+                  <button type="button" onClick={submitQuote} className={`${primaryButtonClass} w-full sm:w-auto`} disabled={submitDisabled}>
                     {isSubmitting ? "Submitting..." : "Submit Quote"}
                   </button>
                 ) : null}
@@ -1989,7 +2041,7 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
             >
               <QuoteHeader tight={false} />
 
-                                  <div className="space-y-5 px-6 pb-6">
+                                  <div className="space-y-5 px-4 pb-6 sm:px-6">
                       <div className="grid grid-cols-12 items-stretch gap-4">
                       <div className="col-span-12 space-y-4 md:col-span-7">
                         <ContactDetailsCard print={false} />
@@ -2001,27 +2053,29 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
 
                       <div className="col-span-12 flex h-full flex-col gap-4 md:col-span-5">
                         <ProgramInputsCard print={false} />
+                        <OnboardingFeesCard print={false} />
                         <PaymentTermsCard print={false} />
 
                         <div className="flex-1" />
 
                         <TotalEstimateCard print={false} />
-                        <div data-pdf-exclude="true" className="flex flex-wrap items-center justify-end gap-3 pt-2">
-                          <button type="button" onClick={printQuoteTwoPages} className={secondaryButtonClass}>
-                            Print Page as PDF
-                          </button>
-                          {ENABLE_QUOTE_SUBMIT ? (
-                            <button
-                              type="button"
-                              onClick={submitQuote}
-                              className={primaryButtonClass}
-                              disabled={submitDisabled}
-                            >
-                              {isSubmitting ? "Submitting..." : "Submit Quote"}
-                            </button>
-                          ) : null}
-                        </div>
                       </div>
+                    </div>
+                    <EstimateNoticeCard print={false} />
+                    <div data-pdf-exclude="true" className="grid gap-2 pt-3 sm:grid-cols-2 sm:justify-end sm:gap-3 md:flex md:flex-wrap md:items-center md:justify-end">
+                      <button type="button" onClick={printQuoteTwoPages} className={`${secondaryButtonClass} w-full sm:w-auto`}>
+                        Print Page as PDF
+                      </button>
+                      {ENABLE_QUOTE_SUBMIT ? (
+                        <button
+                          type="button"
+                          onClick={submitQuote}
+                          className={`${primaryButtonClass} w-full sm:w-auto`}
+                          disabled={submitDisabled}
+                        >
+                          {isSubmitting ? "Submitting..." : "Submit Quote"}
+                        </button>
+                      ) : null}
                     </div>
 
                   </div>
@@ -2032,91 +2086,83 @@ export function QuotePreviewPage({ onNavigate }: { onNavigate: NavigateFn }) {
       </div>
 
       <div className="print-only">
-        <div className="print-page print-page-break">
-          <div className="overflow-hidden rounded-lg border border-border bg-card">
-            <QuoteHeader tight={true} />
-
-            <div className="quote-print-body space-y-3">
-              <div className="grid grid-cols-12 quote-print-gap">
-                <div className="col-span-12 md:col-span-7">
-                  <div className="grid quote-print-stack">
-                    <div className="print-avoid-break">
-                      <ContactDetailsCard print={true} />
-                    </div>
-
-                    <div className="print-avoid-break">
-                      <ProgramGuidelinesCard print={true} />
-                    </div>
-
-                    {guidelines.notes?.trim() ? (
-                      <div className="print-avoid-break">
-                        <NotesCard print={true} />
+        <table className="print-doc">
+          <thead>
+            <tr>
+              <td>
+                <div className="overflow-hidden rounded-lg border border-border bg-card">
+                  <QuoteHeader tight={true} />
+                </div>
+              </td>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div className="print-doc-body print-section-stack">
+                  <div className="print-section">
+                    <div className="grid grid-cols-12 quote-print-gap">
+                      <div className="col-span-12 md:col-span-7">
+                        <div className="grid quote-print-stack">
+                          <div className="print-avoid-break">
+                            <ContactDetailsCard print={true} />
+                          </div>
+                          <div className="print-avoid-break">
+                            <ProgramGuidelinesCard print={true} />
+                          </div>
+                          {guidelines.notes?.trim() ? (
+                            <div className="print-avoid-break">
+                              <NotesCard print={true} />
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
-                    ) : null}
+                      <div className="col-span-12 md:col-span-5">
+                        <div className="grid quote-print-stack">
+                          <div className="print-avoid-break">
+                            <CompactSelectedOptionsCard print={true} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
 
-                <div className="col-span-12 md:col-span-5">
-                  <div className="grid quote-print-stack">
-                    <div className="print-avoid-break">
-                      <CompactSelectedOptionsCard print={true} />
+                  <div className="print-section print-avoid-break">
+                    <LocationsCard print={true} />
+                  </div>
+
+                  <div className="print-section">
+                    <div className="grid grid-cols-12 quote-print-gap">
+                      <div className="col-span-12 md:col-span-6">
+                        <div className="print-avoid-break">
+                          <ProgramInputsCard print={true} />
+                        </div>
+                      </div>
+                      <div className="col-span-12 md:col-span-6">
+                        <div className="print-financial-group space-y-3">
+                          <div className="print-avoid-break">
+                            <OnboardingFeesCard print={true} />
+                          </div>
+                          <div className="print-avoid-break">
+                            <PaymentTermsCard print={true} />
+                          </div>
+                          <div className="print-avoid-break">
+                            <TotalEstimateCard print={true} />
+                          </div>
+                          <div className="print-avoid-break">
+                            <EstimateNoticeCard print={true} />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-
-              <div className="print-avoid-break">
-                <LocationsCard print={true} />
-              </div>
-
-              <div className="print-hide text-xs text-muted-foreground">
-                This quote preview is generated from the selections entered in the Program Builder and Program Calculator.
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="print-page">
-          <div className="overflow-hidden rounded-lg border border-border bg-card">
-            <QuoteHeader tight={true} />
-
-            <div className="quote-print-body space-y-3">
-              <div className="grid grid-cols-12 quote-print-gap">
-                <div className="col-span-12 md:col-span-6">
-                  <div className="grid quote-print-stack">
-                    <div className="print-avoid-break">
-                      <ProgramInputsCard print={true} />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-span-12 md:col-span-6">
-                  <div className="grid quote-print-stack">
-                    <div className="print-avoid-break">
-                      <PaymentTermsCard print={true} />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-span-12">
-                  <div className="grid quote-print-stack">
-                    <div className="print-avoid-break">
-                      <TotalEstimateCard print={true} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="print-hide text-xs text-muted-foreground">
-                This quote preview is generated from the selections entered in the Program Builder and Program Calculator.
-              </div>
-            </div>
-          </div>
-        </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
     </section>
   );
 }
-
-

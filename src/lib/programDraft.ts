@@ -25,6 +25,7 @@ export type LocationRow = {
   city: string;
   state: string;
   zipCode: string;
+  additionalOnsiteVisits: number;
   oneWayMiles: number;
   oneWayMinutes: number;
   autoDistance: boolean;
@@ -111,6 +112,7 @@ export const makeDefaultLocations = (): LocationRow[] => [
     city: "",
     state: "",
     zipCode: "",
+    additionalOnsiteVisits: 0,
     oneWayMiles: 0,
     oneWayMinutes: 0,
     autoDistance: true,
@@ -248,6 +250,7 @@ function normalizeLocationRow(row: Partial<LocationRow> | undefined, index: numb
     city: typeof row?.city === "string" ? row.city : fallback.city,
     state: typeof row?.state === "string" ? row.state : fallback.state,
     zipCode: typeof row?.zipCode === "string" ? row.zipCode : fallback.zipCode,
+    additionalOnsiteVisits: clampNonNegativeNumber(row?.additionalOnsiteVisits, fallback.additionalOnsiteVisits),
     oneWayMiles: clampNonNegativeNumber(row?.oneWayMiles, fallback.oneWayMiles),
     oneWayMinutes: clampNonNegativeNumber(row?.oneWayMinutes, fallback.oneWayMinutes),
     autoDistance: typeof row?.autoDistance === "boolean" ? row.autoDistance : fallback.autoDistance,

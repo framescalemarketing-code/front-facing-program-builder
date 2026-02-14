@@ -5,10 +5,15 @@ import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useSta
 import type { NavigateFn } from "@/app/routerTypes";
 import { PageHero } from "@/components/layout/PageHero";
 import { SectionWrap } from "@/components/layout/SectionWrap";
+import { destructiveButtonClass, primaryButtonClass, secondaryButtonClass } from "@/components/ui/buttonStyles";
 import { useProgramDraft } from "@/hooks/useProgramDraft";
-import { isOptionRestricted, isOptionVisible } from "@/lib/dependencyRules";
+import { isOptionRestricted } from "@/lib/dependencyRules";
 import { calculateCompanywideAllowance, includeEuAddOnsInAllowance } from "@/lib/allowanceMath";
+import { geocodeWithNominatim, routeWithOSRM } from "@/lib/distanceRouting";
+import type { LatLon } from "@/lib/distanceRouting";
+import { PRICING } from "@/lib/pricing";
 import { makeDepartmentConfigRow } from "@/lib/programDraft";
+import { hasDepartmentAddOnsBreakdown } from "@/lib/quotePreviewRules";
 import type {
   AddOns,  EUPackage,
   EUPackageAddOnKey,  LocationRow,
@@ -18,71 +23,7 @@ import type {
   ServiceTier,
 } from "@/lib/programDraft";
 
-type LatLon = { lat: number; lon: number };
-type NominatimResult = { lat?: string | number; lon?: string | number };
-type OSRMResponse = { routes?: Array<{ distance?: number; duration?: number }> };
-
 const SHOWROOM_ADDRESS = "6780 Miramar Rd, San Diego, CA 92121";
-
-const PRICING = {
-  onboardingFeeSingleSiteStandard: 1200,
-  onboardingFeeAdditionalSite: 500,
-
-  extraSiteVisitFee: 60,
-
-  euAllowancePerEmployee: {
-    Compliance: 235,
-    Comfort: 290,
-    Complete: 435,
-    Covered: 435,
-  } satisfies Record<EUPackage, number>,
-
-  serviceFeePerEmployee: {
-    Essential: 65,
-    Access: 85,
-    Premier: 105,
-    Enterprise: 155,
-  } satisfies Record<ServiceTier, number>,
-
-  standardVisitsByTier: {
-    Essential: 2,
-    Access: 6,
-    Premier: 12,
-    Enterprise: 24,
-  } satisfies Record<ServiceTier, number>,
-
-  euPackageAddOnsPerEmployee: {
-    polarized: 135,
-    antiFog: 50,
-    antiReflectiveStd: 55,
-    blueLightAntiReflective: 100,
-    tint: 40,
-    transitions: 135,
-    transitionsPolarized: 165,
-    extraScratchCoating: 50,
-  } satisfies Record<EUPackageAddOnKey, number>,
-
-  travel: {
-    includedOneWayMiles: 50,
-    dollarsPerMileOver: 1,
-    roundTripMultiplier: 2,
-  },
-
-  financeFeesPerInvoice: {
-    NET30: 0,
-    NET45: 15,
-    NET60: 30,
-    NET75: 45,
-    NET90: 60,
-  } satisfies Record<PaymentTerms, number>,
-
-  paymentDiscounts: {
-    none: 0,
-    "2_15_NET30": 0.02,
-    "3_10_NET30": 0.03,
-  } satisfies Record<PaymentDiscount, number>,
-};
-
 
 const EU_PACKAGE_ADD_ON_ITEMS: Array<{
   key: EUPackageAddOnKey;
@@ -172,10 +113,11 @@ type DepartmentRowEditorProps = {
   row: DepartmentConfigRow;
   canRemove: boolean;
   secondaryButtonClass: string;
-  visibleEuAddOnItems: Array<{
+  euAddOnItems: Array<{
     key: EUPackageAddOnKey;
     label: string;
     amount: number;
+    isRestricted: boolean;
   }>;
   onNameInput: (id: string, next: string) => void;
   onNameCommit: (id: string) => void;
@@ -191,7 +133,7 @@ const DepartmentRowEditor = memo(function DepartmentRowEditor({
   row,
   canRemove,
   secondaryButtonClass,
-  visibleEuAddOnItems,
+  euAddOnItems,
   onNameInput,
   onNameCommit,
   getNameValue,
@@ -265,21 +207,40 @@ const DepartmentRowEditor = memo(function DepartmentRowEditor({
       </div>
 
       <div className="space-y-2">
-        <div className="text-sm font-semibold text-foreground">EU Package Add Ons</div>
+        <div className="text-sm font-semibold text-foreground">EU Package Add-Ons</div>
         <div className="space-y-2">
-          {visibleEuAddOnItems.map((item) => (
-            <label key={item.key} className="flex items-start gap-3 rounded-md border border-border bg-card p-3">
+          {euAddOnItems.map((item) => (
+            <label
+              key={item.key}
+              className={`flex items-start gap-3 rounded-md border border-border bg-card p-3 ${
+                item.isRestricted ? "opacity-70" : ""
+              }`}
+            >
               <input
                 type="checkbox"
                 checked={Boolean(row.selections.euPackageAddOns[item.key])}
                 onChange={(e) => onToggleAddOn(row.id, item.key, e.target.checked)}
+                disabled={item.isRestricted}
                 className="mt-1"
               />
               <div className="space-y-1">
                 <div className="text-sm text-foreground">
-                  {item.label} <span className="text-muted-foreground">({formatMoney(item.amount)} per Employee)</span>
+                  {item.label}{" "}
+                  <span className="text-muted-foreground">
+                    (<span className="font-medium text-foreground/80">{formatMoney(item.amount)} per Employee</span>)
+                  </span>
+                  {item.isRestricted ? (
+                    <span className="ml-2 rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive">
+                      Restricted
+                    </span>
+                  ) : null}
                 </div>
                 <div className="text-xs text-muted-foreground">{EU_ADD_ON_DESCRIPTIONS[item.key]}</div>
+                {item.isRestricted ? (
+                  <div className="text-xs text-muted-foreground">
+                    Available only with documented medical necessity and case-by-case approval.
+                  </div>
+                ) : null}
               </div>
             </label>
           ))}
@@ -304,10 +265,6 @@ function normalizeAutoOneWayMiles(n: number) {
 
 function milesOverIncludedOneWay(n: number) {
   return Math.max(0, clampNumber(n) - PRICING.travel.includedOneWayMiles);
-}
-
-function sitesIncludedLabel(selectedTier: ServiceTier | "") {
-  return selectedTier ? `Visits Included In ${selectedTier} Service Tier` : "Visits Included In Service Tier";
 }
 
 function sitesIncludedSubtext() {
@@ -365,150 +322,6 @@ function travelMath(oneWayMiles: number, totalVisits: number) {
   };
 }
 
-function safeNumber(n: unknown) {
-  const v = typeof n === "number" ? n : Number(n);
-  return Number.isFinite(v) ? v : 0;
-}
-
-async function geocodeWithNominatim(
-  loc: Pick<LocationRow, "streetAddress" | "city" | "state" | "zipCode">
-): Promise<LatLon> {
-  const street = loc.streetAddress.trim();
-  const city = loc.city.trim();
-  const state = loc.state.trim();
-  const zip = loc.zipCode.trim();
-
-  const url = new URL("https://nominatim.openstreetmap.org/search");
-  url.searchParams.set("format", "jsonv2");
-  url.searchParams.set("limit", "1");
-  url.searchParams.set("addressdetails", "0");
-  url.searchParams.set("countrycodes", "us");
-  url.searchParams.set("street", street);
-  url.searchParams.set("city", city);
-  url.searchParams.set("state", state);
-  if (zip) url.searchParams.set("postalcode", zip);
-
-  const resp = await fetch(url.toString(), {
-    method: "GET",
-    headers: { Accept: "application/json" },
-  });
-
-  if (!resp.ok) throw new Error(`Geocoding failed (${resp.status}).`);
-
-  const data = (await resp.json()) as unknown;
-  if (!Array.isArray(data) || data.length === 0) throw new Error("No result found for this address.");
-
-  const [first] = data as NominatimResult[];
-  const lat = safeNumber(first?.lat);
-  const lon = safeNumber(first?.lon);
-
-  if (!lat || !lon) throw new Error("Geocoding returned an invalid location.");
-
-  return { lat, lon };
-}
-
-async function routeWithOSRMProvider(
-  baseHost: string,
-  origin: LatLon,
-  destination: LatLon
-): Promise<{ miles: number; minutes: number }> {
-  const baseUrl =
-    `${baseHost}/route/v1/driving/${origin.lon},${origin.lat};${destination.lon},${destination.lat}`;
-
-  const buildUrl = (includeAlternatives: boolean) => {
-    const url = new URL(baseUrl);
-    url.searchParams.set("overview", "false");
-    if (includeAlternatives) url.searchParams.set("alternatives", "true");
-    url.searchParams.set("steps", "false");
-    url.searchParams.set("annotations", "false");
-    return url;
-  };
-
-  let resp = await fetch(buildUrl(true).toString(), {
-    method: "GET",
-    headers: { Accept: "application/json" },
-  });
-
-  if (!resp.ok && resp.status === 400) {
-    resp = await fetch(buildUrl(false).toString(), {
-      method: "GET",
-      headers: { Accept: "application/json" },
-    });
-  }
-
-  if (!resp.ok) throw new Error(`Routing failed (${resp.status}).`);
-
-  const data = (await resp.json()) as OSRMResponse;
-  const routes = Array.isArray(data.routes) ? data.routes : [];
-  const best = routes
-    .map((r) => ({
-      distance: safeNumber(r?.distance),
-      duration: safeNumber(r?.duration),
-    }))
-    .filter((r) => r.distance && r.duration)
-    .sort((a, b) => a.distance - b.distance)[0];
-
-  const meters = best?.distance ?? 0;
-  const seconds = best?.duration ?? 0;
-
-  if (!meters || !seconds) throw new Error("Routing returned an invalid result.");
-
-  return {
-    miles: meters / 1609.344,
-    minutes: Math.round(seconds / 60),
-  };
-}
-
-async function routeWithAppleProvider(origin: LatLon, destination: LatLon): Promise<{ miles: number; minutes: number }> {
-  const resp = await fetch("/api/apple-route", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ origin, destination }),
-  });
-
-  if (!resp.ok) throw new Error(`Apple routing failed (${resp.status}).`);
-
-  const data = (await resp.json()) as { miles?: unknown; minutes?: unknown };
-  const miles = safeNumber(data?.miles);
-  const minutes = safeNumber(data?.minutes);
-  if (!miles) throw new Error("Apple routing returned an invalid result.");
-
-  return { miles, minutes: Math.max(0, Math.round(minutes)) };
-}
-
-async function routeWithOSRM(origin: LatLon, destination: LatLon): Promise<{ miles: number; minutes: number }> {
-  const results = await Promise.all([
-    (async () => {
-      try {
-        return await routeWithAppleProvider(origin, destination);
-      } catch {
-        return null;
-      }
-    })(),
-    (async () => {
-      try {
-        return await routeWithOSRMProvider("https://router.project-osrm.org", origin, destination);
-      } catch {
-        return null;
-      }
-    })(),
-    (async () => {
-      try {
-        return await routeWithOSRMProvider("https://routing.openstreetmap.de/routed-car", origin, destination);
-      } catch {
-        return null;
-      }
-    })(),
-  ]);
-
-  const valid = results.filter((r): r is { miles: number; minutes: number } => Boolean(r));
-  if (valid.length === 0) {
-    throw new Error("Routing failed (all providers unavailable).");
-  }
-
-  return valid.sort((a, b) => a.miles - b.miles)[0];
-}
-
 function discountLabel(d: PaymentDiscount) {
   if (d === "2_15_NET30") return "2 percent discount if paid in 15 days";
   if (d === "3_10_NET30") return "3 percent discount if paid in 10 days";
@@ -525,6 +338,7 @@ function makeDefaultLocations(): LocationRow[] {
       city: "",
       state: "",
       zipCode: "",
+      additionalOnsiteVisits: 0,
       oneWayMiles: 0,
       oneWayMinutes: 0,
       autoDistance: true,
@@ -583,6 +397,8 @@ type EstimateModel = {
     billableRoundTripMiles: number;
     feePerVisit: number;
     total: number;
+    additionalVisitFees: number;
+    locationSubtotal: number;
   }>;
   travelTotal: number;
   subtotal: number;
@@ -602,7 +418,7 @@ type EstimateModel = {
 
 type EstimateBreakdownProps = {
   estimate: EstimateModel;
-  travelExplanation: string;
+  selectedEUValue: EUPackage | "";
   destructiveButtonClass: string;
   primaryButtonClass: string;
   continueDisabled: boolean;
@@ -638,8 +454,7 @@ const DepartmentAllowanceBreakdown = memo(function DepartmentAllowanceBreakdown(
           <tr className="text-left">
             <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
             <th className="py-1 px-2 text-right font-semibold text-foreground">Employees</th>
-            <th className="py-1 px-2 font-semibold text-foreground">Add Ons</th>
-                        <th className="py-1 px-2 text-right font-semibold text-foreground">Allowance per Employee</th>
+            <th className="py-1 px-2 text-right font-semibold text-foreground">Allowance per Employee</th>
             <th className="py-1 pl-2 text-right font-semibold text-foreground">Subtotal</th>
           </tr>
         </thead>
@@ -648,7 +463,6 @@ const DepartmentAllowanceBreakdown = memo(function DepartmentAllowanceBreakdown(
             <tr key={row.id}>
               <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
               <td className="py-1 px-2 text-right">{row.employeeCount}</td>
-              <td className="py-1 px-2">{row.selectedAddOnsLabels.length ? row.selectedAddOnsLabels.join(", ") : ""}</td>
               <td className="py-1 px-2 text-right">{formatMoney(row.allowancePerEmployee)}</td>
               <td className="py-1 pl-2 text-right">{formatMoney(row.allowanceTotal)}</td>
             </tr>
@@ -656,10 +470,39 @@ const DepartmentAllowanceBreakdown = memo(function DepartmentAllowanceBreakdown(
           <tr className="font-semibold text-foreground">
             <td className="py-1 pr-2">Totals</td>
             <td className="py-1 px-2 text-right">{employeesTotal}</td>
-            <td className="py-1 px-2"></td>
             <td className="py-1 px-2 text-right"></td>
             <td className="py-1 pl-2 text-right">{formatMoney(allowanceTotal)}</td>
           </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+});
+
+const DepartmentAddOnsBreakdown = memo(function DepartmentAddOnsBreakdown({
+  rows,
+}: {
+  rows: EstimateDepartmentLine[];
+}) {
+  return (
+    <div className="mt-3 overflow-x-auto">
+      <div className="mb-2 text-sm font-semibold text-foreground">Department Add-Ons Breakdown</div>
+      <table className="min-w-full text-xs text-muted-foreground">
+        <thead>
+          <tr className="text-left">
+            <th className="py-1 pr-2 font-semibold text-foreground">Department</th>
+            <th className="py-1 px-2 text-right font-semibold text-foreground">Employees</th>
+            <th className="py-1 pl-2 font-semibold text-foreground">Selected Add-Ons</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.id}>
+              <td className="py-1 pr-2 text-foreground">{row.departmentName}</td>
+              <td className="py-1 px-2 text-right">{row.employeeCount}</td>
+              <td className="py-1 pl-2">{row.selectedAddOnsLabels.length ? row.selectedAddOnsLabels.join(", ") : "None"}</td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
@@ -838,7 +681,7 @@ const DepartmentInvoiceBreakdown = memo(function DepartmentInvoiceBreakdown({
 
 const EstimateBreakdown = memo(function EstimateBreakdown({
   estimate,
-  travelExplanation,
+  selectedEUValue,
   destructiveButtonClass,
   primaryButtonClass,
   continueDisabled,
@@ -847,6 +690,7 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
   onContinue,
 }: EstimateBreakdownProps) {
   const [showDeptBreakdown, setShowDeptBreakdown] = useState(false);
+  const [showDeptAddOnsBreakdown, setShowDeptAddOnsBreakdown] = useState(false);
   const [showServiceTierDeptBreakdown, setShowServiceTierDeptBreakdown] = useState(false);
   const [showDeptPaymentBreakdown, setShowDeptPaymentBreakdown] = useState(false);
 
@@ -895,6 +739,9 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
     departmentInvoiceBreakdown.length > 0;
 
   const showDepartmentInvoiceFees = estimate.financeFeePerInvoice > 0;
+  const locationCountForVisits = Math.max(1, estimate.travelByLocation.length);
+  const hasMultipleLocations = locationCountForVisits > 1;
+  const totalLocationVisits = estimate.totalVisits;
 
   const showDepartmentPaymentBreakdownToggle =
     showDepartmentDiscountBreakdown || showDepartmentInvoiceBreakdown;
@@ -918,10 +765,14 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
   const departmentPaymentBreakdownLabel = showDepartmentDiscountBreakdown
     ? "Show Department Discount Breakdown"
     : "Show Department Invoice Breakdown";
+  const canShowDepartmentAddOnsBreakdown =
+    estimate.isDepartmentBased &&
+    estimate.departmentBreakdown.length > 0 &&
+    hasDepartmentAddOnsBreakdown(estimate.departmentBreakdown);
 
   return (
     <div className="lg:col-span-5">
-      <div className="sticky top-6 rounded-lg border border-border bg-card overflow-hidden">
+      <div className="lg:sticky lg:top-6 rounded-lg border border-border bg-card overflow-hidden">
         <div className="px-6 py-5">
           <div className="space-y-1">
             <div className="text-lg font-semibold text-foreground">Estimate Breakdown</div>
@@ -929,33 +780,11 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
           </div>
         </div>
 
-        <div className="px-6 pb-6 overflow-y-auto max-h-[calc(100vh-15.25rem)]">
+        <div className="px-4 pb-4 sm:px-6 sm:pb-6 lg:max-h-[calc(100vh-15.25rem)] lg:overflow-y-auto">
           <div className="space-y-6">
             <div className="rounded-md bg-secondary/30 p-4">
-              <div className="text-sm font-semibold text-foreground">Onboarding Fees</div>
-              {estimate.additionalSitesCount <= 0 ? (
-                <div className="mt-3 space-y-1 text-sm text-muted-foreground">
-                  <div>Base Onboarding Fee: {formatMoney(estimate.onboardingBase)}</div>
-                  <div>Single location onboarding used.</div>
-                </div>
-              ) : (
-                <div className="mt-3 space-y-1 text-sm text-muted-foreground">
-                  <div>Base Onboarding Fee: {formatMoney(estimate.onboardingBase)}</div>
-                  <div>Additional Locations Count: {estimate.additionalSitesCount}</div>
-                  <div>Per Additional Location Fee: {formatMoney(estimate.onboardingAdditionalSitesFeePerSite)}</div>
-                  <div>Additional Locations Total: {formatMoney(estimate.onboardingAdditionalSitesTotal)}</div>
-                </div>
-              )}
-              <div className="mt-3 text-xs text-muted-foreground">Onboarding Fees Total</div>
-              <div className="mt-1 text-3xl font-semibold tracking-tight text-foreground">{formatMoney(estimate.onboardingFee)}</div>
-            </div>
-
-            <div className="rounded-md bg-secondary/30 p-4">
-              <div className="text-sm font-semibold text-foreground">EU Package</div>
+              <div className="text-sm font-semibold text-foreground">{`EU Package: ${estimate.selectedEU || "Not Selected"}`}</div>
               <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
-                <div>
-                  EU Package: <span className="text-foreground font-medium">{estimate.selectedEU}</span>
-                </div>
                 <div>
                   {estimate.isDepartmentBased ? "Total Employees" : "Employees"}:{" "}
                   <span className="text-foreground font-medium">{estimate.employees}</span>
@@ -1033,19 +862,21 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                 ) : null}
               </div>
               {estimate.selectedEU === "Covered" ? (
-                <div className="mt-3 space-y-1 text-lg font-semibold text-foreground">
+                <div className="mt-3 space-y-1 text-sm text-muted-foreground">
                   <div>
-                    {`Total: ${formatMoney(
-                      estimate.isDepartmentBased ? estimate.allowanceTotal : estimate.coveredExampleFloorTotal
-                    )}`}
+                    Allowance Total:{" "}
+                    <span className="font-medium text-foreground">
+                      {formatMoney(estimate.isDepartmentBased ? estimate.allowanceTotal : estimate.coveredExampleFloorTotal)}
+                    </span>
                   </div>
-                  <div>{`Total (Available Allowance): ${formatMoney(estimate.coveredExampleCeilingTotal)}`}</div>
+                  <div>
+                    Allowance Total (Available):{" "}
+                    <span className="font-medium text-foreground">{formatMoney(estimate.coveredExampleCeilingTotal)}</span>
+                  </div>
                 </div>
               ) : (
-                <div className="mt-3 text-xl font-semibold text-foreground">
-                  {estimate.isDepartmentBased
-                    ? `Total Allowance Cost: ${formatMoney(estimate.allowanceTotal)}`
-                    : formatMoney(estimate.allowanceTotal)}
+                <div className="mt-3 text-sm text-muted-foreground">
+                  Allowance Total: <span className="font-medium text-foreground">{formatMoney(estimate.allowanceTotal)}</span>
                 </div>
               )}
               {estimate.selectedEU === "Covered" ? (
@@ -1082,14 +913,23 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                   ) : null}
                 </div>
               ) : null}
+              {canShowDepartmentAddOnsBreakdown ? (
+                <div className="mt-4 rounded-md bg-secondary p-3">
+                  <button
+                    type="button"
+                    className="text-sm font-medium text-foreground underline underline-offset-4"
+                    onClick={() => setShowDeptAddOnsBreakdown((prev) => !prev)}
+                  >
+                    {showDeptAddOnsBreakdown ? "Hide Department Add-Ons Breakdown" : "Show Department Add-Ons Breakdown"}
+                  </button>
+                  {showDeptAddOnsBreakdown ? <DepartmentAddOnsBreakdown rows={estimate.departmentBreakdown} /> : null}
+                </div>
+              ) : null}
             </div>
 
             <div className="rounded-md bg-secondary/30 p-4">
-              <div className="text-sm font-semibold text-foreground">Service Tier</div>
+              <div className="text-sm font-semibold text-foreground">{`Service Tier: ${estimate.selectedTier || "Not Selected"}`}</div>
               <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
-                <div>
-                  Service Tier: <span className="text-foreground font-medium">{estimate.selectedTier}</span>
-                </div>
                 <div>
                   Service per Employee: <span className="text-foreground font-medium">{formatMoney(estimate.servicePerEmployee)}</span>
                 </div>
@@ -1097,7 +937,9 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                   Employees: <span className="text-foreground font-medium">{estimate.employees}</span>
                 </div>
               </div>
-              <div className="mt-3 text-xl font-semibold text-foreground">{formatMoney(estimate.serviceTotal)}</div>
+              <div className="mt-3 text-sm text-muted-foreground">
+                Service Total: <span className="font-medium text-foreground">{formatMoney(estimate.serviceTotal)}</span>
+              </div>
 
               {estimate.isDepartmentBased && departmentServiceBreakdown.length > 0 ? (
                 <div className="mt-4 rounded-md bg-secondary p-3">
@@ -1107,8 +949,8 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                     onClick={() => setShowServiceTierDeptBreakdown((prev) => !prev)}
                   >
                     {showServiceTierDeptBreakdown
-                      ? "Hide Service Tier Breakdown by Department"
-                      : "Show Service Tier Breakdown by Department"}
+                      ? "Hide Department Service Tier Breakdown"
+                      : "Show Department Service Tier Breakdown"}
                   </button>
 
                   {showServiceTierDeptBreakdown ? (
@@ -1123,8 +965,12 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
             </div>
 
             <div className="rounded-md bg-secondary/30 p-4">
-              <div className="text-sm font-semibold text-foreground">{sitesIncludedLabel(estimate.selectedTier)}</div>
-              <div className="mt-2 text-sm text-muted-foreground">{sitesIncludedSubtext()}</div>
+              <div className="text-sm font-semibold text-foreground">Locations and Additional Visits</div>
+              <div className="mt-2 text-sm text-muted-foreground">
+                {hasMultipleLocations
+                  ? `Your selected service tier includes a standard number of visits per year. This includes ${estimate.includedVisits} visit${estimate.includedVisits === 1 ? "" : "s"} for each location.`
+                  : sitesIncludedSubtext()}
+              </div>
               <div className="mt-3 grid gap-1 text-sm text-muted-foreground">
                 <div>
                   Visits Included In Service Tier: <span className="text-foreground font-medium">{estimate.includedVisits}</span>
@@ -1132,31 +978,37 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                 <div>
                   Additional Visits: <span className="text-foreground font-medium">{estimate.extraVisits}</span>
                 </div>
+                {hasMultipleLocations ? (
+                  <div>
+                    Included Visits Across Locations: <span className="text-foreground font-medium">{estimate.includedVisits * locationCountForVisits}</span>
+                  </div>
+                ) : null}
                 <div>
-                  Total Visits: <span className="text-foreground font-medium">{estimate.totalVisits}</span>
+                  Total Visits:{" "}
+                  <span className="text-foreground font-medium">{hasMultipleLocations ? totalLocationVisits : estimate.totalVisits}</span>
+                </div>
+                <div>
+                  {estimate.extraVisits} Additional Visit(s) x{" "}
+                  <span className="font-medium text-foreground">{formatMoney(PRICING.extraSiteVisitFee)}</span>
                 </div>
               </div>
-            </div>
-
-            <div className="rounded-md bg-secondary/30 p-4">
-              <div className="text-sm font-semibold text-foreground">Additional Visit Fees</div>
-              <div className="mt-2 text-sm text-muted-foreground">
-                {estimate.extraVisits} Additional Visit(s) x {formatMoney(PRICING.extraSiteVisitFee)}
+              <div className="mt-3 text-lg text-muted-foreground">
+                Additional Visit Fees: <span className="font-semibold text-foreground">{formatMoney(estimate.extraVisitsFee)}</span>
               </div>
-              <div className="mt-3 text-xl font-semibold text-foreground">{formatMoney(estimate.extraVisitsFee)}</div>
-            </div>
-
-            <div className="rounded-md bg-secondary/30 p-4">
-              <div className="text-sm font-semibold text-foreground">Travel Surcharge</div>
+              <div className="mt-4 text-sm font-semibold text-foreground">Travel Surcharge</div>
               <div className="mt-2 text-xs text-muted-foreground">
-                Travel Uses Total Visits: Included Onsite Visits Plus Additional Onsite Visits.
+                Travel surcharge is estimated from each location&apos;s miles and total visits, including additional onsite visits.
               </div>
-              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{travelExplanation}</p>
 
               <div className="mt-4 space-y-3">
                 {estimate.travelByLocation.map((t) => (
                   <div key={t.label} className="rounded-md bg-secondary p-3">
-                    <div className="text-sm font-semibold text-foreground">{t.label}</div>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm font-semibold text-foreground">{t.label}</div>
+                      {t.extraVisits > 0 ? (
+                        <div className="text-xs font-medium text-foreground">{`Additional Visits: ${t.extraVisits}`}</div>
+                      ) : null}
+                    </div>
                     {t.address?.trim() ? <div className="mt-1 text-xs text-muted-foreground">{t.address}</div> : null}
 
                     <div className="mt-3 grid gap-1 text-sm text-muted-foreground">
@@ -1168,34 +1020,59 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                         <span className="text-foreground font-medium">{formatMiles(milesOverIncludedOneWay(t.oneWayMiles))}</span>
                       </div>
                       <div>
-                        Visits Included In Service Tier: <span className="text-foreground font-medium">{t.includedVisits}</span>
-                      </div>
-                      <div>
-                        Additional Visits: <span className="text-foreground font-medium">{t.extraVisits}</span>
-                      </div>
-                      <div>
-                        Total Visits: <span className="text-foreground font-medium">{t.totalVisits}</span>
-                      </div>
-                      <div>
                         Billable Miles per Visit (Round Trip):{" "}
                         <span className="text-foreground font-medium">{formatMiles(t.billableRoundTripMiles)}</span>
                       </div>
                       <div>
                         Surcharge per Visit: <span className="text-foreground font-medium">{formatMoney(t.feePerVisit)}</span>
                       </div>
+                      {t.extraVisits > 0 ? (
+                        <div>
+                          Additional Visit Fees: <span className="text-foreground font-medium">{formatMoney(t.additionalVisitFees)}</span>
+                        </div>
+                      ) : null}
                     </div>
 
-                    <div className="mt-3 text-sm font-semibold text-foreground">{formatMoney(t.total)}</div>
+                    <div className="mt-3 text-sm font-semibold text-foreground">{formatMoney(t.locationSubtotal)}</div>
                   </div>
                 ))}
               </div>
 
               <div className="mt-4 rounded-md bg-secondary p-3">
-                <div className="text-sm font-medium text-muted-foreground">Travel Total</div>
-                <div className="mt-1 text-lg font-semibold text-foreground">{formatMoney(estimate.travelTotal)}</div>
+                <div className="text-sm font-medium text-muted-foreground">Travel Surcharge & Additional Visit Total</div>
+                <div className="mt-1 text-lg font-semibold text-foreground">
+                  {formatMoney(estimate.travelByLocation.reduce((sum, row) => sum + row.locationSubtotal, 0))}
+                </div>
               </div>
             </div>
 
+            <div className="rounded-md bg-secondary/30 p-4">
+              <div className="text-sm font-semibold text-foreground">Onboarding</div>
+              {estimate.additionalSitesCount <= 0 ? (
+                <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                  <div>
+                    Base Onboarding Fee: <span className="font-medium text-foreground">{formatMoney(estimate.onboardingBase)}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                  <div>
+                    Base Onboarding Fee: <span className="font-medium text-foreground">{formatMoney(estimate.onboardingBase)}</span>
+                  </div>
+                  <div>Additional Locations Count: {estimate.additionalSitesCount}</div>
+                  <div>
+                    Per Additional Location Fee:{" "}
+                    <span className="font-medium text-foreground">{formatMoney(estimate.onboardingAdditionalSitesFeePerSite)}</span>
+                  </div>
+                  <div>
+                    Additional Locations Total: <span className="font-medium text-foreground">{formatMoney(estimate.onboardingAdditionalSitesTotal)}</span>
+                  </div>
+                </div>
+              )}
+              <div className="mt-3 text-xs text-muted-foreground">Onboarding Fees Total</div>
+              <div className="mt-1 text-3xl font-semibold tracking-tight text-foreground">{formatMoney(estimate.onboardingFee)}</div>
+            </div>
+            
             <div className="rounded-md bg-secondary/30 p-4">
               <div className="text-sm font-semibold text-foreground">Payment Terms</div>
               {estimate.isDepartmentBased ? (
@@ -1269,6 +1146,14 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                         ) : null
                       ) : null}
                     </div>
+                  ) : null}
+                  {hasMaxDiscount ? (
+                    <div className="mt-3 text-xs text-muted-foreground leading-relaxed">
+                      Discount is shown as a maximum based on the estimated invoice total. Total discount scales with employee count. Actual discount can be lower if some pairs price below the per Employee allowance.
+                    </div>
+                  ) : null}
+                  {selectedEUValue === "Covered" || estimate.selectedEU === "Covered" || estimate.coveredExampleFloorPerEmployee > 0 ? (
+                    <div className="mt-3 text-xs text-muted-foreground">Estimates show base allowance totals only.</div>
                   ) : null}
                 </>
               ) : (
@@ -1347,39 +1232,42 @@ const EstimateBreakdown = memo(function EstimateBreakdown({
                       Discount is shown as a maximum based on the estimated invoice total. Total discount scales with employee count. Actual discount can be lower if some pairs price below the per Employee allowance.
                     </div>
                   ) : null}
-                  {estimate.selectedEU === "Covered" ? (
+                  {selectedEUValue === "Covered" || estimate.selectedEU === "Covered" || estimate.coveredExampleFloorPerEmployee > 0 ? (
                     <div className="mt-3 text-xs text-muted-foreground">Estimates show base allowance totals only.</div>
                   ) : null}
                 </>
               )}
             </div>
+
           </div>
         </div>
 
-        <div className="sticky bottom-0 border-t border-border bg-card px-6 py-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="lg:sticky lg:bottom-0 border-t border-border bg-card/95 px-6 py-4 backdrop-blur supports-[backdrop-filter]:bg-card/90">
+          <div className="flex flex-col gap-3">
             <div className="min-w-0">
-              <div className="text-xs font-medium text-muted-foreground">Total Estimate</div>
-              <div className="text-3xl font-semibold tracking-tight text-foreground">{formatMoney(estimate.grandTotal)}</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total Estimate</div>
+              <div className="mt-1 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">{formatMoney(estimate.grandTotal)}</div>
             </div>
 
-            <div className="flex flex-col items-end gap-2">
-              {continueBlockMessage ? (
-                <div className="text-xs font-medium text-destructive">{continueBlockMessage}</div>
-              ) : null}
-              <div className="flex flex-wrap items-center gap-2">
-                <button type="button" onClick={onClearAll} className={destructiveButtonClass}>
-                  Clear All
+            <div className="w-full">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <button type="button" onClick={onClearAll} className={`${destructiveButtonClass} w-full`}>
+                  Clear Calculator
                 </button>
                 <button
                   type="button"
                   onClick={onContinue}
                   disabled={continueDisabled}
-                  className={`${primaryButtonClass} ${continueDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
+                  className={`${primaryButtonClass} w-full ${continueDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
                 >
-                  Continue To Quote Preview
+                  Continue to Quote Preview
                 </button>
               </div>
+              {continueBlockMessage ? (
+                <div className="mt-2 text-xs font-medium text-destructive text-center sm:text-right">
+                  {continueBlockMessage}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -1437,14 +1325,8 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
   const [showEUPackageInfo, setShowEUPackageInfo] = useState(false);
   const [showServiceTierInfo, setShowServiceTierInfo] = useState(false);
 
-  const secondaryButtonClass =
-    "inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background";
-  const destructiveButtonClass =
-    "inline-flex items-center justify-center rounded-lg bg-destructive px-5 py-3 text-sm font-semibold text-destructive-foreground shadow-md hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background";
-  const primaryButtonClass =
-    "inline-flex items-center justify-center rounded-md bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background";
   const sectionTitleClass = "text-2xl font-semibold tracking-tight text-foreground";
-  const sectionSubtextClass = "text-sm text-muted-foreground leading-relaxed";
+  const sectionSubtextClass = "text-sm text-muted-foreground leading-relaxed max-w-3xl";
   const restrictedEuAddOns = useMemo(() => {
     const ctx = { restrictions: builderGuidelines.restrictions };
     return Object.entries(draft.calculator.addOns.euPackageAddOns)
@@ -1620,16 +1502,39 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
   useEffect(() => {
     if (restrictedEuAddOns.length === 0) return;
 
-    setCalculator((prev) => ({
-      ...prev,
-      addOns: {
-        ...prev.addOns,
-        euPackageAddOns: {
-          ...prev.addOns.euPackageAddOns,
-          ...Object.fromEntries(restrictedEuAddOns.map((k) => [k, false])),
+    const clearedAddOns = Object.fromEntries(restrictedEuAddOns.map((k) => [k, false]));
+
+    setCalculator((prev) => {
+      const hasRestrictedGlobalSelections = restrictedEuAddOns.some((k) => Boolean(prev.addOns.euPackageAddOns[k]));
+      const hasRestrictedDepartmentSelections = (prev.departmentConfigs ?? []).some((row) =>
+        restrictedEuAddOns.some((k) => Boolean(row.selections.euPackageAddOns[k]))
+      );
+
+      if (!hasRestrictedGlobalSelections && !hasRestrictedDepartmentSelections) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        addOns: {
+          ...prev.addOns,
+          euPackageAddOns: {
+            ...prev.addOns.euPackageAddOns,
+            ...clearedAddOns,
+          },
         },
-      },
-    }));
+        departmentConfigs: (prev.departmentConfigs ?? []).map((row) => ({
+          ...row,
+          selections: {
+            ...row.selections,
+            euPackageAddOns: {
+              ...row.selections.euPackageAddOns,
+              ...clearedAddOns,
+            },
+          },
+        })),
+      };
+    });
   }, [restrictedEuAddOns, setCalculator]);
 
   function addLocation() {
@@ -1647,6 +1552,7 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
               city: "",
               state: "",
               zipCode: "",
+              additionalOnsiteVisits: 0,
               oneWayMiles: 0,
               oneWayMinutes: 0,
               autoDistance: true,
@@ -1801,11 +1707,12 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
     const employeesRaw = deferredEligibleEmployees === "" ? 0 : deferredEligibleEmployees;
     const employeesDefault = clampInt(employeesRaw);
 
-    const safeSelectedEU: EUPackage = deferredSelectedEU ? (deferredSelectedEU as EUPackage) : "Compliance";
-    const safeSelectedTier: ServiceTier = deferredSelectedTier ? (deferredSelectedTier as ServiceTier) : "Essential";
-    const baseEUAllowance = PRICING.euAllowancePerEmployee[safeSelectedEU];
+    const hasProgramSelections = Boolean(deferredSelectedEU) && Boolean(deferredSelectedTier);
+    const safeSelectedEU: EUPackage | "" = deferredSelectedEU ? (deferredSelectedEU as EUPackage) : "";
+    const safeSelectedTier: ServiceTier | "" = deferredSelectedTier ? (deferredSelectedTier as ServiceTier) : "";
+    const baseEUAllowance = safeSelectedEU ? PRICING.euAllowancePerEmployee[safeSelectedEU] : 0;
 
-    const includeAddOnsInAllowance = includeEuAddOnsInAllowance();
+    const includeAddOnsInAllowance = hasProgramSelections && includeEuAddOnsInAllowance();
 
     let totalDepartmentEmployees = 0;
     let allowanceTotal = 0;
@@ -1831,22 +1738,34 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
 
     const employees = isDepartmentBased ? totalDepartmentEmployees : employeesDefault;
 
-    const onboardingBase = PRICING.onboardingFeeSingleSiteStandard;
+    const onboardingBase = hasProgramSelections ? PRICING.onboardingFeeSingleSiteStandard : 0;
     const additionalSitesCount = Math.max(0, deferredLocations.length - 1);
-    const onboardingAdditionalSitesFeePerSite = PRICING.onboardingFeeAdditionalSite;
+    const onboardingAdditionalSitesFeePerSite = hasProgramSelections ? PRICING.onboardingFeeAdditionalSite : 0;
     const onboardingAdditionalSitesTotal = additionalSitesCount * onboardingAdditionalSitesFeePerSite;
     const onboardingFee = onboardingBase + onboardingAdditionalSitesTotal;
 
-    const includedVisits = PRICING.standardVisitsByTier[safeSelectedTier];
+    const includedVisits = safeSelectedTier ? PRICING.standardVisitsByTier[safeSelectedTier] : 0;
 
-    const extraVisitsRaw = deferredAddOns.extraSiteVisits === "" ? 0 : deferredAddOns.extraSiteVisits;
-    const extraVisits = clampInt(extraVisitsRaw);
-    const totalVisits = includedVisits + extraVisits;
-    const extraVisitsFee = extraVisits * PRICING.extraSiteVisitFee;
+    const locationCountForVisits = Math.max(1, deferredLocations.length);
+    const includedVisitsAcrossLocations = includedVisits * locationCountForVisits;
+    const legacyExtraVisits = deferredAddOns.extraSiteVisits === "" ? 0 : clampInt(deferredAddOns.extraSiteVisits);
+    const locationExtraVisits = deferredLocations.map((loc) => clampInt(loc.additionalOnsiteVisits));
+    const hasLocationVisitOverrides = locationExtraVisits.some((v) => v > 0);
+    const normalizedLocationExtraVisits =
+      hasLocationVisitOverrides || legacyExtraVisits === 0
+        ? locationExtraVisits
+        : locationExtraVisits.map((v, idx) => (idx === 0 ? v + legacyExtraVisits : v));
+    const extraVisits = hasProgramSelections
+      ? normalizedLocationExtraVisits.reduce((sum, visits) => sum + visits, 0)
+      : 0;
+    const totalVisits = includedVisitsAcrossLocations + extraVisits;
+    const extraVisitsFee = hasProgramSelections ? extraVisits * PRICING.extraSiteVisitFee : 0;
 
-    const euPackageAddOnsPerEmployeeGlobal = EU_PACKAGE_ADD_ON_ITEMS.reduce((sum, item) => {
-      return sum + (deferredAddOns.euPackageAddOns[item.key] ? item.amount : 0);
-    }, 0);
+    const euPackageAddOnsPerEmployeeGlobal = hasProgramSelections
+      ? EU_PACKAGE_ADD_ON_ITEMS.reduce((sum, item) => {
+          return sum + (deferredAddOns.euPackageAddOns[item.key] ? item.amount : 0);
+        }, 0)
+      : 0;
 
 
     const euBaseAllowance = baseEUAllowance;
@@ -1884,41 +1803,45 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
       computedAllowanceTotal = allowance.allowanceTotal;
     }
 
-    const tierBaseServicePerEmployee = PRICING.serviceFeePerEmployee[safeSelectedTier];
+    const tierBaseServicePerEmployee = safeSelectedTier ? PRICING.serviceFeePerEmployee[safeSelectedTier] : 0;
     const servicePerEmployee = tierBaseServicePerEmployee;
     const serviceTotal = tierBaseServicePerEmployee * employees;
 
-    const validMiles = deferredLocations
-      .map((l) => clampNumber(l.oneWayMiles))
-      .filter((miles) => miles > 0);
-
-    const minOneWayMiles = validMiles.length ? Math.min(...validMiles) : 0;
-
-    const travelPricing = travelMath(minOneWayMiles, totalVisits);
-    const travelTotal = travelPricing.total;
-
-    const travelByLocation = deferredLocations.map((loc) => {
-      const tm = travelMath(loc.oneWayMiles, totalVisits);
+    const travelByLocation = deferredLocations.map((loc, idx) => {
+      const locationExtraVisits = hasProgramSelections ? (normalizedLocationExtraVisits[idx] ?? 0) : 0;
+      const locationTotalVisits = hasProgramSelections ? includedVisits + locationExtraVisits : 0;
+      const additionalVisitFees = locationExtraVisits * PRICING.extraSiteVisitFee;
+      const tm = hasProgramSelections
+        ? travelMath(loc.oneWayMiles, locationTotalVisits)
+        : {
+            oneWay: 0,
+            billableRoundTripMiles: 0,
+            feePerVisit: 0,
+            total: 0,
+          };
 
       return {
         label: loc.label,
         address: formatLocationAddress(loc),
         oneWayMiles: tm.oneWay,
         includedVisits,
-        extraVisits,
-        totalVisits,
+        extraVisits: locationExtraVisits,
+        totalVisits: locationTotalVisits,
         billableRoundTripMiles: tm.billableRoundTripMiles,
         feePerVisit: tm.feePerVisit,
         total: tm.total,
+        additionalVisitFees,
+        locationSubtotal: tm.total + additionalVisitFees,
       };
     });
+    const travelTotal = travelByLocation.reduce((sum, row) => sum + row.total, 0);
 
     const subtotal = onboardingFee + computedAllowanceTotal + serviceTotal + extraVisitsFee + travelTotal;
 
-    const financeFeePerInvoice = PRICING.financeFeesPerInvoice[deferredPaymentTerms];
+    const financeFeePerInvoice = hasProgramSelections ? PRICING.financeFeesPerInvoice[deferredPaymentTerms] : 0;
     const financeFeeTotal = financeFeePerInvoice * employees;
 
-    const discountAllowed = deferredPaymentTerms === "NET30";
+    const discountAllowed = hasProgramSelections && deferredPaymentTerms === "NET30";
     const discountPct = discountAllowed ? PRICING.paymentDiscounts[deferredPaymentDiscount] : 0;
 
     const invoicePerEmployee = allowancePerEmployee + servicePerEmployee;
@@ -1938,8 +1861,8 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
       onboardingAdditionalSitesTotal,
       onboardingFee,
 
-      selectedEU: safeSelectedEU,
-      selectedTier: safeSelectedTier,
+      selectedEU: deferredSelectedEU,
+      selectedTier: deferredSelectedTier,
 
       euBaseAllowance,
       euPackageAddOnsPerEmployee,
@@ -1997,20 +1920,24 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
     deferredPaymentDiscount,
     isDepartmentBased,
     deferredDepartmentEstimateInputs,
-    builderGuidelines,
   ]);
 
-  const visibleDepartmentEuAddOnItems = useMemo(
-    () => EU_PACKAGE_ADD_ON_ITEMS.filter((item) => isOptionVisible(builderGuidelines, "euAddOn", item.key)),
+  const departmentEuAddOnItems = useMemo(
+    () =>
+      EU_PACKAGE_ADD_ON_ITEMS.map((item) => ({
+        ...item,
+        isRestricted: isOptionRestricted(builderGuidelines, "euAddOn", item.key),
+      })),
     [builderGuidelines]
   );
 
-  const travelExplanation = useMemo(() => {
+  const travelMileageRule = useMemo(() => {
     const included = PRICING.travel.includedOneWayMiles;
     const rate = PRICING.travel.dollarsPerMileOver;
-    return `Miles up to ${included} one way are included. Miles beyond ${included} are billed round trip, at ${formatMoney(
-      rate
-    )} per mile, for each onsite visit. Total travel surcharge is the per Visit amount times your total visits.`;
+    return {
+      included,
+      rateLabel: `${formatMoney(rate)} per mile, per visit`,
+    };
   }, []);
 
   useEffect(() => {
@@ -2040,7 +1967,7 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
         <div>
           <div className="text-sm font-medium text-foreground">Departments</div>
           <div className="text-xs text-muted-foreground">
-            Add departments, headcount, and pick EU add ons per department.
+            Add departments, headcount, and pick EU add-ons per department.
           </div>
         </div>
 
@@ -2057,7 +1984,7 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
                 row={row}
                 canRemove={departmentConfigs.length > 1}
                 secondaryButtonClass={secondaryButtonClass}
-                visibleEuAddOnItems={visibleDepartmentEuAddOnItems}
+                euAddOnItems={departmentEuAddOnItems}
                 onNameInput={onDepartmentNameInput}
                 onNameCommit={onDepartmentNameCommit}
                 getNameValue={getDepartmentNameValue}
@@ -2094,12 +2021,14 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
   );
 
   const discountDisabled = paymentTerms !== "NET30";
+  const hasAtLeastOneLocation = locations.length > 0;
+  const allLocationsComplete = hasAtLeastOneLocation && locations.every((loc) => isAddressCompleteEnough(loc));
   const continueDisabled =
     !selectedEU ||
     !selectedTier ||
     (isDepartmentBased ? !hasTwoValidDepartments : false) ||
     (!isDepartmentBased && (!eligibleEmployees || eligibleEmployees <= 0)) ||
-    (!locations.length || !locations[0].streetAddress.trim());
+    !allLocationsComplete;
 
   const continueBlockMessage = !selectedEU
     ? "Select an EU package to continue."
@@ -2109,8 +2038,10 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
           ? "Add at least two departments with an employee count greater than 0 to continue."
           : !isDepartmentBased && (!eligibleEmployees || eligibleEmployees <= 0)
             ? "Enter eligible employees to continue."
-            : !locations.length || !locations[0].streetAddress.trim()
+            : !hasAtLeastOneLocation
               ? "Add at least one location to continue."
+              : !allLocationsComplete
+                ? "Complete all locations (street, city, and state) to continue."
               : "";
   const onClearAll = clearAllCalculator;
   const onContinueToQuote = useCallback(() => {
@@ -2122,10 +2053,10 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
       <PageHero
         id="calculator-title"
         title="Program Calculator"
-        subtitle="Calculate estimated pricing based on headcount, EU package allowance, service tier, visits, and travel surcharge."
+        subtitle="Build a pricing estimate by setting employees, package, service tier, locations, travel, and terms."
       />
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionWrap>
 
           {showEUPackageInfo ? (
@@ -2343,7 +2274,7 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
               onClick={() => onNavigate("builder", "internal")}
               className={secondaryButtonClass}
             >
-              Back To Program Builder
+              Back to Program Builder
             </button>
             <div className="flex flex-col items-end gap-2">
               <button
@@ -2352,7 +2283,7 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
                 disabled={continueDisabled}
                 className={`${primaryButtonClass} ${continueDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
               >
-                Continue To Quote Preview
+                Continue to Quote Preview
               </button>
               {continueBlockMessage ? (
                 <div className="text-xs font-medium text-destructive">{continueBlockMessage}</div>
@@ -2367,7 +2298,7 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
                   <div className="space-y-2">
                     <h2 className={sectionTitleClass}>Program Inputs</h2>
                     <p className={sectionSubtextClass}>
-                      These inputs drive EU package allowance, service tier fees, additional onsite visit fees, travel surcharge, and payment terms.
+                      Choose your program setup below. We update pricing in real time as you change package, service, locations, and terms.
                     </p>
                   </div>
 
@@ -2395,7 +2326,7 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
                           <option value="Covered">Covered</option>
                         </select>
                         {selectedEU === "Covered" ? (
-                          <div className="text-xs text-muted-foreground">Covered includes all EU Package add ons.</div>
+                          <div className="text-xs text-muted-foreground">Covered includes all EU Package add-ons.</div>
                         ) : null}
                       </div>
 
@@ -2459,8 +2390,10 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
                   <>
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <h2 className={sectionTitleClass}>EU Package Add Ons</h2>
-                        <p className={sectionSubtextClass}>Optional per Employee EU add ons.</p>
+                        <h2 className={sectionTitleClass}>EU Package Add-Ons</h2>
+                        <p className={sectionSubtextClass}>
+                          Choose optional EU add-ons to see the allowance impact per employee before finalizing your estimate.
+                        </p>
                       </div>
 
                       <div className="grid gap-3 sm:grid-cols-2">
@@ -2487,7 +2420,9 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
                               <div className="space-y-1">
                                 <div className="text-sm text-foreground">
                                   {item.label}{" "}
-                                  <span className="text-muted-foreground">({formatMoney(item.amount)} per Employee)</span>
+                                  <span className="text-muted-foreground">
+                                    (<span className="font-medium text-foreground/80">{formatMoney(item.amount)} per Employee</span>)
+                                  </span>
                                   {isRestricted ? (
                                     <span className="ml-2 rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive">
                                       Restricted
@@ -2508,7 +2443,7 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
 
                       <div className="flex justify-end">
                         <button type="button" onClick={clearEUPackageAddOns} className={secondaryButtonClass}>
-                          Clear EU Add Ons
+                          Clear EU Add-Ons
                         </button>
                       </div>
                     </div>
@@ -2533,36 +2468,11 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <h2 className={sectionTitleClass}>Locations And Visits</h2>
-                    <p className={sectionSubtextClass}>{travelExplanation}</p>
+                    <h2 className={sectionTitleClass}>Locations and Additional Visits</h2>
+                    <p className={sectionSubtextClass}>
+                      Enter every service location and additional onsite visits so travel and visit costs are calculated correctly.
+                    </p>
                   </div>
-
-                  <label className="space-y-2">
-                    <div className="text-sm font-medium text-foreground">Additional Onsite Visits</div>
-                    <input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={addOns.extraSiteVisits}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setAddOnsPatch({
-                          extraSiteVisits: v === "" ? "" : clampInt(Number(v)),
-                        });
-                      }}
-                      onBlur={() => {
-                        setAddOnsPatch({
-                          extraSiteVisits:
-                            draft.calculator.addOns.extraSiteVisits === "" ? 0 : draft.calculator.addOns.extraSiteVisits,
-                        });
-                      }}
-                      className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background focus:border-transparent"
-                      placeholder="0"
-                    />
-                    <div className="text-xs text-muted-foreground">
-                      Adds {formatMoney(PRICING.extraSiteVisitFee)} per Visit. Travel is calculated per Visit, so travel surcharge increases as visits increase.
-                    </div>
-                  </label>
 
                   <div className="rounded-md border border-border bg-card p-4">
                     <div className="text-sm font-semibold text-foreground">Showroom Reference</div>
@@ -2571,10 +2481,16 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
 
                   <div className="space-y-3">
                     {locations.map((loc, idx) => (
-                      <div key={idx} className="rounded-lg border border-border bg-card p-4">
+                      <div key={idx} className="space-y-2">
+                        <div className="rounded-lg border border-border bg-card p-4">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                           <div className="space-y-1">
-                            <div className="text-sm font-semibold text-foreground">{loc.label}</div>
+                            <div className="text-sm font-semibold text-foreground">
+                              {loc.label}
+                              {clampInt(loc.additionalOnsiteVisits) > 0 ? (
+                                <span className="ml-2 text-xs font-medium text-foreground/80">{`(${clampInt(loc.additionalOnsiteVisits)} additional visit${clampInt(loc.additionalOnsiteVisits) === 1 ? "" : "s"})`}</span>
+                              ) : null}
+                            </div>
                             <div className="text-xs text-muted-foreground">{loc.statusMessage}</div>
                           </div>
 
@@ -2640,35 +2556,69 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
                           </div>
                         </div>
 
-                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                          <div className="sm:col-span-2 grid gap-3 sm:grid-cols-2">
+                            <label className="space-y-2">
+                              <div className="text-sm font-medium text-foreground">One Way Miles</div>
+                              <input
+                                type="number"
+                                min={0}
+                                step={0.1}
+                                value={loc.oneWayMiles}
+                                disabled={loc.autoDistance && loc.status !== "error"}
+                                onChange={(e) =>
+                                  updateLocation(idx, {
+                                    oneWayMiles: clampNumber(Number(e.target.value)),
+                                    status: "idle",
+                                    statusMessage: "Manual miles entered. Travel surcharge will use this value.",
+                                  })
+                                }
+                                className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background focus:border-transparent"
+                                placeholder="0"
+                              />
+                            </label>
+
+                            <label className="space-y-2">
+                              <div className="text-sm font-medium text-foreground">Miles Over 50 (One Way)</div>
+                              <input
+                                value={formatMiles(milesOverIncludedOneWay(loc.oneWayMiles))}
+                                disabled
+                                className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground disabled:opacity-80"
+                              />
+                            </label>
+                          </div>
+
                           <label className="space-y-2">
-                            <div className="text-sm font-medium text-foreground">One Way Miles</div>
+                            <div className="text-sm font-medium text-foreground">Additional Onsite Visits</div>
                             <input
                               type="number"
                               min={0}
-                              step={0.1}
-                              value={loc.oneWayMiles}
-                              disabled={loc.autoDistance && loc.status !== "error"}
+                              step={1}
+                              value={clampInt(loc.additionalOnsiteVisits)}
                               onChange={(e) =>
                                 updateLocation(idx, {
-                                  oneWayMiles: clampNumber(Number(e.target.value)),
-                                  status: "idle",
-                                  statusMessage: "Manual miles entered. Travel surcharge will use this value.",
+                                  additionalOnsiteVisits: clampInt(Number(e.target.value)),
                                 })
                               }
-                              className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background focus:border-transparent"
+                              className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background focus:border-transparent"
                               placeholder="0"
                             />
-                          </label>
-
-                          <div className="text-xs text-muted-foreground leading-relaxed sm:self-end">
-                            <div>Miles up to {PRICING.travel.includedOneWayMiles} one way are included.</div>
-                            <div className="mt-1">
-                              Miles Over 50 (One Way):{" "}
-                              <span className="font-medium text-foreground">{formatMiles(milesOverIncludedOneWay(loc.oneWayMiles))}</span>
+                            <div className="text-xs text-muted-foreground">
+                              Adds{" "}
+                              <span className="font-medium text-foreground/80">
+                                {formatMoney(PRICING.extraSiteVisitFee)} per additional visit
+                              </span>
+                              .
                             </div>
+                          </label>
+                        </div>
+                        <div className="mt-2 grid gap-3 sm:grid-cols-3">
+                          <div className="sm:col-span-2 text-xs text-muted-foreground leading-relaxed">
+                            {`Locations within a ${travelMileageRule.included}-mile radius are included. Additional miles are billed round trip at `}
+                            <span className="font-medium text-foreground/80">{travelMileageRule.rateLabel}</span>.
                           </div>
                         </div>
+                      </div>
                       </div>
                     ))}
 
@@ -2688,7 +2638,7 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
                   <div className="space-y-2">
                     <h2 className={sectionTitleClass}>Payment Terms</h2>
                     <p className={sectionSubtextClass}>
-                      Select your payment terms. Extended terms add a finance fee per Invoice. NET30 can include an early pay discount.
+                      Select payment terms to preview finance fees and eligible early-pay discounts before you continue.
                     </p>
                   </div>
 
@@ -2735,21 +2685,12 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
                   ) : null}
                 </div>
 
-                <div className="rounded-md border border-border bg-card p-4">
-                  <div className="text-sm font-semibold text-foreground">Estimate Notice</div>
-                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                    This calculator provides an estimate. Final pricing and program scope are confirmed after On-Sight Safety Optics reviews your locations, onsite requirements, hazard and compliance needs, frame and lens requirements, travel distance, and support coverage.
-                  </p>
-                  <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-                    Supplemental requests, including additional products, services, reporting, special handling, or policy exceptions, are scoped and priced separately. For coverage, timelines, and total cost, review the estimate with an OSSO Program Specialist before treating it as final.
-                  </p>
-                </div>
               </div>
             </div>
 
             <EstimateBreakdown
               estimate={estimate}
-              travelExplanation={travelExplanation}
+              selectedEUValue={selectedEU}
               destructiveButtonClass={destructiveButtonClass}
               primaryButtonClass={primaryButtonClass}
               continueDisabled={continueDisabled}
@@ -2759,6 +2700,22 @@ export function ProgramCalculatorPage({ onNavigate }: { onNavigate: NavigateFn }
             />
           </div>
         </SectionWrap>
+
+        <div className="pb-10">
+          <div className="rounded-md border border-border bg-card p-4">
+            <div className="text-sm font-semibold text-foreground">Estimate Notice</div>
+            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+              This calculator provides an estimate. Final pricing and program scope are confirmed after On-Sight Safety
+              Optics reviews your locations, onsite requirements, hazard and compliance needs, frame and lens requirements,
+              travel distance, and support coverage.
+            </p>
+            <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+              Supplemental requests, including additional products, services, reporting, special handling, or policy
+              exceptions, are scoped and priced separately. For coverage, timelines, and total cost, review this estimate
+              with an OSSO Program Specialist before treating it as final.
+            </p>
+          </div>
+        </div>
       </div>
     </section>
   );

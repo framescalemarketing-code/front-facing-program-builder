@@ -14,5 +14,10 @@
     "esModuleInterop": true,
     "resolveJsonModule": true
   },
-  "include": ["src/lib/allowanceMath.ts", "tests/**/*.ts"]
+  "include": [
+    "src/lib/allowanceMath.ts",
+    "src/lib/contactValidation.ts",
+    "src/lib/quotePreviewRules.ts",
+    "tests/**/*.ts"
+  ]
 }
