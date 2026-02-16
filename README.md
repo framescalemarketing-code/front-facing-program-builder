@@ -1,4 +1,4 @@
-# OSSO Internal Quote Tool
+# OSSO Quote Tool Front Facing
 
 Internal React + TypeScript app for:
 - Program Builder
@@ -77,3 +77,4 @@ npm run test
 Test pipeline:
 - `npm run test:build` compiles test targets into `.tmp-tests`
 - `npm run test` runs `node:test` on compiled test files
+
