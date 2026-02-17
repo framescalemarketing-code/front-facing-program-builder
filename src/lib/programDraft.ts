@@ -1,5 +1,7 @@
 export type EUPackage = "Compliance" | "Comfort" | "Complete" | "Covered";
 export type ServiceTier = "Essential" | "Access" | "Premier" | "Enterprise";
+export type PaymentTerms = "NET30" | "NET45" | "NET60" | "NET75" | "NET90";
+export type PaymentDiscount = "none" | "2_15_NET30" | "3_10_NET30";
 
 export type SideShieldType = "removable" | "permanent" | "integrated";
 export type EligibilityFrequency = "annual" | "biennial" | string;
@@ -68,19 +70,27 @@ export type ProgramState = {
   eligibleEmployees: number | "";
   selectedEU: EUPackage | "";
   selectedTier: ServiceTier | "";
+  paymentTerms: PaymentTerms;
+  paymentDiscount: PaymentDiscount;
   addOns: AddOns;
+  departmentAllowances?: Array<unknown>;
   departmentConfigs?: DepartmentConfigRow[];
   locations: LocationRow[];
   contact: Contact;
 };
 
-export type Draft = {
+export type DraftBase = {
   builder: BuilderState;
   program: ProgramState;
   programConfig?: {
     active?: unknown;
     manualDraftSnapshot?: Draft;
   };
+};
+
+export type Draft = DraftBase & {
+  // Backward-compatibility alias used by calculator/quote pages.
+  calculator: ProgramState;
 };
 
 const emptyEuPackageAddOns = (): Record<EUPackageAddOnKey, boolean> => ({
@@ -139,19 +149,25 @@ const makeDefaultContact = (): Contact => ({
 });
 
 export function createDefaultDraft(): Draft {
+  const program: ProgramState = {
+    eligibleEmployees: 1,
+    selectedEU: "",
+    selectedTier: "",
+    paymentTerms: "NET30",
+    paymentDiscount: "none",
+    addOns: makeDefaultAddOns(),
+    departmentAllowances: [],
+    departmentConfigs: [],
+    locations: makeDefaultLocations(),
+    contact: makeDefaultContact(),
+  };
+
   return {
     builder: {
       guidelines: makeDefaultGuidelines(),
     },
-    program: {
-      eligibleEmployees: 1,
-      selectedEU: "",
-      selectedTier: "",
-      addOns: makeDefaultAddOns(),
-      departmentConfigs: [],
-      locations: makeDefaultLocations(),
-      contact: makeDefaultContact(),
-    },
+    program,
+    calculator: program,
     programConfig: {
       active: undefined,
       manualDraftSnapshot: undefined,
@@ -324,6 +340,23 @@ function mergeProgram(current: ProgramState, patch: ProgramStatePatch | undefine
       ...current.contact,
       ...(contactPatch ?? {}),
     }),
+    paymentTerms:
+      patch.paymentTerms === "NET30" ||
+      patch.paymentTerms === "NET45" ||
+      patch.paymentTerms === "NET60" ||
+      patch.paymentTerms === "NET75" ||
+      patch.paymentTerms === "NET90"
+        ? patch.paymentTerms
+        : current.paymentTerms,
+    paymentDiscount:
+      patch.paymentDiscount === "none" ||
+      patch.paymentDiscount === "2_15_NET30" ||
+      patch.paymentDiscount === "3_10_NET30"
+        ? patch.paymentDiscount
+        : current.paymentDiscount,
+    departmentAllowances: Array.isArray(patch.departmentAllowances)
+      ? patch.departmentAllowances
+      : current.departmentAllowances,
     locations: Array.isArray(patch.locations) ? normalizeLocations(patch.locations) : current.locations,
     departmentConfigs: Array.isArray(patch.departmentConfigs)
       ? ensureDepartmentConfigs(patch.departmentConfigs, 0)
@@ -361,14 +394,17 @@ export function mergeDraft(current: Draft, patch: DraftPatch): Draft {
   };
 
   const minDepartmentRows = next.builder.guidelines.allowanceScope === "department_based" ? 2 : 0;
+  const normalizedProgram = {
+    ...next.program,
+    locations: normalizeLocations(next.program.locations),
+    contact: normalizeContact(next.program.contact),
+    departmentConfigs: ensureDepartmentConfigs(next.program.departmentConfigs, minDepartmentRows),
+  };
+
   return {
     ...next,
-    program: {
-      ...next.program,
-      locations: normalizeLocations(next.program.locations),
-      contact: normalizeContact(next.program.contact),
-      departmentConfigs: ensureDepartmentConfigs(next.program.departmentConfigs, minDepartmentRows),
-    },
+    program: normalizedProgram,
+    calculator: normalizedProgram,
   };
 }
 

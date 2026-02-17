@@ -1,8 +1,15 @@
-export type PageId = "builder" | "program" | "recommendation" | "recommendation_summary";
+export type PageId =
+  | "builder"
+  | "program"
+  | "calculator"
+  | "quote"
+  | "recommendation"
+  | "recommendation_summary";
 
 export type NavSource =
   | "builder_continue"
   | "program_continue"
+  | "calculator_continue"
   | "recommendation_complete"
   | "internal";
 

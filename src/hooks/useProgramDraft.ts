@@ -29,9 +29,12 @@ type ProgramDraftStore = {
   updateDraft: (patch: DraftPatch | ((prev: Draft) => DraftPatch)) => void;
   setBuilder: (updater: (prev: Draft["builder"]) => Draft["builder"]) => void;
   setProgram: (updater: (prev: Draft["program"]) => Draft["program"]) => void;
+  // Backward-compatibility alias used by calculator/quote flows.
+  setCalculator: (updater: (prev: Draft["program"]) => Draft["program"]) => void;
   clear: {
     builder: () => void;
     program: () => void;
+    calculator: () => void;
   };
 };
 
@@ -158,6 +161,21 @@ export function ProgramDraftProvider({ children }: { children: ReactNode }) {
             },
           };
         }),
+      calculator: () =>
+        updateDraft((prev) => {
+          const defaults = createDefaultDraft().program;
+          const isDepartmentBased = prev.builder.guidelines.allowanceScope === "department_based";
+          const departmentConfigs = isDepartmentBased
+            ? ensureDepartmentConfigs(defaults.departmentConfigs ?? [], 2)
+            : defaults.departmentConfigs ?? [];
+          return {
+            program: {
+              ...defaults,
+              contact: prev.program.contact,
+              departmentConfigs,
+            },
+          };
+        }),
     }),
     [updateDraft]
   );
@@ -169,6 +187,7 @@ export function ProgramDraftProvider({ children }: { children: ReactNode }) {
       updateDraft,
       setBuilder,
       setProgram,
+      setCalculator: setProgram,
       clear,
     }),
     [clear, draft, setBuilder, setProgram, updateDraft]

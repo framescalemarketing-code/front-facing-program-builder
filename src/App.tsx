@@ -8,6 +8,12 @@ const ProgramBuilderPage = lazy(() =>
 const ProgramDetailsPage = lazy(() =>
   import("@/features/program-details").then((module) => ({ default: module.ProgramDetailsPage }))
 );
+const ProgramCalculatorPage = lazy(() =>
+  import("@/features/program-calculator").then((module) => ({ default: module.ProgramCalculatorPage }))
+);
+const QuotePreviewPage = lazy(() =>
+  import("@/features/quote-preview").then((module) => ({ default: module.QuotePreviewPage }))
+);
 const RecommendationIntakePage = lazy(() =>
   import("@/features/recommendation-intake").then((module) => ({ default: module.RecommendationIntakePage }))
 );
@@ -21,6 +27,8 @@ export default function App() {
   useEffect(() => {
     const preload = () => {
       void import("@/features/program-details");
+      void import("@/features/program-calculator");
+      void import("@/features/quote-preview");
       void import("@/features/recommendation-intake");
       void import("@/features/recommendation-summary");
     };
@@ -50,6 +58,8 @@ export default function App() {
         pages={{
           builder: ProgramBuilderPage,
           program: ProgramDetailsPage,
+          calculator: ProgramCalculatorPage,
+          quote: QuotePreviewPage,
           recommendation: RecommendationIntakePage,
           recommendation_summary: RecommendationSummaryPage,
         }}
