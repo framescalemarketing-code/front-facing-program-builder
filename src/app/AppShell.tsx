@@ -1,11 +1,13 @@
 import React, { Suspense, useEffect, useState } from "react";
 import type { NavigateFn, NavSource, PageId } from "./routerTypes";
 import { SiteFooter } from "@/components/layout/SiteFooter";
+import { ProgramDiscoverySticky } from "@/components/ProgramDiscoverySticky";
 
 type PageProps = { onNavigate: NavigateFn };
 
 export function AppShell(props: { pages: Record<PageId, React.ComponentType<PageProps>> }) {
   const [page, setPage] = useState<PageId>("builder");
+  const [isDiscoveryStickyClosed, setIsDiscoveryStickyClosed] = useState(false);
 
   const onNavigate: NavigateFn = (nextPage, via: NavSource = "internal") => {
     const canGoCalculator = via === "builder_continue" || via === "internal";
@@ -79,6 +81,13 @@ export function AppShell(props: { pages: Record<PageId, React.ComponentType<Page
           <Current onNavigate={onNavigate} />
         </Suspense>
       </main>
+
+      {!isDiscoveryStickyClosed && page !== "discovery" ? (
+        <ProgramDiscoverySticky
+          onStart={() => onNavigate("discovery", "internal")}
+          onClose={() => setIsDiscoveryStickyClosed(true)}
+        />
+      ) : null}
 
       <SiteFooter />
     </div>

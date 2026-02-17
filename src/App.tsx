@@ -11,12 +11,16 @@ const ProgramCalculatorPage = lazy(() =>
 const QuotePreviewPage = lazy(() =>
   import("@/features/quote-preview").then((module) => ({ default: module.QuotePreviewPage }))
 );
+const ProgramDiscoveryPage = lazy(() =>
+  import("@/features/program-discovery").then((module) => ({ default: module.ProgramDiscoveryPage }))
+);
 
 export default function App() {
   useEffect(() => {
     const preload = () => {
       void import("@/features/program-calculator");
       void import("@/features/quote-preview");
+      void import("@/features/program-discovery");
     };
 
     type IdleWindow = Window & {
@@ -45,6 +49,7 @@ export default function App() {
           builder: ProgramBuilderPage,
           calculator: ProgramCalculatorPage,
           quote: QuotePreviewPage,
+          discovery: ProgramDiscoveryPage,
         }}
       />
     </ProgramDraftProvider>

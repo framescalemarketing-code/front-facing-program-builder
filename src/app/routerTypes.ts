@@ -1,4 +1,4 @@
-export type PageId = "builder" | "calculator" | "quote";
+export type PageId = "builder" | "calculator" | "quote" | "discovery";
 
 export type NavSource = "builder_continue" | "calculator_continue" | "internal";
 
