@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import type { NavigateFn } from "@/app/routerTypes";
 import { PageHero } from "@/components/layout/PageHero";
@@ -120,10 +120,10 @@ export function RecommendationSummaryPage({ onNavigate }: { onNavigate: Navigate
             </button>
             <button
               type="button"
-              onClick={() => onNavigate("program", "recommendation_complete")}
+              onClick={() => onNavigate("recommendation", "internal")}
               className={primaryButtonClass}
             >
-              Open Program Details
+              Start Over
             </button>
           </div>
 

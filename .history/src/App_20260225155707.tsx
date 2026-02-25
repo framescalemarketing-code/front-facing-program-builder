@@ -1,4 +1,5 @@
-﻿import { lazy, useEffect } from "react";
+@"
+import { lazy, useEffect } from "react";
 import { AppShell } from "@/app/AppShell";
 import { ProgramDraftProvider } from "@/hooks/useProgramDraft";
 
@@ -36,3 +37,4 @@ export default function App() {
     </ProgramDraftProvider>
   );
 }
+"@ | Set-Content -Encoding utf8 src/App.tsx

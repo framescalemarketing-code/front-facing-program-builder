@@ -1,4 +1,5 @@
-﻿import React, { Suspense, useEffect, useState } from "react";
+﻿@"
+import React, { Suspense, useEffect, useState } from "react";
 import type { NavigateFn, PageId } from "./routerTypes";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { AppNavProvider } from "@/app/navContext";
@@ -69,3 +70,4 @@ export function AppShell(props: { pages: Record<PageId, React.ComponentType<Page
     </div>
   );
 }
+"@ | Set-Content -Encoding utf8 src/app/AppShell.tsx
