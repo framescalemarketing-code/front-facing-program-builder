@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useState } from "react";
+﻿import React, { Suspense, useEffect, useState } from "react";
 import type { NavigateFn, NavSource, PageId } from "./routerTypes";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { ProgramRecommendationSticky } from "@/components/ProgramRecommendationSticky";
@@ -40,17 +40,17 @@ export function AppShell(props: { pages: Record<PageId, React.ComponentType<Page
   const Current = props.pages[page];
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-dvh overflow-x-clip bg-background text-foreground">
       <a href="#main-content" className="skip-link">
         Skip to main content
       </a>
 
       <header
-        className="border-b border-border bg-card text-card-foreground app-shell-header no-print"
+        className="app-shell-header no-print border-b border-border bg-[color:var(--brand-blue)] text-white shadow-sm"
         data-pdf-exclude="true"
       >
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
+        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-2.5 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
               onClick={() => onNavigate("builder", "internal")}
@@ -60,28 +60,32 @@ export function AppShell(props: { pages: Record<PageId, React.ComponentType<Page
               <img
                 src="/brand/osso/osso-logo-horizontal.png"
                 alt="On-Sight Safety Optics"
-                className="hidden h-10 w-auto sm:block"
+                className="hidden h-7 w-auto sm:block sm:h-8"
                 loading="eager"
               />
               <img
                 src="/brand/osso/osso-logomark.svg"
                 alt="OSSO logo mark"
-                className="block h-10 w-auto sm:hidden"
+                className="block h-7 w-auto sm:hidden"
                 loading="eager"
               />
               <span className="sr-only">On-Sight Safety Optics</span>
             </button>
-            <div className="text-sm font-semibold">On-Sight Safety Optics</div>
+            <div className="text-xs font-semibold tracking-[0.08em] uppercase sm:text-sm">
+              On-Sight Safety Optics
+            </div>
           </div>
-          <div className="hidden text-xs text-muted-foreground sm:block">Program Planning Tool</div>
+          <div className="hidden text-xs text-white/90 sm:block">Program Planning Tool</div>
         </div>
       </header>
 
-      <main id="main-content" className="bg-background">
+      <main id="main-content" className="overflow-x-clip bg-background">
         <Suspense
           fallback={
-            <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-              <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">Loading page...</div>
+            <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+              <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
+                Loading page...
+              </div>
             </div>
           }
         >
