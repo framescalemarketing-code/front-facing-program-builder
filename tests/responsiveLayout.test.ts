@@ -13,11 +13,11 @@ test("page hero keeps mobile-first responsive spacing", () => {
   assert.match(source, /max-w-3xl/);
 });
 
-test("program details keeps responsive layout and actions", () => {
-  const source = read("src/features/program-details/ProgramDetailsPage.tsx");
+test("recommendation intake keeps responsive layout and actions", () => {
+  const source = read("src/features/recommendation-intake/RecommendationIntakePage.tsx");
   assert.match(source, /lg:grid-cols-12/);
-  assert.match(source, /grid grid-cols-1 gap-2 sm:grid-cols-2/);
-  assert.match(source, /Potential travel surcharge/);
+  assert.match(source, /Go to Program Summary/);
+  assert.match(source, /Generate Recommendation Preview/);
 });
 
 test("recommendation summary keeps responsive columns and location flag copy", () => {

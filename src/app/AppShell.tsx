@@ -1,13 +1,11 @@
 ﻿import React, { Suspense, useEffect, useState } from "react";
 import type { NavigateFn, PageId } from "./routerTypes";
-import { SiteFooter } from "@/components/layout/SiteFooter";
-import { AppNavProvider } from "@/app/navContext";
+import { SiteFooter } from "../components/layout/SiteFooter";
 
 type PageProps = { onNavigate: NavigateFn };
 
 export function AppShell(props: { pages: Record<PageId, React.ComponentType<PageProps>> }) {
   const [page, setPage] = useState<PageId>("recommendation");
-  const recommendationLaunchPage: PageId = "recommendation";
 
   const onNavigate: NavigateFn = (nextPage) => {
     setPage(nextPage);
@@ -59,9 +57,7 @@ export function AppShell(props: { pages: Record<PageId, React.ComponentType<Page
             </div>
           }
         >
-          <AppNavProvider value={{ currentPage: page, recommendationLaunchPage }}>
-            <Current onNavigate={onNavigate} />
-          </AppNavProvider>
+          <Current onNavigate={onNavigate} />
         </Suspense>
       </main>
 

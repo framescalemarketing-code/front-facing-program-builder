@@ -10,14 +10,15 @@ test("page hero keeps mobile-first responsive spacing", () => {
     assert.match(source, /px-4 py-8 sm:px-6 sm:py-10 lg:px-8/);
     assert.match(source, /max-w-3xl/);
 });
-test("calculator sticky footer keeps responsive button grid", () => {
-    const source = read("src/features/program-calculator/ProgramCalculatorPage.tsx");
-    assert.match(source, /grid grid-cols-1 gap-2 sm:grid-cols-2/);
-    assert.match(source, /text-3xl font-semibold tracking-tight text-foreground sm:text-4xl/);
+test("recommendation intake keeps responsive layout and actions", () => {
+    const source = read("src/features/recommendation-intake/RecommendationIntakePage.tsx");
+    assert.match(source, /lg:grid-cols-12/);
+    assert.match(source, /Go to Program Summary/);
+    assert.match(source, /Generate Recommendation Preview/);
 });
-test("quote preview preserves print styles and responsive top actions", () => {
-    const source = read("src/features/quote-preview/QuotePreviewPage.tsx");
-    assert.match(source, /@media print/);
-    assert.match(source, /print-only/);
-    assert.match(source, /lg:ml-auto/);
+test("recommendation summary keeps responsive columns and location flag copy", () => {
+    const source = read("src/features/recommendation-summary/RecommendationSummaryPage.tsx");
+    assert.match(source, /Program Recommendation Summary/);
+    assert.match(source, /lg:grid-cols-12/);
+    assert.match(source, /Potential travel surcharge/);
 });

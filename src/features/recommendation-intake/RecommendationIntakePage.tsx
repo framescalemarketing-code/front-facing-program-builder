@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { NavigateFn, PageId } from "@/app/routerTypes";
-import { useAppNav } from "@/app/navContext";
+import type { NavigateFn } from "@/app/routerTypes";
 import { PageHero } from "@/components/layout/PageHero";
 import { SectionWrap } from "@/components/layout/SectionWrap";
 import { primaryButtonClass, secondaryButtonClass } from "@/components/ui/buttonStyles";
@@ -258,19 +257,7 @@ function setupSectionForItem(item: CurrentSafetySetup) {
   return CURRENT_SETUP_SECTIONS.find((section) => section.options.some((option) => option.value === item)) ?? null;
 }
 
-function exitTarget(launch: PageId): PageId {
-  if (
-    launch === "program" ||
-    launch === "builder" ||
-    launch === "recommendation_summary"
-  ) {
-    return launch;
-  }
-  return "builder";
-}
-
 export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateFn }) {
-  const { recommendationLaunchPage } = useAppNav();
   const { draft, updateDraft } = useProgramDraft();
 
   const [form, setForm] = useState<RecommendationInputs>(() => ({ ...DEFAULT_RECOMMENDATION_INPUTS }));
@@ -436,7 +423,7 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
   }
 
   function onExitEarly() {
-    onNavigate(exitTarget(recommendationLaunchPage), "internal");
+    onNavigate("recommendation_summary", "internal");
   }
 
   function onComplete() {
@@ -801,8 +788,12 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                   </button>
                 ) : (
                   <div className="flex flex-wrap items-center gap-3">
-                    <button type="button" onClick={() => onNavigate("builder", "internal")} className={secondaryButtonClass}>
-                      Return to Program Builder
+                    <button
+                      type="button"
+                      onClick={() => onNavigate("recommendation_summary", "internal")}
+                      className={secondaryButtonClass}
+                    >
+                      Go to Program Summary
                     </button>
                     <button type="button" onClick={onComplete} className={primaryButtonClass}>
                       Generate Recommendation Preview

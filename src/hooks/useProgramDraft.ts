@@ -21,7 +21,6 @@ import {
 } from "@/lib/programDraft";
 
 const STORAGE_KEY = "osso_front_facing_program_builder_draft_v2";
-const LEGACY_STORAGE_KEY = "osso_program_draft_v1";
 
 type ProgramDraftStore = {
   draft: Draft;
@@ -29,12 +28,9 @@ type ProgramDraftStore = {
   updateDraft: (patch: DraftPatch | ((prev: Draft) => DraftPatch)) => void;
   setBuilder: (updater: (prev: Draft["builder"]) => Draft["builder"]) => void;
   setProgram: (updater: (prev: Draft["program"]) => Draft["program"]) => void;
-  // Backward-compatibility alias used by calculator/quote flows.
-  setCalculator: (updater: (prev: Draft["program"]) => Draft["program"]) => void;
   clear: {
     builder: () => void;
     program: () => void;
-    calculator: () => void;
   };
 };
 
@@ -44,7 +40,7 @@ function loadStoredDraft(): Draft {
   try {
     const raw =
       typeof window !== "undefined"
-        ? localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY)
+        ? localStorage.getItem(STORAGE_KEY)
         : null;
     if (!raw) return createDefaultDraft();
     const draft = deserializeDraft(JSON.parse(raw));
@@ -161,21 +157,6 @@ export function ProgramDraftProvider({ children }: { children: ReactNode }) {
             },
           };
         }),
-      calculator: () =>
-        updateDraft((prev) => {
-          const defaults = createDefaultDraft().program;
-          const isDepartmentBased = prev.builder.guidelines.allowanceScope === "department_based";
-          const departmentConfigs = isDepartmentBased
-            ? ensureDepartmentConfigs(defaults.departmentConfigs ?? [], 2)
-            : defaults.departmentConfigs ?? [];
-          return {
-            program: {
-              ...defaults,
-              contact: prev.program.contact,
-              departmentConfigs,
-            },
-          };
-        }),
     }),
     [updateDraft]
   );
@@ -187,7 +168,6 @@ export function ProgramDraftProvider({ children }: { children: ReactNode }) {
       updateDraft,
       setBuilder,
       setProgram,
-      setCalculator: setProgram,
       clear,
     }),
     [clear, draft, setBuilder, setProgram, updateDraft]

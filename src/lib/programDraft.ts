@@ -88,10 +88,7 @@ export type DraftBase = {
   };
 };
 
-export type Draft = DraftBase & {
-  // Backward-compatibility alias used by calculator/quote pages.
-  calculator: ProgramState;
-};
+export type Draft = DraftBase;
 
 const emptyEuPackageAddOns = (): Record<EUPackageAddOnKey, boolean> => ({
   polarized: false,
@@ -167,7 +164,6 @@ export function createDefaultDraft(): Draft {
       guidelines: makeDefaultGuidelines(),
     },
     program,
-    calculator: program,
     programConfig: {
       active: undefined,
       manualDraftSnapshot: undefined,
@@ -239,8 +235,6 @@ export type ProgramStatePatch = Partial<ProgramState> & {
 export type DraftPatch = {
   builder?: Partial<BuilderState> & { guidelines?: BuilderGuidelinesPatch };
   program?: ProgramStatePatch;
-  // Backward-compatibility alias for legacy persisted payloads.
-  calculator?: ProgramStatePatch;
   programConfig?: {
     active?: unknown;
     manualDraftSnapshot?: Draft;
@@ -370,9 +364,7 @@ export function mergeDraft(current: Draft, patch: DraftPatch): Draft {
     : undefined;
   const programPatch = isObject(patch.program)
     ? (patch.program as DraftPatch["program"])
-    : isObject(patch.calculator)
-      ? (patch.calculator as DraftPatch["program"])
-      : undefined;
+    : undefined;
   const programConfigPatch = isObject(patch.programConfig)
     ? (patch.programConfig as DraftPatch["programConfig"])
     : undefined;
@@ -404,22 +396,13 @@ export function mergeDraft(current: Draft, patch: DraftPatch): Draft {
   return {
     ...next,
     program: normalizedProgram,
-    calculator: normalizedProgram,
   };
 }
 
 export function deserializeDraft(value: unknown): Draft {
   const defaults = createDefaultDraft();
   if (!isObject(value)) return defaults;
-  const incoming = value as DraftPatch & { calculator?: ProgramStatePatch; program?: ProgramStatePatch };
-  const migrated: DraftPatch =
-    !incoming.program && incoming.calculator
-      ? {
-          ...incoming,
-          program: incoming.calculator,
-        }
-      : incoming;
-  return mergeDraft(defaults, migrated);
+  return mergeDraft(defaults, value as DraftPatch);
 }
 
 export function serializeDraft(draft: Draft): string {
