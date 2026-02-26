@@ -109,6 +109,7 @@ const SETUP_SECTION_BADGES: Record<CurrentSetupSectionId, string> = {
 };
 
 const EMPTY_GUIDANCE_MESSAGE = "Select an option to see how it shapes your program.";
+const RECOMMENDATION_START_STEP_KEY = "osso_recommendation_start_step";
 
 const WORK_TYPE_OPTIONS: Array<{ value: ProgramWorkType; label: string; helper: string }> = [
   {
@@ -325,14 +326,6 @@ function exposureCardClass(focused: boolean, selected: boolean, compact = false)
   return `group relative w-full rounded-lg border border-border bg-card ${densityClass} text-left transition hover:border-ring hover:bg-secondary/35 ${focusClass}`;
 }
 
-function selectToggleClass(selected: boolean) {
-  return `inline-flex h-8 w-8 items-center justify-center rounded-full border transition focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background ${
-    selected
-      ? "border-primary bg-primary text-primary-foreground shadow-sm"
-      : "border-border bg-background text-muted-foreground hover:border-ring"
-  }`;
-}
-
 function stepProgressLabel(stepIndex: number) {
   return `Step ${stepIndex + 1} of ${STEPS.length}`;
 }
@@ -355,11 +348,22 @@ function setupSectionForItem(item: CurrentSafetySetup) {
   return CURRENT_SETUP_SECTIONS.find((section) => section.options.some((option) => option.value === item)) ?? null;
 }
 
+function consumeInitialStepIndex() {
+  if (typeof window === "undefined") return 0;
+  const raw = window.sessionStorage.getItem(RECOMMENDATION_START_STEP_KEY);
+  if (raw == null) return 0;
+  window.sessionStorage.removeItem(RECOMMENDATION_START_STEP_KEY);
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return 0;
+  const rounded = Math.trunc(parsed);
+  return Math.max(0, Math.min(rounded, STEPS.length - 1));
+}
+
 export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateFn }) {
   const { draft, updateDraft } = useProgramDraft();
 
   const [form, setForm] = useState<RecommendationInputs>(() => ({ ...DEFAULT_RECOMMENDATION_INPUTS }));
-  const [stepIndex, setStepIndex] = useState(0);
+  const [stepIndex, setStepIndex] = useState(() => consumeInitialStepIndex());
   const [locationOptionId, setLocationOptionId] = useState<"single" | "multi_same_region" | "multi_across_regions" | "multi_complex">("single");
   const [showLocationDetails, setShowLocationDetails] = useState(false);
   const [activeExposureFocus, setActiveExposureFocus] = useState<ProgramExposureRisk | null>(null);
@@ -486,24 +490,20 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
     return () => observer.disconnect();
   }, [step.id, collapsedSetupSections]);
 
-  function goNext() {
+  function goToStep(nextIndex: number) {
     setError("");
-    const nextIndex = Math.min(stepIndex + 1, STEPS.length - 1);
-    setStepIndex(nextIndex);
-    const nextStepId = STEPS[nextIndex].id;
+    const clamped = Math.max(0, Math.min(nextIndex, STEPS.length - 1));
+    setStepIndex(clamped);
+    const nextStepId = STEPS[clamped].id;
     setMobileGuidanceOpen(nextStepId === "exposures" || nextStepId === "current_setup");
+  }
+
+  function goNext() {
+    goToStep(stepIndex + 1);
   }
 
   function goBack() {
-    setError("");
-    const nextIndex = Math.max(stepIndex - 1, 0);
-    setStepIndex(nextIndex);
-    const nextStepId = STEPS[nextIndex].id;
-    setMobileGuidanceOpen(nextStepId === "exposures" || nextStepId === "current_setup");
-  }
-
-  function onExitEarly() {
-    onNavigate("recommendation_summary", "internal");
+    goToStep(stepIndex - 1);
   }
 
   function onComplete() {
@@ -535,8 +535,13 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
       <div className="mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8 lg:pb-0">
         <SectionWrap>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <button type="button" onClick={onExitEarly} className={secondaryButtonClass}>
-              Exit
+            <button
+              type="button"
+              onClick={goBack}
+              disabled={stepIndex === 0}
+              className={secondaryButtonClass}
+            >
+              Back
             </button>
             <div className="text-sm font-semibold text-foreground">{stepProgressLabel(stepIndex)}</div>
           </div>
@@ -550,18 +555,21 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                 const active = idx === stepIndex;
                 const complete = idx < stepIndex;
                 return (
-                  <div
+                  <button
                     key={item.id}
+                    type="button"
+                    onClick={() => goToStep(idx)}
+                    aria-current={active ? "step" : undefined}
                     className={`rounded-md border px-2 py-1.5 text-center leading-snug transition ${
                       active
                         ? "border-primary bg-primary/10 text-primary"
                         : complete
                           ? "border-primary/40 bg-primary/5 text-primary/80"
-                          : "border-border bg-card"
+                          : "border-border bg-card hover:border-ring hover:bg-secondary/50"
                     }`}
                   >
                     {item.progressLabel}
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -777,14 +785,18 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                     const focused = activeExposureFocus === opt.value;
                     const isFinalOddCard = EXPOSURE_OPTIONS.length % 2 === 1 && idx === EXPOSURE_OPTIONS.length - 1;
                     return (
-                      <button
+                      <div
                         key={opt.value}
-                        type="button"
+                        role="button"
+                        tabIndex={0}
                         aria-label={selected ? `Unselect ${opt.label}` : `Select ${opt.label}`}
                         aria-pressed={selected}
                         onClick={() => toggleExposureSelection(opt.value)}
                         onFocus={() => setActiveExposureFocus(opt.value)}
                         onMouseEnter={() => setActiveExposureFocus(opt.value)}
+                        onMouseLeave={() => {
+                          setActiveExposureFocus((prev) => (prev === opt.value ? null : prev));
+                        }}
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault();
@@ -796,22 +808,12 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                         {focused ? <span className="absolute inset-y-0 left-0 w-1 rounded-l-lg bg-primary" aria-hidden="true" /> : null}
 
                         <div className="flex items-center justify-end">
-                          {selected ? (
-                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-primary bg-primary text-primary-foreground shadow-sm">
-                              <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-[2.25]">
-                                <path d="M3.5 8.25L6.75 11.5L12.5 5.75" />
-                              </svg>
-                            </span>
-                          ) : (
-                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground">
-                              <span className="h-3 w-3 rounded-sm border border-current" aria-hidden="true" />
-                            </span>
-                          )}
+                          {selected ? selectedBadge() : null}
                         </div>
 
                         <div className="mt-1 text-sm font-semibold text-foreground">{opt.label}</div>
                         <div className="mt-1 text-xs text-muted-foreground">{opt.helper}</div>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -866,57 +868,36 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                                     key={opt.value}
                                     role="button"
                                     tabIndex={0}
-                                    aria-label={`Focus ${opt.label} details`}
-                                    onClick={() => setSetupFocus(opt.value)}
-                                    onFocus={() => setActiveSetupSection(section.id)}
-                                    onMouseEnter={() => setActiveSetupSection(section.id)}
+                                    aria-label={selected ? `Unselect ${opt.label}` : `Select ${opt.label}`}
+                                    aria-pressed={selected}
+                                    onClick={() => toggleSetupSelection(opt.value)}
+                                    onFocus={() => {
+                                      setActiveSetupSection(section.id);
+                                      setSetupFocus(opt.value);
+                                    }}
+                                    onMouseEnter={() => {
+                                      setActiveSetupSection(section.id);
+                                      setSetupFocus(opt.value);
+                                    }}
+                                    onMouseLeave={() => {
+                                      setActiveSetupFocus((prev) => (prev === opt.value ? null : prev));
+                                    }}
                                     onKeyDown={(event) => {
                                       if (event.key === "Enter" || event.key === " ") {
                                         event.preventDefault();
-                                        setSetupFocus(opt.value);
+                                        toggleSetupSelection(opt.value);
                                       }
                                     }}
                                     className={exposureCardClass(focused, selected, true)}
                                   >
                                     {focused ? <span className="absolute inset-y-0 left-0 w-1 rounded-l-lg bg-primary" aria-hidden="true" /> : null}
 
-                                    <div className="flex items-center justify-end gap-2">
-                                      <span
-                                        className={`text-[11px] font-medium uppercase tracking-wide ${
-                                          selected ? "text-primary" : "text-muted-foreground"
-                                        }`}
-                                      >
-                                        {selected ? "Selected" : "Select"}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        aria-label={selected ? `Unselect ${opt.label}` : `Select ${opt.label}`}
-                                        aria-pressed={selected}
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          toggleSetupSelection(opt.value);
-                                        }}
-                                        className={selectToggleClass(selected)}
-                                      >
-                                        {selected ? (
-                                          <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-[2.25]">
-                                            <path d="M3.5 8.25L6.75 11.5L12.5 5.75" />
-                                          </svg>
-                                        ) : (
-                                          <span className="h-3 w-3 rounded-full border border-current" aria-hidden="true" />
-                                        )}
-                                      </button>
+                                    <div className="flex items-center justify-end">
+                                      {selected ? selectedBadge() : null}
                                     </div>
 
                                     <div className="text-sm font-semibold leading-tight text-foreground">{opt.label}</div>
                                     <div className="mt-1 text-xs leading-snug text-muted-foreground">{opt.helper}</div>
-                                    <div
-                                      className={`mt-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground transition ${
-                                        focused ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
-                                      }`}
-                                    >
-                                      Details
-                                    </div>
                                   </div>
                                 );
                               })}

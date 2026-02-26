@@ -14,6 +14,9 @@ import {
   type ProgramExposureRisk,
 } from "@/lib/programConfig";
 
+const RECOMMENDATION_START_STEP_KEY = "osso_recommendation_start_step";
+const DIRECTION_STEP_INDEX = 6;
+
 function nonEmpty(value: string | undefined | null) {
   const trimmed = (value ?? "").trim();
   return trimmed ? trimmed : null;
@@ -193,6 +196,13 @@ export function RecommendationSummaryPage({ onNavigate }: { onNavigate: Navigate
     serviceTier,
   });
 
+  function openRecommendationAtDirection() {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(RECOMMENDATION_START_STEP_KEY, String(DIRECTION_STEP_INDEX));
+    }
+    onNavigate("recommendation", "internal");
+  }
+
   return (
     <section aria-labelledby="recommendation-preview-title">
       <PageHero
@@ -204,7 +214,7 @@ export function RecommendationSummaryPage({ onNavigate }: { onNavigate: Navigate
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionWrap>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <button type="button" onClick={() => onNavigate("recommendation", "internal")} className={secondaryButtonClass}>
+            <button type="button" onClick={openRecommendationAtDirection} className={secondaryButtonClass}>
               Back to Recommendation
             </button>
             <button type="button" onClick={() => onNavigate("recommendation", "internal")} className={primaryButtonClass}>
