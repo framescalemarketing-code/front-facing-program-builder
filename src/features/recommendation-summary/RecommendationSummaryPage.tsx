@@ -409,6 +409,12 @@ export function RecommendationSummaryPage({ onNavigate }: { onNavigate: Navigate
           <div className="mt-6 grid gap-5 lg:grid-cols-12">
             <div className="lg:col-span-8">
               <article className="rounded-md border border-border bg-card p-4 sm:p-5">
+                <img
+                  src="/images/placeholders/summary-overview.svg"
+                  alt="Program planning overview illustration"
+                  className="mb-4 w-full rounded-md border border-border"
+                  loading="lazy"
+                />
                 <h2 className="text-lg font-semibold text-foreground">Recommendation summary</h2>
 
                 <section className="mt-4">
