@@ -530,8 +530,6 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
         id="recommendation-title"
         title={step.heroTitle}
         subtitle={`Program Recommendation - ${step.sectionLabel}`}
-        titleClassName="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
-        subtitleClassName="brand-eyebrow mt-3 max-w-none text-primary"
       />
 
       <div className="mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8 lg:pb-0">
