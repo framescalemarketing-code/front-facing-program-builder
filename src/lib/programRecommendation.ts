@@ -222,18 +222,18 @@ function budgetPlanningNote(
   serviceTier: ServiceTier
 ) {
   if (budgetPreference === "super_strict") {
-    return `Program direction: Foundational Standardization. Suggested service tier: ${serviceTier}.`;
+    return `Program posture: Compliance First. Suggested service tier: ${serviceTier}.`;
   }
   if (budgetPreference === "low_budget") {
-    return `Program direction: Steady Operations. Suggested service tier: ${serviceTier}.`;
+    return `Program posture: Operationally Steady. Suggested service tier: ${serviceTier}.`;
   }
   if (budgetPreference === "unlimited_budget") {
-    return `Program direction: Maximum Coverage. Suggested service tier: ${serviceTier}.`;
+    return `Program posture: Full Program Investment. Suggested service tier: ${serviceTier}.`;
   }
   if (budgetPreference === "good_budget") {
-    return `Program direction: Balanced Growth. Suggested service tier: ${serviceTier}.`;
+    return `Program posture: Growing the Program. Suggested service tier: ${serviceTier}.`;
   }
-  return `Program direction not selected. Suggested service tier: ${serviceTier}.`;
+  return `Program posture not selected. Suggested service tier: ${serviceTier}.`;
 }
 
 function addOnKeyForRecommendation(addOn: RecommendationAddOn): EUPackageAddOnKey {

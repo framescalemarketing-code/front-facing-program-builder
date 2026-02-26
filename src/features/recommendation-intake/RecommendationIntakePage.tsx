@@ -1,12 +1,12 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import type { NavigateFn } from "@/app/routerTypes";
 import { PageHero } from "@/components/layout/PageHero";
 import { SectionWrap } from "@/components/layout/SectionWrap";
 import { primaryButtonClass, secondaryButtonClass } from "@/components/ui/buttonStyles";
 import { useProgramDraft } from "@/hooks/useProgramDraft";
-import { formatPhoneAsUs } from "@/lib/contactValidation";
+import { formatPhoneAsUs, isValidEmailFormat } from "@/lib/contactValidation";
 import {
   DEFAULT_RECOMMENDATION_INPUTS,
   buildProgramRecommendation,
@@ -85,20 +85,53 @@ const STEPS: WizardStep[] = [
   },
   {
     id: "budget",
-    sectionLabel: "Direction",
-    heroTitle: "Choose your direction",
-    progressLabel: "Direction",
+    sectionLabel: "Program Posture",
+    heroTitle: "How is your program operating today?",
+    progressLabel: "Posture",
   },
 ];
 
-const FOUR_PILLAR_BY_STEP: Record<StepId, { icon: string; phrase: string }> = {
-  company: { icon: "FT", phrase: "Follow Through as a Feature" },
-  work_type: { icon: "HF", phrase: "Human First Safety" },
-  coverage: { icon: "RD", phrase: "Reliability by Design" },
-  locations: { icon: "RD", phrase: "Reliability by Design" },
-  exposures: { icon: "HF", phrase: "Human First Safety" },
-  current_setup: { icon: "FT", phrase: "Follow Through as a Feature" },
-  budget: { icon: "AO", phrase: "Adoption over Allowance" },
+type PillarIconKey = "human_first" | "reliability" | "follow_through" | "adoption";
+
+const FOUR_PILLAR_BY_STEP: Record<StepId, { icon: PillarIconKey; phrase: string } | null> = {
+  company: null,
+  work_type: { icon: "human_first", phrase: "Human First Safety" },
+  coverage: { icon: "reliability", phrase: "Reliability by Design" },
+  locations: { icon: "reliability", phrase: "Reliability by Design" },
+  exposures: { icon: "human_first", phrase: "Human First Safety" },
+  current_setup: { icon: "follow_through", phrase: "Follow Through as a Feature" },
+  budget: { icon: "adoption", phrase: "Adoption over Allowance" },
+};
+
+const PILLAR_ICONS: Record<PillarIconKey, ReactElement> = {
+  human_first: (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-[1.5]">
+      <circle cx="8" cy="4" r="2" />
+      <path d="M8 6.5V11.5M5.5 13H10.5M6.25 8.5L4.5 10M9.75 8.5L11.5 10" />
+      <path d="M11 5.25L12.75 6V8L11 8.75L9.25 8V6L11 5.25Z" />
+    </svg>
+  ),
+  reliability: (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-[1.5]">
+      <path d="M3.5 6.25A4.75 4.75 0 0 1 11.4 3.2L12.5 4.1M12.5 9.75A4.75 4.75 0 0 1 4.6 12.8L3.5 11.9" />
+      <path d="M12.5 2.75V4.75H10.5M3.5 13.25V11.25H5.5M6.25 8.1L7.45 9.35L10 6.8" />
+    </svg>
+  ),
+  follow_through: (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-[1.5]">
+      <path d="M2.5 8H13.5M11.25 5.75L13.5 8L11.25 10.25" />
+      <path d="M6.75 4.5V11.5" />
+      <path d="M5 4.5H8.5V11.5H5Z" />
+    </svg>
+  ),
+  adoption: (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-[1.5]">
+      <circle cx="5.25" cy="10.75" r="1.25" />
+      <circle cx="9.75" cy="10.75" r="1.25" />
+      <path d="M3.75 13.25C4.2 12.45 4.95 12 5.75 12C6.55 12 7.3 12.45 7.75 13.25M8.25 13.25C8.7 12.45 9.45 12 10.25 12C11.05 12 11.8 12.45 12.25 13.25" />
+      <path d="M3.5 6.5H7.5L9 5L12.5 8.5" />
+    </svg>
+  ),
 };
 
 const SETUP_SECTION_BADGES: Record<CurrentSetupSectionId, string> = {
@@ -272,31 +305,35 @@ const BUDGET_OPTIONS: Array<{
 }> = [
   {
     value: "super_strict",
-    label: "Foundational Standardization",
-    bestFor: "New programs or compliance first rollouts",
-    helper: "We need a tightly standardized baseline focused on core compliance and consistent execution.",
-    impact: "Focuses recommendation on dependable baseline coverage with limited complexity.",
+    label: "Compliance First",
+    bestFor: "New programs or tightening a loose setup",
+    helper:
+      "We have limited structure today. We need clear standards, defined eligibility, and a program that runs predictably without exceptions.",
+    impact: "Prioritizes a predictable compliance foundation with tightly controlled exceptions.",
   },
   {
     value: "low_budget",
-    label: "Steady Operations",
-    bestFor: "Established programs managing steady headcount",
-    helper: "We want stable day-to-day execution with practical flexibility for field realities.",
-    impact: "Balances consistency and support while keeping operations manageable.",
+    label: "Operationally Steady",
+    bestFor: "Established programs managing consistent coverage",
+    helper:
+      "Our program works but we want it running more reliably without adding heavy overhead or reworking what is already in place.",
+    impact: "Balances consistency and support while keeping day-to-day execution manageable.",
   },
   {
     value: "good_budget",
-    label: "Balanced Growth",
-    bestFor: "Programs scaling across teams or locations",
-    helper: "We want to improve adoption and consistency with a stronger operational support model.",
-    impact: "Maintains a strong mix of service reliability, employee experience, and control.",
+    label: "Growing the Program",
+    bestFor: "Programs ready to invest in adoption and consistency",
+    helper:
+      "We want to improve coverage quality, reduce exceptions, and give employees a better experience across shifts and teams.",
+    impact: "Raises support depth to improve adoption quality and operational consistency.",
   },
   {
     value: "unlimited_budget",
-    label: "Maximum Coverage",
-    bestFor: "Large, multi site, or high complexity operations",
-    helper: "We want the strongest long-term program resilience across teams and locations.",
-    impact: "Prioritizes scalability, premium support pathways, and stronger service depth.",
+    label: "Full Program Investment",
+    bestFor: "Large, complex, or performance-driven operations",
+    helper:
+      "We want the strongest possible program structure with full support depth and the scalability to handle growth without rework.",
+    impact: "Prioritizes maximum scalability, support depth, and long-term operational resilience.",
   },
 ];
 
@@ -499,6 +536,18 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
   }
 
   function goNext() {
+    if (step.id === "company") {
+      if (!form.contactName.trim() || !form.companyName.trim()) {
+        setError("Please add your full name and company before continuing.");
+        return;
+      }
+      if (!isValidEmailFormat(form.email)) {
+        setError(
+          "We need your email to send your recommendation and connect you with a specialist - it is the only way we can make this useful for you."
+        );
+        return;
+      }
+    }
     goToStep(stepIndex + 1);
   }
 
@@ -575,12 +624,14 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
             </div>
           </div>
 
-          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
-            <span aria-hidden="true" className="font-semibold text-primary">
-              {pillarAnchor.icon}
-            </span>
-            <span className="font-medium text-foreground/90">{pillarAnchor.phrase}</span>
-          </div>
+          {pillarAnchor ? (
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
+              <span aria-hidden="true" className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary">
+                {PILLAR_ICONS[pillarAnchor.icon]}
+              </span>
+              <span className="font-medium text-foreground/90">{pillarAnchor.phrase}</span>
+            </div>
+          ) : null}
 
           {error ? (
             <div className="mt-6 rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
@@ -975,7 +1026,11 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                   </div>
                 ) : null}
                 <div className="text-sm font-semibold text-foreground">Advisory Guidance</div>
-                <div className="mt-1 text-xs text-muted-foreground">Guidance updates as you make selections.</div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {step.id === "budget"
+                    ? "Your posture shapes the structure and depth of your recommendation."
+                    : "Guidance updates as you make selections."}
+                </div>
                 {guidance.selectedLabel ? (
                   <div className="mt-3">
                     <span className="inline-flex rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
@@ -1250,20 +1305,20 @@ function buildGuidance(args: {
         selectedLabel: null,
         sections: guidanceSections(
           {
-            title: "This step is about how far you want to go",
-            body: "Your direction shapes how much structure, support depth, and service cadence the recommendation includes. It is not about budget. It is about how your program should feel to operate from the inside. Pick the one that matches how your team actually works, not just your ideal state.",
+            title: "Tell us where your program stands today",
+            body: "This is about your current operational reality, not your ideal state. The posture you select helps us match the right package depth and service structure to where you actually are. Be honest here - the recommendation is only useful if it is built on where you are starting from.",
           },
           {
-            title: "How this changes your rollout",
-            body: "Your direction sets how much service depth and governance support the recommendation should include.",
+            title: "How this shapes your rollout",
+            body: "Your posture sets how much structure, service depth, and governance support the recommendation should include right now.",
           },
           {
             title: "How this affects adoption and uptime",
-            body: "Direction influences whether the recommendation prioritizes lean consistency or higher support resilience.",
+            body: "Posture influences whether the recommendation prioritizes a lean baseline or broader support resilience.",
           },
           {
             title: "How to decide confidently",
-            body: "Pick the option that best matches your operational pace, not only your near-term budget target.",
+            body: "Pick the option that best matches how your program operates today, not where you hope it will be later.",
           }
         ),
       };
@@ -1598,7 +1653,7 @@ function setupExplainer(item: CurrentSafetySetup) {
       compliance:
         "Compliance improves when partner catalogs and eligibility rules are aligned to approved safety standards.",
       admin:
-        "Administration shifts to partner coordination, eligibility validation, and exception handling.",
+        "Switching from an existing partner is a real operational step. Your specialist will walk through what that transition looks like and what stays the same.",
     },
     vendor_optometry_partnership: {
       structure:
@@ -1606,7 +1661,7 @@ function setupExplainer(item: CurrentSafetySetup) {
       compliance:
         "Compliance improves when partner catalogs and eligibility rules are aligned to approved safety standards.",
       admin:
-        "Administration shifts to partner coordination, eligibility validation, and exception handling.",
+        "Switching from an existing partner is a real operational step. Your specialist will walk through what that transition looks like and what stays the same.",
     },
     voucher: {
       structure:
@@ -1742,10 +1797,10 @@ function setupExplainer(item: CurrentSafetySetup) {
 
 function budgetPreferenceLabel(value: ProgramBudgetPreference) {
   const map: Record<ProgramBudgetPreference, string> = {
-    super_strict: "Foundational Standardization",
-    low_budget: "Steady Operations",
-    good_budget: "Balanced Growth",
-    unlimited_budget: "Maximum Coverage",
+    super_strict: "Compliance First",
+    low_budget: "Operationally Steady",
+    good_budget: "Growing the Program",
+    unlimited_budget: "Full Program Investment",
   };
   return map[value];
 }
@@ -1757,35 +1812,35 @@ function budgetPreferenceExplainer(value: ProgramBudgetPreference) {
   > = {
     super_strict: {
       impact:
-        "Program structure stays focused on essential compliance outcomes and tighter operational standardization.",
+        "Program structure stays focused on clear standards, defined eligibility, and predictable compliance execution.",
       recommendation:
-        "Recommendation leans toward lower-complexity service structure unless scale demands more support depth.",
+        "Recommendation leans toward foundational package depth with tightly controlled complexity.",
       bestFor:
-        "Best for teams prioritizing a clear foundational safety baseline with strong consistency.",
+        "Best for new programs or teams tightening a loose setup before scaling.",
     },
     low_budget: {
       impact:
-        "Program design emphasizes stable operations while preserving enough flexibility to avoid frequent exceptions.",
+        "Program design emphasizes reliable day-to-day operations without unnecessary process overhead.",
       recommendation:
-        "Recommendation balances core controls with practical support so rollout quality stays stable without overinvesting.",
+        "Recommendation balances consistency and service support so execution stays steady across normal demand.",
       bestFor:
-        "Best for organizations that want dependable execution with moderate operational complexity.",
+        "Best for established programs managing consistent coverage and predictable workflows.",
     },
     good_budget: {
       impact:
-        "Program can support stronger employee experience, smoother operations, and more consistent policy adherence over time.",
+        "Program can support stronger adoption quality, improved employee experience, and cleaner multi-team consistency.",
       recommendation:
-        "Recommendation typically aligns to complexity-based service structure with a balanced value approach.",
+        "Recommendation steps up depth to reduce exceptions and improve consistency as operations expand.",
       bestFor:
-        "Best for organizations investing in long-term consistency without maximizing service depth.",
+        "Best for teams that are actively growing and ready to invest in stronger consistency.",
     },
     unlimited_budget: {
       impact:
-        "Program can prioritize scalability, richer support workflows, and premium operational performance across locations.",
+        "Program can prioritize full support depth, enterprise scalability, and long-term operational resilience.",
       recommendation:
-        "Recommendation can step up service depth to reduce execution risk and improve adoption at scale.",
+        "Recommendation can move to maximum package and service depth where complexity and scale justify it.",
       bestFor:
-        "Best for organizations optimizing for maximum program performance and long-term operational resilience.",
+        "Best for large or highly complex programs optimizing for full performance and support.",
     },
   };
   return map[value];
