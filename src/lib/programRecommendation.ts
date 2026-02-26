@@ -30,6 +30,7 @@ export type RecommendationInputs = Omit<
   | "selectedAddOns"
 > & {
   contactName: string;
+  contactRole: string;
   email: string;
   phone: string;
   companyName: string;
@@ -49,6 +50,7 @@ export type RecommendationInputs = Omit<
 
 export const DEFAULT_RECOMMENDATION_INPUTS: RecommendationInputs = {
   contactName: "",
+  contactRole: "",
   email: "",
   phone: "",
   companyName: "",
@@ -285,6 +287,7 @@ export function buildProgramRecommendation(inputs: RecommendationInputs): {
     company: {
       companyName: inputs.companyName.trim(),
       contactName: inputs.contactName.trim(),
+      role: inputs.contactRole.trim(),
       email: inputs.email.trim(),
       phone: inputs.phone.trim(),
       address1: inputs.address1.trim(),
@@ -339,6 +342,7 @@ export function buildProgramRecommendation(inputs: RecommendationInputs): {
       contact: {
         companyName: inputs.companyName.trim(),
         fullName: inputs.contactName.trim(),
+        role: inputs.contactRole.trim(),
         email: inputs.email.trim(),
         phone: inputs.phone.trim(),
       },

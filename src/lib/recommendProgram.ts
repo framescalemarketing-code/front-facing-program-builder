@@ -31,7 +31,8 @@ export type ProgramExposureRisk =
   | "outdoor_glare"
   | "fog_humidity"
   | "indoor_outdoor_shift"
-  | "screen_intensive";
+  | "screen_intensive"
+  | "temperature_extremes";
 
 export type ProgramBudgetPreference =
   | "super_strict"

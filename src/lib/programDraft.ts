@@ -49,7 +49,7 @@ export type AddOns = {
   extraSiteVisits: number | "";
 };
 
-export type Contact = { companyName: string; fullName: string; email: string; phone: string };
+export type Contact = { companyName: string; fullName: string; role: string; email: string; phone: string };
 
 export type BuilderGuidelines = {
   sideShieldType: SideShieldType;
@@ -141,6 +141,7 @@ const makeDefaultGuidelines = (): BuilderGuidelines => ({
 const makeDefaultContact = (): Contact => ({
   companyName: "",
   fullName: "",
+  role: "",
   email: "",
   phone: "",
 });
@@ -283,6 +284,7 @@ function normalizeContact(contact: Partial<Contact> | undefined): Contact {
   return {
     companyName: typeof contact?.companyName === "string" ? contact.companyName : defaults.companyName,
     fullName: typeof contact?.fullName === "string" ? contact.fullName : defaults.fullName,
+    role: typeof contact?.role === "string" ? contact.role : defaults.role,
     email: typeof contact?.email === "string" ? contact.email : defaults.email,
     phone: typeof contact?.phone === "string" ? contact.phone : defaults.phone,
   };

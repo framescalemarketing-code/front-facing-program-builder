@@ -98,7 +98,7 @@ const FOUR_PILLAR_BY_STEP: Record<StepId, { icon: string; phrase: string }> = {
   locations: { icon: "RD", phrase: "Reliability by Design" },
   exposures: { icon: "HF", phrase: "Human First Safety" },
   current_setup: { icon: "FT", phrase: "Follow Through as a Feature" },
-  budget: { icon: "SS", phrase: "Structured Scale" },
+  budget: { icon: "AO", phrase: "Adoption over Allowance" },
 };
 
 const SETUP_SECTION_BADGES: Record<CurrentSetupSectionId, string> = {
@@ -108,7 +108,6 @@ const SETUP_SECTION_BADGES: Record<CurrentSetupSectionId, string> = {
   coverage_type: "6D",
 };
 
-const EMPTY_GUIDANCE_MESSAGE = "Select an option to see how it shapes your program.";
 const RECOMMENDATION_START_STEP_KEY = "osso_recommendation_start_step";
 
 const WORK_TYPE_OPTIONS: Array<{ value: ProgramWorkType; label: string; helper: string }> = [
@@ -183,6 +182,7 @@ const EXPOSURE_OPTIONS: Array<{ value: ProgramExposureRisk; label: string; helpe
   { value: "fog_humidity", label: "Fog or Humidity", helper: "Humidity and temperature shifts that can interrupt visibility and workflow continuity." },
   { value: "indoor_outdoor_shift", label: "Indoor and Outdoor Shift Changes", helper: "Frequent movement across lighting zones that demands faster visual adaptation." },
   { value: "screen_intensive", label: "Screen Intensive Tasks", helper: "Extended digital viewing that can increase visual fatigue and reduce comfort." },
+  { value: "temperature_extremes", label: "Temperature Extremes", helper: "Heat and cold swings that affect lens performance, fog behavior, and long-shift comfort." },
 ];
 
 type CurrentSetupSectionId = "funding" | "approval" | "delivery" | "coverage_type";
@@ -622,6 +622,17 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                       </label>
 
                       <label className="space-y-2 sm:col-span-2">
+                        <div className="text-sm font-medium text-muted-foreground">Your Role</div>
+                        <input
+                          value={form.contactRole}
+                          onChange={(e) => setField("contactRole", e.target.value)}
+                          className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
+                          placeholder="Safety Manager, EHS Director, etc."
+                          aria-label="Your role"
+                        />
+                      </label>
+
+                      <label className="space-y-2 sm:col-span-2">
                         <div className="text-sm font-semibold text-foreground">Email</div>
                         <input
                           type="email"
@@ -733,7 +744,7 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                     })}
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Don't see your environment? Other Safety Environment covers custom and specialized conditions.
+                    Do not see your environment? Other Safety Environment covers specialized and custom conditions.
                   </p>
                 </div>
               ) : null}
@@ -1071,20 +1082,20 @@ function buildGuidance(args: {
       selectedLabel: null,
       sections: guidanceSections(
         {
-          title: "What to complete first",
-          body: "Start with Full Name, Company, and Email so we can generate a reliable recommendation preview.",
+          title: "Who owns this program",
+          body: "The name and contact here become the escalation anchor for your entire program. When approvals stall, when employees have questions, or when a replacement needs to move quickly, this is who the program points back to. Clear ownership is the single biggest predictor of consistent follow through.",
         },
         {
-          title: "How this keeps your rollout aligned",
-          body: "A clear primary contact keeps decisions and follow-through consistent as teams and sites expand.",
+          title: "How this shapes rollout speed",
+          body: "A clean primary contact prevents mixed messages from day one. Your team, your employees, and your OSSO specialist all communicate through one path, which means decisions happen faster and your program launches without the friction of unclear ownership.",
         },
         {
-          title: "How this supports adoption",
-          body: "Consistent contact ownership reduces mixed messages and helps employees trust the program process.",
+          title: "How this affects employee trust in the program",
+          body: "When employees see a consistent name attached to their safety program, they trust the process more. Consistent contact ownership reduces confusion about how to get help, request replacements, or raise issues, and that trust directly improves wear compliance.",
         },
         {
-          title: "What helps audit readiness later",
-          body: "Baseline company details make future documentation cleaner when you review approvals and program history.",
+          title: "Operational payoff you feel every week",
+          body: "When ownership is clear, execution stays consistent. Your team spends less time chasing exceptions and more time running a program that follows through across sites.",
         }
       ),
     };
@@ -1149,10 +1160,10 @@ function buildGuidance(args: {
     return {
       selectedLabel: selected,
       sections: guidanceSections(
-        { title: "How scheduling works at this size", body: copy.complexity },
-        { title: "What your admin load looks like", body: copy.admin },
-        { title: "How this grows with you", body: copy.scale },
-        { title: "What to align now", body: copy.nextMove }
+        { title: "What this size means for your team", body: copy.complexity },
+        { title: "Where the admin pressure lands", body: copy.admin },
+        { title: "How to set yourself up to scale", body: copy.scale },
+        { title: "What to lock in before you move forward", body: copy.nextMove }
       ),
     };
   }
@@ -1238,7 +1249,10 @@ function buildGuidance(args: {
       return {
         selectedLabel: null,
         sections: guidanceSections(
-          { title: "Choose your direction", body: EMPTY_GUIDANCE_MESSAGE },
+          {
+            title: "This step is about how far you want to go",
+            body: "Your direction shapes how much structure, support depth, and service cadence the recommendation includes. It is not about budget. It is about how your program should feel to operate from the inside. Pick the one that matches how your team actually works, not just your ideal state.",
+          },
           {
             title: "How this changes your rollout",
             body: "Your direction sets how much service depth and governance support the recommendation should include.",
@@ -1256,6 +1270,16 @@ function buildGuidance(args: {
     }
     const selectedBudget = form.budgetPreference;
     const copy = budgetPreferenceExplainer(selectedBudget);
+    const specialistBuildMap: Record<ProgramBudgetPreference, string> = {
+      super_strict:
+        "Your specialist will structure a program that sets a clear standard, limits edge cases, and gives your safety team something they can enforce without chasing exceptions.",
+      low_budget:
+        "Your specialist will design for reliable day to day execution. Not the flashiest option, but the one that keeps running when headcount shifts and priorities change.",
+      good_budget:
+        "Your specialist will balance adoption support with governance depth, so employees get a good experience and your program produces audit ready outcomes at the same time.",
+      unlimited_budget:
+        "Your specialist will build for long term resilience, a program architecture that handles scale, complexity, and evolving requirements without requiring constant manual intervention.",
+    };
     return {
       selectedLabel: budgetPreferenceLabel(selectedBudget),
       sections: guidanceSections(
@@ -1263,8 +1287,8 @@ function buildGuidance(args: {
         { title: "How this shapes the recommendation", body: copy.recommendation },
         { title: "Who this path is best for", body: copy.bestFor },
         {
-          title: "What to review before generating",
-          body: "Confirm this direction reflects your rollout goals so the generated preview matches how you plan to execute.",
+          title: "What your OSSO specialist will build from this",
+          body: specialistBuildMap[selectedBudget],
         }
       ),
     };
@@ -1278,18 +1302,21 @@ function buildGuidance(args: {
       return {
         selectedLabel: null,
         sections: guidanceSections(
-          { title: "Choose a coverage type", body: "Select a coverage type to see how it shapes compliance and operations." },
+          {
+            title: "Choose a coverage type",
+            body: "Select a coverage type to see how it shapes compliance, adoption, replacement rhythm, and daily operations.",
+          },
           {
             title: "Compliance and audit trail",
-            body: "Coverage-type decisions define what documentation and verification checks your team needs to maintain.",
+            body: "Coverage type controls what eligibility and verification evidence your team must maintain to keep audit documentation clean.",
           },
           {
             title: "Employee adoption and wear consistency",
-            body: "Matching coverage pathways to real worker needs is the strongest predictor of consistent wear behavior.",
+            body: "Prescription versus OTG is often a compliance versus comfort tradeoff at the job level, so matching pathway to role is critical for consistent daily wear.",
           },
           {
             title: "Replacement cadence and admin load",
-            body: "Coverage pathways change remake frequency, inventory planning, and approval workload.",
+            body: "This choice sets remake frequency, inventory expectations, and approval volume, so make it with long-term operations in mind.",
           }
         ),
       };
@@ -1441,6 +1468,7 @@ function exposureLabel(risk: ProgramExposureRisk) {
     fog_humidity: "Fog or Humidity",
     indoor_outdoor_shift: "Indoor and Outdoor Shift Changes",
     screen_intensive: "Screen Intensive Tasks",
+    temperature_extremes: "Temperature Extremes",
   };
   return map[risk];
 }
@@ -1502,6 +1530,14 @@ function exposureExplainer(risk: ProgramExposureRisk) {
         "Anti-reflective and blue-light-support options can improve clarity, comfort, and sustained program adoption.",
       compliance:
         "Clear add-on eligibility controls help prevent inconsistent upgrades, reimbursement disputes, and billing leakage.",
+    },
+    temperature_extremes: {
+      meaning:
+        "Workers move through heat and cold conditions that can impact comfort, fog behavior, and lens consistency over a shift.",
+      implications:
+        "Programs should prioritize stable performance in changing temperatures so visibility remains dependable during task transitions.",
+      compliance:
+        "Define when temperature-supportive options are required by role to reduce exceptions and keep policy decisions consistent.",
     },
   };
   return map[risk];

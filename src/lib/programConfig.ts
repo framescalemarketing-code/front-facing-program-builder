@@ -21,7 +21,8 @@ export type ProgramExposureRisk =
   | "outdoor_glare"
   | "fog_humidity"
   | "indoor_outdoor_shift"
-  | "screen_intensive";
+  | "screen_intensive"
+  | "temperature_extremes";
 
 export type ProgramBudgetPreference =
   | "super_strict"
@@ -64,6 +65,7 @@ export type ProgramConfig = {
   company: {
     companyName: string;
     contactName: string;
+    role?: string;
     email: string;
     phone: string;
     address1?: string;
@@ -129,6 +131,7 @@ export function deriveProgramConfigFromDraft(draft: Draft): ProgramConfig {
     company: {
       companyName: (contact.companyName ?? "").trim(),
       contactName: (contact.fullName ?? "").trim(),
+      role: (contact.role ?? "").trim(),
       email: (contact.email ?? "").trim(),
       phone: (contact.phone ?? "").trim(),
     },
@@ -171,6 +174,7 @@ export function buildDraftPatchFromProgramConfig(config: ProgramConfig): DraftPa
       contact: {
         companyName: config.company.companyName,
         fullName: config.company.contactName,
+        role: config.company.role ?? "",
         email: config.company.email,
         phone: config.company.phone,
       },

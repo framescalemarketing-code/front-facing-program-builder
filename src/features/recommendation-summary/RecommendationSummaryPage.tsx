@@ -97,6 +97,7 @@ function exposureRiskLabel(risk: ProgramExposureRisk) {
     fog_humidity: "fog and humidity",
     indoor_outdoor_shift: "indoor/outdoor shifts",
     screen_intensive: "screen-intensive work",
+    temperature_extremes: "temperature extremes",
   };
   return map[risk];
 }
@@ -112,28 +113,28 @@ function summarizeExposureRisks(risks: ProgramExposureRisk[] | undefined) {
 function readinessCard(tier: ProgramComplexityTier) {
   const map: Record<ProgramComplexityTier, { label: string; badgeClass: string; explanation: string }> = {
     foundational: {
-      label: "Foundational",
+      label: "Building Strong",
       badgeClass: "border-sky-300 bg-sky-100 text-sky-900",
       explanation:
-        "Your profile is best served by a focused baseline with clear standards and straightforward controls. This keeps rollout simple while building a strong compliance foundation. It also gives you room to scale without operational resets.",
+        "Your program is in the right position to build something that actually sticks. A focused structure now means fewer exceptions, cleaner compliance records, and a baseline your team can operate without constant correction. When your workforce grows or your locations change, this foundation holds without needing a full reset.",
     },
     structured: {
-      label: "Structured",
+      label: "Running Clean",
       badgeClass: "border-emerald-300 bg-emerald-100 text-emerald-900",
       explanation:
-        "Your program needs stronger workflow structure to support consistent execution. This tier balances employee adoption with reliable governance and predictable support channels. It keeps audit evidence cleaner as you grow.",
+        "Your program has the right ingredients to run consistently without constant oversight. The structure here balances employee experience with governance that holds up, so people get what they need, audits stay clean, and your team is not fielding exceptions every week. This is a program that earns trust through reliability.",
     },
     multi_site_controlled: {
-      label: "Multi Site Controlled",
+      label: "Scaled with Control",
       badgeClass: "border-amber-300 bg-amber-100 text-amber-900",
       explanation:
-        "Your complexity indicates a multi-site program that benefits from tighter oversight and documented routing rules. This tier supports operational uptime across locations while controlling exceptions. It improves readiness for cross-site audits and reporting.",
+        "Running safety across multiple locations is where most programs quietly start to drift. Yours does not have to. This profile points to a program structure that keeps standards consistent site to site, reduces the noise of local exceptions, and makes your team look coordinated from the inside out. When audits come or leadership asks, you have the documentation to back it up.",
     },
     enterprise_scale: {
-      label: "Enterprise Scale",
+      label: "Enterprise Ready",
       badgeClass: "border-violet-300 bg-violet-100 text-violet-900",
       explanation:
-        "Your workforce profile points to enterprise-level operational demands. This tier emphasizes scalable controls, resilient service pathways, and centralized governance for consistency. It is designed to protect adoption, uptime, and audit posture at scale.",
+        "At this scale, the difference between a program that works and one that creates friction is the depth of support behind it. Your profile calls for a partnership model, not just a vendor. That means a specialist who knows your program, reporting that gives leadership visibility, and a structure designed to stay consistent as your workforce shifts, your sites expand, and your compliance obligations evolve.",
     },
   };
   return map[tier];
@@ -160,6 +161,22 @@ function SummaryRow(props: { label: string; value: string | null }) {
   return (
     <div>
       {props.label}: <span className="font-medium text-foreground">{props.value}</span>
+    </div>
+  );
+}
+
+function ExposurePills(props: { risks: ProgramExposureRisk[] | undefined }) {
+  if (!props.risks || props.risks.length === 0) return null;
+  return (
+    <div className="pt-1">
+      <div className="text-xs uppercase tracking-wide text-muted-foreground">Exposure Risks</div>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {props.risks.map((risk) => (
+          <span key={risk} className="inline-flex rounded-full border border-primary/35 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+            {exposureRiskLabel(risk)}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -228,8 +245,8 @@ export function RecommendationSummaryPage({ onNavigate }: { onNavigate: Navigate
           </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
-            <div className="rounded-md border border-border bg-card p-5">
-              <div className="text-sm font-semibold text-foreground">Readiness Tier</div>
+              <div className="rounded-md border border-border bg-card p-5">
+              <div className="text-sm font-semibold text-foreground">Your Program Profile</div>
               <div className="mt-3 rounded-lg border border-border bg-secondary/40 p-4">
                 <div className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${readiness.badgeClass}`}>
                   {readiness.label}
@@ -295,6 +312,7 @@ export function RecommendationSummaryPage({ onNavigate }: { onNavigate: Navigate
                   <SummaryRow label="Program Direction" value={budgetDirection} />
                   <SummaryRow label="Delivery Model" value={deliveryModel} />
                   <SummaryRow label="Approval Model" value={approvalModel} />
+                  <ExposurePills risks={programConfig.programProfile.exposureRisks} />
                 </div>
               </div>
             </div>
