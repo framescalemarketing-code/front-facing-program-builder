@@ -1,9 +1,8 @@
 # Front Facing Program Builder
 
 Front-facing React + TypeScript app for:
-- Program Guidelines
-- Program Details
-- Program Recommendation intake and summary
+- Program Recommendation intake
+- Program Recommendation summary
 
 ## Local Setup
 

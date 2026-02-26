@@ -16,7 +16,6 @@ export default defineConfig({
       output: {
         manualChunks: {
           react: ["react", "react-dom"],
-          pdf: ["jspdf", "html2canvas-pro"],
         },
       },
     },

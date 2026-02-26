@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { NavigateFn } from "@/app/routerTypes";
@@ -12,7 +12,6 @@ import {
   buildProgramRecommendation,
   type RecommendationInputs,
 } from "@/lib/programRecommendation";
-import { recommendProgram } from "@/lib/recommendProgram";
 import type {
   ProgramBudgetPreference,
   CurrentSafetySetup,
@@ -284,12 +283,6 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
       setActiveSetupFocus,
     });
   }, [activeExposureFocus, activeSetupFocus, form, step.id]);
-
-  const computedRecommendation = useMemo(() => recommendProgram(form), [form]);
-  const computedAddOnText =
-    computedRecommendation.addOns.length > 0
-      ? computedRecommendation.addOns.join(", ")
-      : "None";
 
   function setField<K extends keyof RecommendationInputs>(key: K, value: RecommendationInputs[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -812,22 +805,6 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                   Setup.
                 </div>
                 <div className="mt-4 space-y-3 text-sm text-muted-foreground">{explainer}</div>
-                <div className="mt-5 rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
-                  <div className="font-semibold text-foreground">Computed Recommendation</div>
-                  <div className="mt-2 space-y-1">
-                    <div>
-                      EU Package:{" "}
-                      <span className="font-medium text-foreground">{computedRecommendation.euPackage}</span>
-                    </div>
-                    <div>
-                      Service Tier:{" "}
-                      <span className="font-medium text-foreground">{computedRecommendation.serviceTier}</span>
-                    </div>
-                    <div>
-                      Add-Ons: <span className="font-medium text-foreground">{computedAddOnText}</span>
-                    </div>
-                  </div>
-                </div>
               </div>
             </aside>
           </div>
@@ -859,22 +836,6 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                     Setup.
                   </div>
                   <div className="space-y-3">{explainer}</div>
-                  <div className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
-                    <div className="font-semibold text-foreground">Computed Recommendation</div>
-                    <div className="mt-2 space-y-1">
-                      <div>
-                        EU Package:{" "}
-                        <span className="font-medium text-foreground">{computedRecommendation.euPackage}</span>
-                      </div>
-                      <div>
-                        Service Tier:{" "}
-                        <span className="font-medium text-foreground">{computedRecommendation.serviceTier}</span>
-                      </div>
-                      <div>
-                        Add-Ons: <span className="font-medium text-foreground">{computedAddOnText}</span>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               ) : null}
             </div>
@@ -1598,3 +1559,5 @@ function budgetPreferenceExplainer(value: ProgramBudgetPreference) {
   };
   return map[value];
 }
+
+

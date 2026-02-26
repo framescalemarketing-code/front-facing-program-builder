@@ -1,5 +1,4 @@
-/* eslint-env node */
-/* global fetch */
+﻿/* global fetch */
 
 type HeaderValue = string | string[] | undefined;
 

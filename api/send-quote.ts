@@ -1,5 +1,4 @@
-﻿/* eslint-env node */
-/* global fetch */
+﻿/* global fetch */
 
 /* Serverless function for Vercel to email submitted quotes via Resend.
    Environment variables:

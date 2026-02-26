@@ -18,8 +18,6 @@
 
 | Path | Purpose |
 | --- | --- |
-| `src/features/program-builder/ProgramBuilderPage.tsx` | Program guidelines and contact setup |
-| `src/features/program-details/ProgramDetailsPage.tsx` | Program details and location inputs |
 | `src/features/recommendation-intake/RecommendationIntakePage.tsx` | Guided recommendation intake flow |
 | `src/features/recommendation-summary/RecommendationSummaryPage.tsx` | Final front-facing summary |
 
@@ -48,5 +46,5 @@ Examples
 ```ts
 import { AppShell } from "@/app/AppShell";
 import { useProgramDraft } from "@/hooks/useProgramDraft";
-import { ProgramDetailsPage } from "@/features/program-details";
+import { RecommendationIntakePage } from "@/features/recommendation-intake";
 ```

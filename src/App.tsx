@@ -1,4 +1,4 @@
-import { lazy, useEffect } from "react";
+import { lazy } from "react";
 import { AppShell } from "./app/AppShell";
 import { ProgramDraftProvider } from "./hooks/useProgramDraft";
 
@@ -15,16 +15,6 @@ const RecommendationSummaryPage = lazy(() =>
 );
 
 export default function App() {
-  useEffect(() => {
-    const preload = () => {
-      void import("./features/recommendation-intake");
-      void import("./features/recommendation-summary");
-    };
-
-    const timeoutId = window.setTimeout(preload, 300);
-    return () => window.clearTimeout(timeoutId);
-  }, []);
-
   return (
     <ProgramDraftProvider>
       <AppShell
