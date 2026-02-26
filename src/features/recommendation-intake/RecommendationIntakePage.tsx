@@ -29,15 +29,86 @@ type StepId =
   | "current_setup"
   | "budget";
 
-const STEPS: Array<{ id: StepId; title: string }> = [
-  { id: "company", title: "Company and Safety Contact" },
-  { id: "work_type", title: "Safety Work Type" },
-  { id: "coverage", title: "Safety Coverage Size" },
-  { id: "locations", title: "Safety Locations" },
-  { id: "exposures", title: "Safety Exposure Risks" },
-  { id: "current_setup", title: "Current Safety Setup" },
-  { id: "budget", title: "Program Direction" },
+type WizardStep = {
+  id: StepId;
+  sectionLabel: string;
+  heroTitle: string;
+  progressLabel: string;
+};
+
+type GuidanceSection = {
+  title: string;
+  body: string;
+};
+
+type GuidanceContent = {
+  selectedLabel: string | null;
+  sections: [GuidanceSection, GuidanceSection, GuidanceSection, GuidanceSection];
+};
+
+const STEPS: WizardStep[] = [
+  {
+    id: "company",
+    sectionLabel: "Contact",
+    heroTitle: "Let's start with your team",
+    progressLabel: "Contact",
+  },
+  {
+    id: "work_type",
+    sectionLabel: "Work Type",
+    heroTitle: "What kind of work does your workforce do?",
+    progressLabel: "Work Type",
+  },
+  {
+    id: "coverage",
+    sectionLabel: "Team Size",
+    heroTitle: "How should coverage be structured?",
+    progressLabel: "Team Size",
+  },
+  {
+    id: "locations",
+    sectionLabel: "Locations",
+    heroTitle: "Where will service be delivered?",
+    progressLabel: "Locations",
+  },
+  {
+    id: "exposures",
+    sectionLabel: "Exposures",
+    heroTitle: "What hazards are your workers exposed to?",
+    progressLabel: "Exposures",
+  },
+  {
+    id: "current_setup",
+    sectionLabel: "Setup",
+    heroTitle: "How should this program be set up?",
+    progressLabel: "Setup",
+  },
+  {
+    id: "budget",
+    sectionLabel: "Direction",
+    heroTitle: "Choose your direction",
+    progressLabel: "Direction",
+  },
 ];
+
+const FOUR_PILLAR_BY_STEP: Record<StepId, { icon: string; phrase: string }> = {
+  company: { icon: "FT", phrase: "Follow Through as a Feature" },
+  work_type: { icon: "HF", phrase: "Human First Safety" },
+  coverage: { icon: "RD", phrase: "Reliability by Design" },
+  locations: { icon: "RD", phrase: "Reliability by Design" },
+  exposures: { icon: "HF", phrase: "Human First Safety" },
+  current_setup: { icon: "FT", phrase: "Follow Through as a Feature" },
+  budget: { icon: "SS", phrase: "Structured Scale" },
+};
+
+const SETUP_SECTION_BADGES: Record<CurrentSetupSectionId, string> = {
+  funding: "6A",
+  approval: "6B",
+  delivery: "6C",
+  coverage_type: "6D",
+};
+
+const EMPTY_GUIDANCE_MESSAGE = "Select an option to see how it shapes your program.";
 
 const WORK_TYPE_OPTIONS: Array<{ value: ProgramWorkType; label: string; helper: string }> = [
   {
@@ -91,10 +162,16 @@ const COVERAGE_BANDS: Array<{ value: RecommendationInputs["coverageSizeBand"]; l
   { value: "500_plus", label: "500+", helper: "Enterprise-scale complexity requiring mature workflows, visibility, and cross-site program management." },
 ];
 
-const LOCATION_MODELS: Array<{ value: ProgramLocationModel; label: string; helper: string }> = [
-  { value: "single", label: "Single Location", helper: "Centralized rollout with straightforward scheduling, approvals, and service execution." },
-  { value: "multi_same_region", label: "Multiple Locations Same Region", helper: "Regional coordination model with repeatable site scheduling and shared playbooks." },
-  { value: "multi_across_regions", label: "Multiple Locations Across Regions", helper: "Distributed program model requiring strong governance, routing, and communication structure." },
+const LOCATION_MODELS: Array<{ id: "single" | "multi_same_region" | "multi_across_regions" | "multi_complex"; value: ProgramLocationModel; label: string; helper: string }> = [
+  { id: "single", value: "single", label: "Single Location", helper: "Centralized rollout with straightforward scheduling, approvals, and service execution." },
+  { id: "multi_same_region", value: "multi_same_region", label: "Multiple Locations Same Region", helper: "Regional coordination model with repeatable site scheduling and shared playbooks." },
+  { id: "multi_across_regions", value: "multi_across_regions", label: "Multiple Locations Across Regions", helper: "Distributed program model requiring strong governance, routing, and communication structure." },
+  {
+    id: "multi_complex",
+    value: "multi_across_regions",
+    label: "Multiple Locations, International or Complex",
+    helper: "Complex, international, or mixed-location operations that need centralized routing and policy consistency.",
+  },
 ];
 
 const EXPOSURE_OPTIONS: Array<{ value: ProgramExposureRisk; label: string; helper: string }> = [
@@ -188,30 +265,35 @@ const CURRENT_SETUP_SECTIONS: Array<{
 const BUDGET_OPTIONS: Array<{
   value: ProgramBudgetPreference;
   label: string;
+  bestFor: string;
   helper: string;
   impact: string;
 }> = [
   {
     value: "super_strict",
     label: "Foundational Standardization",
+    bestFor: "New programs or compliance first rollouts",
     helper: "We need a tightly standardized baseline focused on core compliance and consistent execution.",
     impact: "Focuses recommendation on dependable baseline coverage with limited complexity.",
   },
   {
     value: "low_budget",
     label: "Steady Operations",
+    bestFor: "Established programs managing steady headcount",
     helper: "We want stable day-to-day execution with practical flexibility for field realities.",
     impact: "Balances consistency and support while keeping operations manageable.",
   },
   {
     value: "good_budget",
     label: "Balanced Growth",
+    bestFor: "Programs scaling across teams or locations",
     helper: "We want to improve adoption and consistency with a stronger operational support model.",
     impact: "Maintains a strong mix of service reliability, employee experience, and control.",
   },
   {
     value: "unlimited_budget",
     label: "Maximum Coverage",
+    bestFor: "Large, multi site, or high complexity operations",
     helper: "We want the strongest long-term program resilience across teams and locations.",
     impact: "Prioritizes scalability, premium support pathways, and stronger service depth.",
   },
@@ -227,29 +309,46 @@ function toggleMulti<T extends string>(current: T[], value: T): T[] {
 }
 
 function cardClass(selected: boolean) {
-  return `w-full rounded-md border border-border bg-card p-3 text-left transition focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background ${
-    selected ? "border-ring bg-secondary/50" : "hover:border-ring hover:bg-secondary/50"
+  return `relative w-full rounded-md border border-border bg-card p-3 text-left transition focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background ${
+    selected
+      ? "border-primary bg-primary/10 shadow-sm ring-1 ring-primary/25"
+      : "hover:border-ring hover:bg-secondary/50"
   }`;
 }
 
-function exposureCardClass(focused: boolean, compact = false) {
+function exposureCardClass(focused: boolean, selected: boolean, compact = false) {
   const densityClass = compact ? "p-3" : "p-4";
-  if (focused) {
-    return `group relative w-full rounded-lg border border-primary bg-secondary/60 ${densityClass} text-left shadow-sm ring-2 ring-primary/25 transition`;
+  const focusClass = "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background";
+  if (focused || selected) {
+    return `group relative w-full rounded-lg border border-primary bg-primary/10 ${densityClass} text-left shadow-sm ring-2 ring-primary/25 transition ${focusClass}`;
   }
-  return `group relative w-full rounded-lg border border-border bg-card ${densityClass} text-left transition hover:border-ring hover:bg-secondary/35`;
+  return `group relative w-full rounded-lg border border-border bg-card ${densityClass} text-left transition hover:border-ring hover:bg-secondary/35 ${focusClass}`;
 }
 
 function selectToggleClass(selected: boolean) {
-  return `inline-flex h-7 w-7 items-center justify-center rounded-md border transition focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background ${
+  return `inline-flex h-8 w-8 items-center justify-center rounded-full border transition focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background ${
     selected
-      ? "border-primary bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/25"
+      ? "border-primary bg-primary text-primary-foreground shadow-sm"
       : "border-border bg-background text-muted-foreground hover:border-ring"
   }`;
 }
 
 function stepProgressLabel(stepIndex: number) {
   return `Step ${stepIndex + 1} of ${STEPS.length}`;
+}
+
+function setupSectionBadge(sectionId: CurrentSetupSectionId) {
+  return SETUP_SECTION_BADGES[sectionId];
+}
+
+function selectedBadge() {
+  return (
+    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-primary bg-primary text-primary-foreground shadow-sm">
+      <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-[2.25]">
+        <path d="M3.5 8.25L6.75 11.5L12.5 5.75" />
+      </svg>
+    </span>
+  );
 }
 
 function setupSectionForItem(item: CurrentSafetySetup) {
@@ -261,66 +360,67 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
 
   const [form, setForm] = useState<RecommendationInputs>(() => ({ ...DEFAULT_RECOMMENDATION_INPUTS }));
   const [stepIndex, setStepIndex] = useState(0);
+  const [locationOptionId, setLocationOptionId] = useState<"single" | "multi_same_region" | "multi_across_regions" | "multi_complex">("single");
+  const [showLocationDetails, setShowLocationDetails] = useState(false);
   const [activeExposureFocus, setActiveExposureFocus] = useState<ProgramExposureRisk | null>(null);
-  const [lastSelectedExposureOption, setLastSelectedExposureOption] = useState<ProgramExposureRisk | null>(null);
   const [activeSetupFocus, setActiveSetupFocus] = useState<CurrentSafetySetup | null>(null);
-  const [lastSelectedSetupOption, setLastSelectedSetupOption] = useState<CurrentSafetySetup | null>(null);
+  const [activeSetupSection, setActiveSetupSection] = useState<CurrentSetupSectionId>("funding");
+  const [collapsedSetupSections, setCollapsedSetupSections] = useState<Record<CurrentSetupSectionId, boolean>>({
+    funding: false,
+    approval: false,
+    delivery: false,
+    coverage_type: false,
+  });
   const [mobileGuidanceOpen, setMobileGuidanceOpen] = useState(false);
   const [error, setError] = useState<string>("");
-  const exposureCardsRef = useRef<HTMLDivElement | null>(null);
-  const currentSetupCardsRef = useRef<HTMLDivElement | null>(null);
+  const setupSectionRefs = useRef<Record<CurrentSetupSectionId, HTMLElement | null>>({
+    funding: null,
+    approval: null,
+    delivery: null,
+    coverage_type: null,
+  });
 
   const step = STEPS[stepIndex];
   const progress = clamp01(stepIndex / (STEPS.length - 1));
+  const pillarAnchor = FOUR_PILLAR_BY_STEP[step.id];
 
-  const explainer = useMemo(() => {
-    return buildExplainer({
+  const guidance = useMemo(() => {
+    return buildGuidance({
       stepId: step.id,
       form,
+      locationOptionId,
       activeExposureFocus,
       activeSetupFocus,
-      setActiveExposureFocus,
-      setActiveSetupFocus,
+      activeSetupSection,
     });
-  }, [activeExposureFocus, activeSetupFocus, form, step.id]);
+  }, [activeExposureFocus, activeSetupFocus, activeSetupSection, form, locationOptionId, step.id]);
 
   function setField<K extends keyof RecommendationInputs>(key: K, value: RecommendationInputs[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  function toggleExposureFocus(risk: ProgramExposureRisk) {
-    const next = activeExposureFocus === risk ? null : risk;
-    setActiveExposureFocus(next);
-    if (form.exposureRisks.includes(risk)) {
-      setLastSelectedExposureOption(risk);
-    }
-    if (next) {
-      setMobileGuidanceOpen(true);
+  function selectLocationOption(id: "single" | "multi_same_region" | "multi_across_regions" | "multi_complex", value: ProgramLocationModel) {
+    setLocationOptionId(id);
+    setField("locationModel", value);
+  }
+
+  function setSetupFocus(item: CurrentSafetySetup | null) {
+    setActiveSetupFocus(item);
+    if (!item) return;
+    const section = setupSectionForItem(item);
+    if (section) {
+      setActiveSetupSection(section.id);
     }
   }
 
-  function toggleSetupFocus(item: CurrentSafetySetup) {
-    const next = activeSetupFocus === item ? null : item;
-    setActiveSetupFocus(next);
-    if (form.currentSafetySetup.includes(item)) {
-      setLastSelectedSetupOption(item);
-    }
-    if (next) {
-      setMobileGuidanceOpen(true);
-    }
-  }
-
-  function toggleExposureSelection(risk: ProgramExposureRisk) {
+  function toggleExposureSelection(risk: ProgramExposureRisk, shouldFocus = true) {
     const selected = form.exposureRisks.includes(risk);
     const next = toggleMulti(form.exposureRisks, risk);
     setField("exposureRisks", next);
-    if (selected) {
-      if (lastSelectedExposureOption === risk) {
-        setLastSelectedExposureOption(null);
-      }
-      return;
+    if (shouldFocus) {
+      setActiveExposureFocus(selected ? next[next.length - 1] ?? null : risk);
+      setMobileGuidanceOpen(true);
     }
-    setLastSelectedExposureOption(risk);
   }
 
   function toggleSetupSelection(item: CurrentSafetySetup) {
@@ -328,8 +428,8 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
     if (selected) {
       const next = form.currentSafetySetup.filter((v) => v !== item);
       setField("currentSafetySetup", next);
-      if (lastSelectedSetupOption === item) {
-        setLastSelectedSetupOption(null);
+      if (activeSetupFocus === item) {
+        setSetupFocus(next[next.length - 1] ?? null);
       }
       return;
     }
@@ -344,75 +444,62 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
     const sectionValues = section.options.map((option) => option.value);
     const next = [...form.currentSafetySetup.filter((v) => !sectionValues.includes(v)), item];
     setField("currentSafetySetup", next);
-    setLastSelectedSetupOption(item);
+    setActiveSetupSection(section.id);
+    setSetupFocus(item);
+    setMobileGuidanceOpen(true);
+  }
+
+  function toggleSetupSection(sectionId: CurrentSetupSectionId) {
+    setCollapsedSetupSections((prev) => ({ ...prev, [sectionId]: !prev[sectionId] }));
+    setActiveSetupSection(sectionId);
   }
 
   useEffect(() => {
-    if (step.id !== "exposures") return;
-
-    const onPointerDown = (event: PointerEvent) => {
-      const container = exposureCardsRef.current;
-      if (!container) return;
-      if (!(event.target instanceof Element)) return;
-
-      const clickedCard = event.target.closest('[data-exposure-card="true"]');
-      if (clickedCard && container.contains(clickedCard)) return;
-
-      if (activeExposureFocus) {
-        setActiveExposureFocus(null);
-      }
-
-      if (!lastSelectedExposureOption) return;
-      if (!form.exposureRisks.includes(lastSelectedExposureOption)) {
-        setLastSelectedExposureOption(null);
-        return;
-      }
-
-      setField("exposureRisks", form.exposureRisks.filter((value) => value !== lastSelectedExposureOption));
-      setLastSelectedExposureOption(null);
-    };
-
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [activeExposureFocus, form.exposureRisks, lastSelectedExposureOption, step.id]);
-
-  useEffect(() => {
     if (step.id !== "current_setup") return;
-
-    const onPointerDown = (event: PointerEvent) => {
-      const container = currentSetupCardsRef.current;
-      if (!container) return;
-      if (!(event.target instanceof Element)) return;
-
-      const clickedCard = event.target.closest('[data-setup-card="true"]');
-      if (clickedCard && container.contains(clickedCard)) return;
-
-      if (activeSetupFocus) {
-        setActiveSetupFocus(null);
+    const refs = setupSectionRefs.current;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        let topEntry: IntersectionObserverEntry | null = null;
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          if (!topEntry || entry.intersectionRatio > topEntry.intersectionRatio) {
+            topEntry = entry;
+          }
+        }
+        if (!topEntry) return;
+        const sectionId = (topEntry.target as HTMLElement).dataset.setupSection as CurrentSetupSectionId | undefined;
+        if (!sectionId) return;
+        setActiveSetupSection(sectionId);
+      },
+      {
+        root: null,
+        rootMargin: "-25% 0px -50% 0px",
+        threshold: [0.2, 0.45, 0.7],
       }
+    );
 
-      if (!lastSelectedSetupOption) return;
-      if (!form.currentSafetySetup.includes(lastSelectedSetupOption)) {
-        setLastSelectedSetupOption(null);
-        return;
-      }
+    for (const sectionId of Object.keys(refs) as CurrentSetupSectionId[]) {
+      const node = refs[sectionId];
+      if (node) observer.observe(node);
+    }
 
-      setField("currentSafetySetup", form.currentSafetySetup.filter((value) => value !== lastSelectedSetupOption));
-      setLastSelectedSetupOption(null);
-    };
-
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [activeSetupFocus, form.currentSafetySetup, lastSelectedSetupOption, step.id]);
+    return () => observer.disconnect();
+  }, [step.id, collapsedSetupSections]);
 
   function goNext() {
     setError("");
-    setStepIndex((prev) => Math.min(prev + 1, STEPS.length - 1));
+    const nextIndex = Math.min(stepIndex + 1, STEPS.length - 1);
+    setStepIndex(nextIndex);
+    const nextStepId = STEPS[nextIndex].id;
+    setMobileGuidanceOpen(nextStepId === "exposures" || nextStepId === "current_setup");
   }
 
   function goBack() {
     setError("");
-    setStepIndex((prev) => Math.max(prev - 1, 0));
+    const nextIndex = Math.max(stepIndex - 1, 0);
+    setStepIndex(nextIndex);
+    const nextStepId = STEPS[nextIndex].id;
+    setMobileGuidanceOpen(nextStepId === "exposures" || nextStepId === "current_setup");
   }
 
   function onExitEarly() {
@@ -441,8 +528,10 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
     <section aria-labelledby="recommendation-title">
       <PageHero
         id="recommendation-title"
-        title="Program Recommendation"
-        subtitle="Use Guided Steps To Generate A Recommended Program Configuration."
+        title={step.heroTitle}
+        subtitle={`Program Recommendation - ${step.sectionLabel}`}
+        titleClassName="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
+        subtitleClassName="brand-eyebrow mt-3 max-w-none text-primary"
       />
 
       <div className="mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8 lg:pb-0">
@@ -458,7 +547,33 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
             <div className="h-2 w-full rounded-full bg-secondary">
               <div className="h-2 rounded-full bg-primary" style={{ width: `${Math.round(progress * 100)}%` }} />
             </div>
-            <div className="mt-2 text-xs text-muted-foreground">{step.title}</div>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sm:grid-cols-4 lg:grid-cols-7">
+              {STEPS.map((item, idx) => {
+                const active = idx === stepIndex;
+                const complete = idx < stepIndex;
+                return (
+                  <div
+                    key={item.id}
+                    className={`rounded-md border px-2 py-1.5 text-center leading-snug transition ${
+                      active
+                        ? "border-primary bg-primary/10 text-primary"
+                        : complete
+                          ? "border-primary/40 bg-primary/5 text-primary/80"
+                          : "border-border bg-card"
+                    }`}
+                  >
+                    {item.progressLabel}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
+            <span aria-hidden="true" className="font-semibold text-primary">
+              {pillarAnchor.icon}
+            </span>
+            <span className="font-medium text-foreground/90">{pillarAnchor.phrase}</span>
           </div>
 
           {error ? (
@@ -471,40 +586,53 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
             <div className="space-y-6 lg:col-span-7">
               {step.id === "company" ? (
                 <div className="rounded-lg border border-border bg-card p-5">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <label className="space-y-2">
-                      <div className="text-sm font-medium text-foreground">Contact Name</div>
-                      <input
-                        value={form.contactName}
-                        onChange={(e) => setField("contactName", e.target.value)}
-                        className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
-                        placeholder="Full name"
-                      />
-                    </label>
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                      Required for recommendation preview
+                    </p>
+                    <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                      <label className="space-y-2">
+                        <div className="text-sm font-semibold text-foreground">Full Name</div>
+                        <input
+                          value={form.contactName}
+                          onChange={(e) => setField("contactName", e.target.value)}
+                          className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
+                          placeholder="Full name"
+                          aria-label="Full name"
+                          required
+                        />
+                      </label>
 
-                    <label className="space-y-2">
-                      <div className="text-sm font-medium text-foreground">Company Name</div>
-                      <input
-                        value={form.companyName}
-                        onChange={(e) => setField("companyName", e.target.value)}
-                        className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
-                        placeholder="Company"
-                      />
-                    </label>
+                      <label className="space-y-2">
+                        <div className="text-sm font-semibold text-foreground">Company</div>
+                        <input
+                          value={form.companyName}
+                          onChange={(e) => setField("companyName", e.target.value)}
+                          className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
+                          placeholder="Company"
+                          aria-label="Company"
+                          required
+                        />
+                      </label>
 
-                    <label className="space-y-2">
-                      <div className="text-sm font-medium text-foreground">Email</div>
-                      <input
-                        type="email"
-                        value={form.email}
-                        onChange={(e) => setField("email", e.target.value)}
-                        className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
-                        placeholder="name@company.com"
-                      />
-                    </label>
+                      <label className="space-y-2 sm:col-span-2">
+                        <div className="text-sm font-semibold text-foreground">Email</div>
+                        <input
+                          type="email"
+                          value={form.email}
+                          onChange={(e) => setField("email", e.target.value)}
+                          className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
+                          placeholder="name@company.com"
+                          aria-label="Email"
+                          required
+                        />
+                      </label>
+                    </div>
+                  </div>
 
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
                     <label className="space-y-2">
-                      <div className="text-sm font-medium text-foreground">Phone</div>
+                      <div className="text-sm font-medium text-muted-foreground">Phone (optional)</div>
                       <input
                         type="tel"
                         inputMode="tel"
@@ -512,256 +640,316 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                         onChange={(e) => setField("phone", formatPhoneAsUs(e.target.value))}
                         className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
                         placeholder="123-456-7890"
+                        aria-label="Phone"
                       />
                     </label>
 
-                    <label className="space-y-2 sm:col-span-2">
-                      <div className="text-sm font-medium text-foreground">Address</div>
-                      <input
-                        value={form.address1}
-                        onChange={(e) => setField("address1", e.target.value)}
-                        className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
-                        placeholder="Street address"
-                      />
-                    </label>
+                    <div className="sm:col-span-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowLocationDetails((prev) => !prev)}
+                        className="inline-flex items-center rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition hover:border-ring hover:bg-secondary/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+                        aria-expanded={showLocationDetails}
+                        aria-controls="location-details-fields"
+                      >
+                        {showLocationDetails ? "Hide location details" : "Add location details"}
+                      </button>
+                    </div>
 
-                    <label className="space-y-2">
-                      <div className="text-sm font-medium text-foreground">City</div>
-                      <input
-                        value={form.city}
-                        onChange={(e) => setField("city", e.target.value)}
-                        className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
-                        placeholder="City"
-                      />
-                    </label>
+                    {showLocationDetails ? (
+                      <div id="location-details-fields" className="grid gap-4 sm:col-span-2 sm:grid-cols-2">
+                        <label className="space-y-2 sm:col-span-2">
+                          <div className="text-sm font-medium text-muted-foreground">Street</div>
+                          <input
+                            value={form.address1}
+                            onChange={(e) => setField("address1", e.target.value)}
+                            className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
+                            placeholder="Street address"
+                            aria-label="Street"
+                          />
+                        </label>
 
-                    <label className="space-y-2">
-                      <div className="text-sm font-medium text-foreground">State</div>
-                      <input
-                        value={form.state}
-                        onChange={(e) => setField("state", e.target.value)}
-                        className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
-                        placeholder="State"
-                      />
-                    </label>
+                        <label className="space-y-2">
+                          <div className="text-sm font-medium text-muted-foreground">City</div>
+                          <input
+                            value={form.city}
+                            onChange={(e) => setField("city", e.target.value)}
+                            className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
+                            placeholder="City"
+                            aria-label="City"
+                          />
+                        </label>
 
-                    <label className="space-y-2">
-                      <div className="text-sm font-medium text-foreground">ZIP</div>
-                      <input
-                        value={form.zip}
-                        onChange={(e) => setField("zip", e.target.value)}
-                        className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
-                        placeholder="ZIP"
-                      />
-                    </label>
+                        <label className="space-y-2">
+                          <div className="text-sm font-medium text-muted-foreground">State</div>
+                          <input
+                            value={form.state}
+                            onChange={(e) => setField("state", e.target.value)}
+                            className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
+                            placeholder="State"
+                            aria-label="State"
+                          />
+                        </label>
+
+                        <label className="space-y-2">
+                          <div className="text-sm font-medium text-muted-foreground">ZIP</div>
+                          <input
+                            value={form.zip}
+                            onChange={(e) => setField("zip", e.target.value)}
+                            className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
+                            placeholder="ZIP"
+                            aria-label="ZIP"
+                          />
+                        </label>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               ) : null}
 
               {step.id === "work_type" ? (
-                <div className="grid gap-3">
-                  {WORK_TYPE_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      className={cardClass(form.workType === opt.value)}
-                      onClick={() => setField("workType", opt.value)}
-                    >
-                      <div className="text-sm font-semibold text-foreground">{opt.label}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">{opt.helper}</div>
-                    </button>
-                  ))}
+                <div className="space-y-3">
+                  <div className="grid gap-3">
+                    {WORK_TYPE_OPTIONS.map((opt) => {
+                      const selected = form.workType === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          className={cardClass(selected)}
+                          onClick={() => setField("workType", opt.value)}
+                        >
+                          <div className="absolute right-3 top-3">{selected ? selectedBadge() : null}</div>
+                          <div className="pr-10 text-sm font-semibold text-foreground">{opt.label}</div>
+                          <div className="mt-1 pr-10 text-xs text-muted-foreground">{opt.helper}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Don't see your environment? Other Safety Environment covers custom and specialized conditions.
+                  </p>
                 </div>
               ) : null}
 
               {step.id === "coverage" ? (
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {COVERAGE_BANDS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      className={cardClass(form.coverageSizeBand === opt.value)}
-                      onClick={() => setField("coverageSizeBand", opt.value)}
-                    >
-                      <div className="text-sm font-semibold text-foreground">{opt.label}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">{opt.helper}</div>
-                    </button>
-                  ))}
+                  {COVERAGE_BANDS.map((opt) => {
+                    const selected = form.coverageSizeBand === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className={cardClass(selected)}
+                        onClick={() => setField("coverageSizeBand", opt.value)}
+                      >
+                        <div className="absolute right-3 top-3">{selected ? selectedBadge() : null}</div>
+                        <div className="pr-10 text-sm font-semibold text-foreground">{opt.label}</div>
+                        <div className="mt-1 pr-10 text-xs text-muted-foreground">{opt.helper}</div>
+                      </button>
+                    );
+                  })}
                 </div>
               ) : null}
 
               {step.id === "locations" ? (
                 <div className="grid gap-3">
-                  {LOCATION_MODELS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      className={cardClass(form.locationModel === opt.value)}
-                      onClick={() => setField("locationModel", opt.value)}
-                    >
-                      <div className="text-sm font-semibold text-foreground">{opt.label}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">{opt.helper}</div>
-                    </button>
-                  ))}
+                  {LOCATION_MODELS.map((opt) => {
+                    const selected = locationOptionId === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        className={cardClass(selected)}
+                        onClick={() => selectLocationOption(opt.id, opt.value)}
+                      >
+                        <div className="absolute right-3 top-3">{selected ? selectedBadge() : null}</div>
+                        <div className="pr-10 text-sm font-semibold text-foreground">{opt.label}</div>
+                        <div className="mt-1 pr-10 text-xs text-muted-foreground">{opt.helper}</div>
+                      </button>
+                    );
+                  })}
                 </div>
               ) : null}
 
               {step.id === "exposures" ? (
-                <div ref={exposureCardsRef} className="grid gap-3 sm:grid-cols-2">
-                  {EXPOSURE_OPTIONS.map((opt) => {
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {EXPOSURE_OPTIONS.map((opt, idx) => {
                     const selected = form.exposureRisks.includes(opt.value);
                     const focused = activeExposureFocus === opt.value;
+                    const isFinalOddCard = EXPOSURE_OPTIONS.length % 2 === 1 && idx === EXPOSURE_OPTIONS.length - 1;
                     return (
-                      <div
+                      <button
                         key={opt.value}
-                        data-exposure-card="true"
-                        role="button"
-                        tabIndex={0}
-                        aria-label={`Focus ${opt.label} details`}
-                        onClick={() => toggleExposureFocus(opt.value)}
+                        type="button"
+                        aria-label={selected ? `Unselect ${opt.label}` : `Select ${opt.label}`}
+                        aria-pressed={selected}
+                        onClick={() => toggleExposureSelection(opt.value)}
+                        onFocus={() => setActiveExposureFocus(opt.value)}
+                        onMouseEnter={() => setActiveExposureFocus(opt.value)}
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault();
-                            toggleExposureFocus(opt.value);
+                            toggleExposureSelection(opt.value);
                           }
                         }}
-                        className={exposureCardClass(focused)}
+                        className={`${exposureCardClass(focused, selected)} ${isFinalOddCard ? "sm:col-span-2" : ""}`}
                       >
                         {focused ? <span className="absolute inset-y-0 left-0 w-1 rounded-l-lg bg-primary" aria-hidden="true" /> : null}
 
-                        <div className="flex items-center justify-end gap-2">
-                          <span
-                            className={`text-[11px] font-medium uppercase tracking-wide ${
-                              selected ? "text-primary" : "text-muted-foreground"
-                            }`}
-                          >
-                            {selected ? "Selected" : "Select"}
-                          </span>
-                          <button
-                            type="button"
-                            aria-label={selected ? `Unselect ${opt.label}` : `Select ${opt.label}`}
-                            aria-pressed={selected}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              toggleExposureSelection(opt.value);
-                            }}
-                            className={selectToggleClass(selected)}
-                          >
-                            {selected ? (
+                        <div className="flex items-center justify-end">
+                          {selected ? (
+                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-primary bg-primary text-primary-foreground shadow-sm">
                               <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-[2.25]">
                                 <path d="M3.5 8.25L6.75 11.5L12.5 5.75" />
                               </svg>
-                            ) : (
-                              <span className="h-3.5 w-3.5 rounded-sm border border-current" aria-hidden="true" />
-                            )}
-                          </button>
+                            </span>
+                          ) : (
+                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground">
+                              <span className="h-3 w-3 rounded-sm border border-current" aria-hidden="true" />
+                            </span>
+                          )}
                         </div>
 
                         <div className="mt-1 text-sm font-semibold text-foreground">{opt.label}</div>
                         <div className="mt-1 text-xs text-muted-foreground">{opt.helper}</div>
-                        <div
-                          className={`mt-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground transition ${
-                            focused ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
-                          }`}
-                        >
-                          Details
-                        </div>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
               ) : null}
 
               {step.id === "current_setup" ? (
-                <div ref={currentSetupCardsRef} className="space-y-4">
-                  {CURRENT_SETUP_SECTIONS.map((section) => (
-                    <div key={section.id} className="space-y-2">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-primary">{section.title}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">{section.helper}</p>
-                      </div>
-                      <div className={`grid gap-2 ${section.options.length > 1 ? "sm:grid-cols-2" : ""}`}>
-                        {section.options.map((opt) => {
-                          const selected = form.currentSafetySetup.includes(opt.value);
-                          const focused = activeSetupFocus === opt.value;
-                          return (
-                            <div
-                              key={opt.value}
-                              data-setup-card="true"
-                              role="button"
-                              tabIndex={0}
-                              aria-label={`Focus ${opt.label} details`}
-                              onClick={() => toggleSetupFocus(opt.value)}
-                              onKeyDown={(event) => {
-                                if (event.key === "Enter" || event.key === " ") {
-                                  event.preventDefault();
-                                  toggleSetupFocus(opt.value);
-                                }
-                              }}
-                              className={exposureCardClass(focused, true)}
-                            >
-                              {focused ? <span className="absolute inset-y-0 left-0 w-1 rounded-l-lg bg-primary" aria-hidden="true" /> : null}
-
-                              <div className="flex items-center justify-end gap-2">
-                                <span
-                                  className={`text-[11px] font-medium uppercase tracking-wide ${
-                                    selected ? "text-primary" : "text-muted-foreground"
-                                  }`}
-                                >
-                                  {selected ? "Selected" : "Select"}
-                                </span>
-                                <button
-                                  type="button"
-                                  aria-label={selected ? `Unselect ${opt.label}` : `Select ${opt.label}`}
-                                  aria-pressed={selected}
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    toggleSetupSelection(opt.value);
-                                  }}
-                                  className={selectToggleClass(selected)}
-                                >
-                                  {selected ? (
-                                    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-[2.25]">
-                                      <path d="M3.5 8.25L6.75 11.5L12.5 5.75" />
-                                    </svg>
-                                  ) : (
-                                    <span className="h-3.5 w-3.5 rounded-sm border border-current" aria-hidden="true" />
-                                  )}
-                                </button>
-                              </div>
-
-                              <div className="text-sm font-semibold leading-tight text-foreground">{opt.label}</div>
-                              <div className="mt-1 text-xs leading-snug text-muted-foreground">{opt.helper}</div>
-                              <div
-                                className={`mt-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground transition ${
-                                  focused ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
-                                }`}
-                              >
-                                Details
-                              </div>
+                <div className="space-y-6">
+                  {CURRENT_SETUP_SECTIONS.map((section) => {
+                    const sectionCollapsed = collapsedSetupSections[section.id];
+                    const sectionFocused = activeSetupSection === section.id;
+                    return (
+                      <section
+                        key={section.id}
+                        ref={(node) => {
+                          setupSectionRefs.current[section.id] = node;
+                        }}
+                        data-setup-section={section.id}
+                        className="rounded-lg border border-border bg-card p-4 sm:p-5"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => toggleSetupSection(section.id)}
+                          className="flex w-full items-start justify-between gap-3 text-left"
+                          aria-expanded={!sectionCollapsed}
+                        >
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="inline-flex rounded-full border border-primary/35 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+                                {setupSectionBadge(section.id)}
+                              </span>
+                              <p className="text-xs font-semibold uppercase tracking-wide text-primary">{section.title}</p>
                             </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
+                            <p className="mt-1 text-xs text-muted-foreground">{section.helper}</p>
+                          </div>
+                          <span
+                            className={`text-[11px] font-semibold uppercase tracking-wide ${
+                              sectionFocused ? "text-primary" : "text-muted-foreground"
+                            }`}
+                          >
+                            {sectionCollapsed ? "Expand" : "Collapse"}
+                          </span>
+                        </button>
+
+                        {sectionCollapsed ? null : (
+                          <div className="mt-4 border-t border-border pt-4">
+                            <div className={`grid gap-3 ${section.options.length > 1 ? "sm:grid-cols-2" : ""}`}>
+                              {section.options.map((opt) => {
+                                const selected = form.currentSafetySetup.includes(opt.value);
+                                const focused = activeSetupFocus === opt.value;
+                                return (
+                                  <div
+                                    key={opt.value}
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label={`Focus ${opt.label} details`}
+                                    onClick={() => setSetupFocus(opt.value)}
+                                    onFocus={() => setActiveSetupSection(section.id)}
+                                    onMouseEnter={() => setActiveSetupSection(section.id)}
+                                    onKeyDown={(event) => {
+                                      if (event.key === "Enter" || event.key === " ") {
+                                        event.preventDefault();
+                                        setSetupFocus(opt.value);
+                                      }
+                                    }}
+                                    className={exposureCardClass(focused, selected, true)}
+                                  >
+                                    {focused ? <span className="absolute inset-y-0 left-0 w-1 rounded-l-lg bg-primary" aria-hidden="true" /> : null}
+
+                                    <div className="flex items-center justify-end gap-2">
+                                      <span
+                                        className={`text-[11px] font-medium uppercase tracking-wide ${
+                                          selected ? "text-primary" : "text-muted-foreground"
+                                        }`}
+                                      >
+                                        {selected ? "Selected" : "Select"}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        aria-label={selected ? `Unselect ${opt.label}` : `Select ${opt.label}`}
+                                        aria-pressed={selected}
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          toggleSetupSelection(opt.value);
+                                        }}
+                                        className={selectToggleClass(selected)}
+                                      >
+                                        {selected ? (
+                                          <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-[2.25]">
+                                            <path d="M3.5 8.25L6.75 11.5L12.5 5.75" />
+                                          </svg>
+                                        ) : (
+                                          <span className="h-3 w-3 rounded-full border border-current" aria-hidden="true" />
+                                        )}
+                                      </button>
+                                    </div>
+
+                                    <div className="text-sm font-semibold leading-tight text-foreground">{opt.label}</div>
+                                    <div className="mt-1 text-xs leading-snug text-muted-foreground">{opt.helper}</div>
+                                    <div
+                                      className={`mt-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground transition ${
+                                        focused ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+                                      }`}
+                                    >
+                                      Details
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </section>
+                    );
+                  })}
                 </div>
               ) : null}
 
               {step.id === "budget" ? (
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {BUDGET_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      className={cardClass(form.budgetPreference === opt.value)}
-                      onClick={() => setField("budgetPreference", opt.value)}
-                    >
-                      <div className="text-sm font-semibold text-foreground">{opt.label}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">{opt.helper}</div>
-                      <div className="mt-2 text-xs text-foreground/80">{opt.impact}</div>
-                    </button>
-                  ))}
+                  {BUDGET_OPTIONS.map((opt) => {
+                    const selected = form.budgetPreference === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className={cardClass(selected)}
+                        onClick={() => setField("budgetPreference", opt.value)}
+                      >
+                        <div className="absolute right-3 top-3">{selected ? selectedBadge() : null}</div>
+                        <div className="pr-10 text-sm font-semibold text-foreground">{opt.label}</div>
+                        <div className="mt-2 pr-10 text-xs font-medium text-foreground">Best for: {opt.bestFor}</div>
+                        <div className="mt-1 pr-10 text-xs text-muted-foreground">{opt.helper}</div>
+                        <div className="mt-2 pr-10 text-xs text-foreground/80">{opt.impact}</div>
+                      </button>
+                    );
+                  })}
                 </div>
               ) : null}
 
@@ -781,13 +969,6 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                   </button>
                 ) : (
                   <div className="flex flex-wrap items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => onNavigate("recommendation_summary", "internal")}
-                      className={secondaryButtonClass}
-                    >
-                      Go to Program Summary
-                    </button>
                     <button type="button" onClick={onComplete} className={primaryButtonClass}>
                       Generate Recommendation Preview
                     </button>
@@ -798,13 +979,28 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
 
             <aside className="hidden lg:col-span-5 lg:block">
               <div className="sticky top-6 rounded-lg border border-border bg-card p-5">
-                <div className="text-sm font-semibold text-foreground">Program Guidance</div>
-                <div className="mt-1 text-xs text-muted-foreground">What This Choice Means For Your Program</div>
-                <div className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                  Clear Notes On Compliance Impact, Lens And Frame Implications, And How This Choice Affects Program
-                  Setup.
+                {step.id === "company" ? (
+                  <div className="mb-2 text-xs italic text-muted-foreground">
+                    You are shaping service consistency, adoption outcomes, uptime continuity, and audit readiness.
+                  </div>
+                ) : null}
+                <div className="text-sm font-semibold text-foreground">Advisory Guidance</div>
+                <div className="mt-1 text-xs text-muted-foreground">Guidance updates as you make selections.</div>
+                {guidance.selectedLabel ? (
+                  <div className="mt-3">
+                    <span className="inline-flex rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+                      {guidance.selectedLabel}
+                    </span>
+                  </div>
+                ) : null}
+                <div className="mt-4 space-y-4 text-sm text-muted-foreground">
+                  {guidance.sections.map((section) => (
+                    <section key={section.title}>
+                      <h3 className="text-sm font-semibold text-foreground">{section.title}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">{section.body}</p>
+                    </section>
+                  ))}
                 </div>
-                <div className="mt-4 space-y-3 text-sm text-muted-foreground">{explainer}</div>
               </div>
             </aside>
           </div>
@@ -817,9 +1013,10 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                 className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
                 aria-expanded={mobileGuidanceOpen}
                 aria-controls="mobile-program-guidance"
+                aria-label="Program guidance drawer"
               >
                 <div>
-                  <div className="text-sm font-semibold text-foreground">Program Guidance</div>
+                  <div className="text-sm font-semibold text-foreground">Advisory Guidance</div>
                   <div className="text-xs text-muted-foreground">
                     Tap To {mobileGuidanceOpen ? "Minimize" : "Open"} Details
                   </div>
@@ -830,12 +1027,25 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
               </button>
 
               {mobileGuidanceOpen ? (
-                <div id="mobile-program-guidance" className="max-h-[70vh] space-y-3 overflow-y-auto border-t border-border p-4 text-sm text-muted-foreground">
-                  <div className="text-xs leading-relaxed text-muted-foreground">
-                    Clear Notes On Compliance Impact, Lens And Frame Implications, And How This Choice Affects Program
-                    Setup.
-                  </div>
-                  <div className="space-y-3">{explainer}</div>
+                <div id="mobile-program-guidance" className="max-h-[70vh] space-y-4 overflow-y-auto border-t border-border p-4 text-sm text-muted-foreground">
+                  {step.id === "company" ? (
+                    <div className="text-xs italic leading-relaxed text-muted-foreground">
+                      You are shaping service consistency, adoption outcomes, uptime continuity, and audit readiness.
+                    </div>
+                  ) : null}
+                  {guidance.selectedLabel ? (
+                    <div>
+                      <span className="inline-flex rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+                        {guidance.selectedLabel}
+                      </span>
+                    </div>
+                  ) : null}
+                  {guidance.sections.map((section) => (
+                    <section key={section.title}>
+                      <h3 className="text-sm font-semibold text-foreground">{section.title}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">{section.body}</p>
+                    </section>
+                  ))}
                 </div>
               ) : null}
             </div>
@@ -852,317 +1062,309 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
   );
 }
 
-function buildExplainer(args: {
+function guidanceSections(
+  first: GuidanceSection,
+  second: GuidanceSection,
+  third: GuidanceSection,
+  fourth: GuidanceSection
+): [GuidanceSection, GuidanceSection, GuidanceSection, GuidanceSection] {
+  return [first, second, third, fourth];
+}
+
+function selectedSetupInSection(selectedSetup: CurrentSafetySetup[], sectionId: CurrentSetupSectionId) {
+  const section = CURRENT_SETUP_SECTIONS.find((item) => item.id === sectionId);
+  if (!section) return null;
+  return section.options.find((option) => selectedSetup.includes(option.value))?.value ?? null;
+}
+
+function buildGuidance(args: {
   stepId: StepId;
   form: RecommendationInputs;
+  locationOptionId: "single" | "multi_same_region" | "multi_across_regions" | "multi_complex";
   activeExposureFocus: ProgramExposureRisk | null;
   activeSetupFocus: CurrentSafetySetup | null;
-  setActiveExposureFocus: (v: ProgramExposureRisk | null) => void;
-  setActiveSetupFocus: (v: CurrentSafetySetup | null) => void;
-}) {
+  activeSetupSection: CurrentSetupSectionId;
+}): GuidanceContent {
   const { stepId, form } = args;
 
   if (stepId === "company") {
-    return (
-      <>
-        <p>
-          Company and safety contact details set the operating foundation for rollout speed, escalation paths, and day
-          to day execution quality. Strong ownership at this stage reduces friction later when approvals, exceptions,
-          and employee support questions appear.
-        </p>
-        <p>
-          Even in mail-first programs, location context improves kickoff planning, compliance communication, travel
-          forecasting, and service-tier alignment across sites and departments.
-        </p>
-      </>
-    );
+    return {
+      selectedLabel: null,
+      sections: guidanceSections(
+        {
+          title: "What to complete first",
+          body: "Start with Full Name, Company, and Email so we can generate a reliable recommendation preview.",
+        },
+        {
+          title: "How this keeps your rollout aligned",
+          body: "A clear primary contact keeps decisions and follow-through consistent as teams and sites expand.",
+        },
+        {
+          title: "How this supports adoption",
+          body: "Consistent contact ownership reduces mixed messages and helps employees trust the program process.",
+        },
+        {
+          title: "What helps audit readiness later",
+          body: "Baseline company details make future documentation cleaner when you review approvals and program history.",
+        }
+      ),
+    };
   }
 
   if (stepId === "work_type") {
     const content = workTypeExplainer(form.workType);
-    return (
-      <>
-        <p className="text-foreground font-medium">Typical Conditions</p>
-        <p>{content.conditions}</p>
-        <p className="text-foreground font-medium">Prescription Safety Needs</p>
-        <p>{content.needs}</p>
-        <p className="text-foreground font-medium">Compliance Considerations</p>
-        <p>{content.compliance}</p>
-        <p className="text-foreground font-medium">Why Structure Matters</p>
-        <p>{content.why}</p>
-      </>
-    );
+    const selected = WORK_TYPE_OPTIONS.find((option) => option.value === form.workType)?.label ?? null;
+    return {
+      selectedLabel: selected,
+      sections: guidanceSections(
+        { title: "What this environment looks like", body: content.conditions },
+        { title: "What keeps service steady", body: content.needs },
+        { title: "What keeps audits cleaner", body: content.compliance },
+        { title: "How this scales without resets", body: content.why }
+      ),
+    };
   }
 
   if (stepId === "coverage") {
     const band = form.coverageSizeBand ?? "31_60";
-    const map: Record<string, { complexity: string; admin: string; scale: string }> = {
+    const selected = COVERAGE_BANDS.find((option) => option.value === band)?.label ?? null;
+    const map: Record<string, { complexity: string; admin: string; scale: string; nextMove: string }> = {
       "1_30": {
-        complexity: "Coordination is usually direct, with limited exception traffic and faster decision cycles.",
-        admin: "Administration can stay lean with a single owner handling eligibility, questions, and follow-up.",
-        scale: "Early policy discipline is still important so the program can expand without rework later.",
+        complexity: "Scheduling is usually direct with quick coordination and fewer exception cycles.",
+        admin: "One owner can often manage policy checks, questions, and replacements without extra layers.",
+        scale: "Early consistency matters now so you do not need to reset structure when headcount grows.",
+        nextMove: "Set simple standards now so every new hire follows the same intake and ordering path.",
       },
       "31_60": {
-        complexity: "Scheduling and onboarding complexity grows as employees enter in groups and questions increase.",
-        admin: "Simple but clear approval and eligibility rules prevent inconsistent one-off exceptions.",
-        scale: "Repeatable ordering and communication flows become important to sustain delivery quality.",
+        complexity: "Scheduling starts to include grouped onboarding and higher question volume across shifts.",
+        admin: "Clear eligibility and replacement rules reduce one-off requests that slow the team down.",
+        scale: "Repeatable communication and ordering flows become important for steady service quality.",
+        nextMove: "Document ownership for approvals and employee questions before volume climbs further.",
       },
       "61_100": {
-        complexity: "Multiple shifts and teams increase operational overlap, handoffs, and follow-up requirements.",
-        admin: "Eligibility tracking, replacement handling, and reporting cadence start to matter more.",
-        scale: "Standardized workflows reduce manual back-and-forth and keep service levels predictable.",
+        complexity: "Cross-team handoffs increase, so scheduling consistency and role clarity matter more.",
+        admin: "Admin work expands into tracking, exception handling, and a steadier reporting rhythm.",
+        scale: "Standardized workflows reduce manual follow-up and stabilize execution across departments.",
+        nextMove: "Lock in repeatable timelines for approvals, fittings, replacements, and escalations.",
       },
       "101_250": {
-        complexity: "Higher volume requires tighter controls across managers, departments, and location leaders.",
-        admin: "Administrative workload often needs defined approval lanes and batch-style operating rhythms.",
-        scale: "Scaling successfully depends on clear governance, controls, and repeatable process ownership.",
+        complexity: "Coordination spans more managers and sites, creating heavier schedule orchestration.",
+        admin: "Admin load usually needs defined lanes, response targets, and clear ownership checkpoints.",
+        scale: "Growth is smoother when governance and process ownership are already documented.",
+        nextMove: "Formalize coverage rules now to keep policy decisions consistent between teams.",
       },
       "251_500": {
-        complexity: "Distributed execution and exception management become continuous, not occasional, activities.",
-        admin: "Approvals, policy enforcement, and reporting mature into ongoing operational workstreams.",
-        scale: "Role-based and department-based rules improve fairness, compliance, and throughput at scale.",
+        complexity: "Scheduling and exception work become ongoing operational workflows, not occasional events.",
+        admin: "Approvals and policy enforcement require regular oversight and clean reporting cadence.",
+        scale: "Role-based controls and program governance keep throughput fair and predictable at size.",
+        nextMove: "Build site-level accountability with centralized standards to avoid local policy drift.",
       },
       "500_plus": {
-        complexity: "Enterprise rollout introduces multi-channel delivery, layered stakeholders, and complex dependencies.",
-        admin: "Centralized controls, structured reporting, and escalation governance are required for consistency.",
-        scale: "Programs at this level perform best with standardized playbooks and strong cross-site ownership.",
+        complexity: "Scheduling spans multiple channels, stakeholders, and local constraints simultaneously.",
+        admin: "Centralized controls and escalation governance are typically required for reliable execution.",
+        scale: "Enterprise readiness depends on standardized playbooks and strong cross-site ownership.",
+        nextMove: "Set operating guardrails early so scale does not increase exceptions or audit risk.",
       },
     };
     const copy = map[band] ?? map["31_60"];
-    return (
-      <>
-        <p className="text-foreground font-medium">Coordination Complexity</p>
-        <p>{copy.complexity}</p>
-        <p className="text-foreground font-medium">Administrative Load</p>
-        <p>{copy.admin}</p>
-        <p className="text-foreground font-medium">Scaling Pattern</p>
-        <p>{copy.scale}</p>
-      </>
-    );
+    return {
+      selectedLabel: selected,
+      sections: guidanceSections(
+        { title: "How scheduling works at this size", body: copy.complexity },
+        { title: "What your admin load looks like", body: copy.admin },
+        { title: "How this grows with you", body: copy.scale },
+        { title: "What to align now", body: copy.nextMove }
+      ),
+    };
   }
 
   if (stepId === "locations") {
+    const selected = LOCATION_MODELS.find((option) => option.id === args.locationOptionId)?.label ?? null;
     const model = form.locationModel;
-    const map: Record<ProgramLocationModel, { scheduling: string; oversight: string; execution: string }> = {
+    const map: Record<ProgramLocationModel, { scheduling: string; oversight: string; execution: string; nextMove: string }> = {
       single: {
-        scheduling: "Scheduling can be centralized, giving you faster launch decisions and cleaner event planning.",
-        oversight: "Oversight is typically straightforward with one coordinator owning policy and communication.",
-        execution: "Execution can prioritize consistency, faster turnaround, and lower operational overhead.",
+        scheduling: "Scheduling stays centralized, which helps launch quickly and keep turnaround predictable.",
+        oversight: "One coordinator can usually manage communication, policy updates, and issue routing cleanly.",
+        execution: "Service delivery is easier to standardize when teams share one location and one process owner.",
+        nextMove: "Define a repeatable baseline now so expansion to additional sites does not require rework.",
       },
       multi_same_region: {
-        scheduling: "Scheduling benefits from regional batching by site, shift window, and employee availability.",
-        oversight: "A central owner can manage effectively when each site follows shared playbooks.",
-        execution: "Execution improves when contact ownership and routing standards are consistent across locations.",
+        scheduling: "Regional batching by site and shift keeps calendars manageable and reduces missed coverage.",
+        oversight: "Shared playbooks allow a central owner to keep policy enforcement consistent across locations.",
+        execution: "Execution improves when each site follows the same handoff, escalation, and support expectations.",
+        nextMove: "Confirm site contacts and escalation paths so regional coordination remains predictable.",
       },
       multi_across_regions: {
-        scheduling: "Scheduling becomes a multi-calendar operation with different local constraints and timelines.",
-        oversight: "Distributed oversight needs standardized approvals, reporting, and escalation rules.",
-        execution: "Cross-region execution requires a flexible model that still protects policy consistency.",
+        scheduling: "Scheduling spans different local timelines, constraints, and staffing rhythms across regions.",
+        oversight: "Distributed operations need standardized approvals and reporting to prevent policy drift.",
+        execution: "Cross-region delivery works best with clear governance and flexible but controlled routing rules.",
+        nextMove: "Set cross-site standards for approvals and exception handling before volume increases further.",
       },
     };
     const copy = map[model];
-    return (
-      <>
-        <p className="text-foreground font-medium">Scheduling Coordination</p>
-        <p>{copy.scheduling}</p>
-        <p className="text-foreground font-medium">Oversight Model</p>
-        <p>{copy.oversight}</p>
-        <p className="text-foreground font-medium">Execution Capability</p>
-        <p>{copy.execution}</p>
-      </>
-    );
+    return {
+      selectedLabel: selected,
+      sections: guidanceSections(
+        { title: "How coordination will feel day to day", body: copy.scheduling },
+        { title: "How to keep standards consistent", body: copy.oversight },
+        { title: "How this protects service uptime", body: copy.execution },
+        { title: "What to lock in next", body: copy.nextMove }
+      ),
+    };
   }
 
   if (stepId === "exposures") {
     const selected = form.exposureRisks;
-    const active = args.activeExposureFocus;
-
-    if (!selected.length && !active) {
-      return (
-        <>
-          <p>
-            Select the exposure risks that apply to your workforce. These choices shape frame durability, lens
-            treatment strategy, and the policy controls needed to maintain compliance at scale.
-          </p>
-          <p>Use the checkbox to select exposures, then click any selected item to review detailed implementation guidance.</p>
-        </>
-      );
+    const active = args.activeExposureFocus && selected.includes(args.activeExposureFocus) ? args.activeExposureFocus : selected[0] ?? null;
+    if (!active) {
+      return {
+        selectedLabel: null,
+        sections: guidanceSections(
+          {
+            title: "Start by selecting exposures",
+            body: "Select one or more exposures to see how they shape your program guidance.",
+          },
+          {
+            title: "How this affects fit and comfort",
+            body: "Exposure choices influence which product features improve consistent daily wear across your workforce.",
+          },
+          {
+            title: "How this affects uptime",
+            body: "The right exposure profile reduces visibility disruptions and lowers avoidable replacement friction.",
+          },
+          {
+            title: "How this affects compliance",
+            body: "Exposure-based standards make policy decisions easier to document and audit later.",
+          }
+        ),
+      };
     }
-
-    return (
-      <>
-        <div className="rounded-lg border border-border bg-secondary/20 p-3">
-          <p className="text-foreground font-medium">Selected Exposures</p>
-          <p className="mt-1 text-xs text-muted-foreground">Program Guidance: How Exposure Impacts Safety Glasses Overall</p>
-          <p className="mt-1 text-xs text-muted-foreground">Click One To View Details</p>
-          {selected.length ? (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {selected.map((risk) => (
-                <button
-                  key={risk}
-                  type="button"
-                  onClick={() => args.setActiveExposureFocus(args.activeExposureFocus === risk ? null : risk)}
-                  className={`rounded-full border px-3 py-1 text-xs transition ${
-                    active === risk
-                      ? "border-primary bg-primary/15 font-semibold text-primary shadow-sm ring-2 ring-primary/25"
-                      : "border-primary/35 bg-primary/10 font-medium text-primary hover:border-primary/60 hover:bg-primary/15"
-                  }`}
-                >
-                  {exposureLabel(risk)}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-2 text-xs text-muted-foreground">No Selected Exposures Yet. Use The Top-Right Checkbox On A Card To Select.</p>
-          )}
-        </div>
-
-        {active ? (
-          <ExposureDetailPanel
-            key={active}
-            active={active}
-            activeCopy={exposureExplainer(active)}
-          />
-        ) : (
-          <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
-            Select A Selected Exposure To Show Detailed Guidance.
-          </div>
-        )}
-      </>
-    );
+    const copy = exposureExplainer(active);
+    return {
+      selectedLabel: exposureLabel(active),
+      sections: guidanceSections(
+        { title: "What this means in real work conditions", body: copy.meaning },
+        { title: "What keeps service uptime steady", body: copy.implications },
+        { title: "What keeps your policy clear", body: copy.compliance },
+        {
+          title: "How to apply this across teams",
+          body: "Use this exposure as a baseline and add role-specific controls only where they are operationally necessary.",
+        }
+      ),
+    };
   }
 
   if (stepId === "budget") {
-    const selectedBudget = form.budgetPreference ?? "good_budget";
+    if (!form.budgetPreference) {
+      return {
+        selectedLabel: null,
+        sections: guidanceSections(
+          { title: "Choose your direction", body: EMPTY_GUIDANCE_MESSAGE },
+          {
+            title: "How this changes your rollout",
+            body: "Your direction sets how much service depth and governance support the recommendation should include.",
+          },
+          {
+            title: "How this affects adoption and uptime",
+            body: "Direction influences whether the recommendation prioritizes lean consistency or higher support resilience.",
+          },
+          {
+            title: "How to decide confidently",
+            body: "Pick the option that best matches your operational pace, not only your near-term budget target.",
+          }
+        ),
+      };
+    }
+    const selectedBudget = form.budgetPreference;
     const copy = budgetPreferenceExplainer(selectedBudget);
-    return (
-      <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-primary">Selected Program Direction</p>
-        <div className="mt-2 inline-flex rounded-full border border-primary/35 bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
-          {budgetPreferenceLabel(selectedBudget)}
-        </div>
-        <p className="mt-3 text-foreground font-medium">How This Impacts Program Design</p>
-        <p>{copy.impact}</p>
-        <p className="text-foreground font-medium">How This Shapes Recommendation</p>
-        <p>{copy.recommendation}</p>
-        <p className="text-foreground font-medium">Best Fit Scenario</p>
-        <p>{copy.bestFor}</p>
-      </div>
-    );
+    return {
+      selectedLabel: budgetPreferenceLabel(selectedBudget),
+      sections: guidanceSections(
+        { title: "How this changes your operating model", body: copy.impact },
+        { title: "How this shapes the recommendation", body: copy.recommendation },
+        { title: "Who this path is best for", body: copy.bestFor },
+        {
+          title: "What to review before generating",
+          body: "Confirm this direction reflects your rollout goals so the generated preview matches how you plan to execute.",
+        }
+      ),
+    };
   }
 
-  const selectedSetup = form.currentSafetySetup;
-  const active = args.activeSetupFocus;
-
-  if (!selectedSetup.length && !active) {
-    return (
-      <>
-        <p>
-          Select setup signals by section to reflect how your program runs today. This context aligns recommendations
-          to real operating constraints, not just ideal-state policy.
-        </p>
-        <p>
-          Choose one option per section for cleaner guidance across safety program, approval workflow, delivery
-          method, and coverage type.
-        </p>
-      </>
-    );
+  const activeSection = args.activeSetupSection;
+  const activeInSection = selectedSetupInSection(form.currentSafetySetup, activeSection);
+  const activeSelection = args.activeSetupFocus && setupSectionForItem(args.activeSetupFocus)?.id === activeSection ? args.activeSetupFocus : activeInSection;
+  if (activeSection === "coverage_type") {
+    if (!activeSelection) {
+      return {
+        selectedLabel: null,
+        sections: guidanceSections(
+          { title: "Choose a coverage type", body: "Select a coverage type to see how it shapes compliance and operations." },
+          {
+            title: "Compliance and audit trail",
+            body: "Coverage-type decisions define what documentation and verification checks your team needs to maintain.",
+          },
+          {
+            title: "Employee adoption and wear consistency",
+            body: "Matching coverage pathways to real worker needs is the strongest predictor of consistent wear behavior.",
+          },
+          {
+            title: "Replacement cadence and admin load",
+            body: "Coverage pathways change remake frequency, inventory planning, and approval workload.",
+          }
+        ),
+      };
+    }
+    const copy = setupExplainer(activeSelection);
+    return {
+      selectedLabel: setupLabel(activeSelection),
+      sections: guidanceSections(
+        { title: "Compliance and audit trail", body: copy.compliance },
+        { title: "Employee adoption and wear consistency", body: copy.structure },
+        { title: "Replacement frequency expectations", body: copy.admin },
+        {
+          title: "Administrative load and approvals",
+          body: "Plan clear approval boundaries for exceptions so coverage choices stay consistent as request volume grows.",
+        }
+      ),
+    };
   }
 
-  return (
-    <>
-      <div className="rounded-lg border border-border bg-secondary/20 p-3">
-        <p className="text-foreground font-medium">Selected Setup Signals</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Program Guidance: How Current Setup Impacts Safety Glasses Program Operations
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">Click One To View Details</p>
-        {selectedSetup.length ? (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {selectedSetup.map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => args.setActiveSetupFocus(args.activeSetupFocus === item ? null : item)}
-                className={`rounded-full border px-3 py-1 text-xs transition ${
-                  active === item
-                    ? "border-primary bg-primary/15 font-semibold text-primary shadow-sm ring-2 ring-primary/25"
-                    : "border-primary/35 bg-primary/10 font-medium text-primary hover:border-primary/60 hover:bg-primary/15"
-                }`}
-              >
-                {setupLabel(item)}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <p className="mt-2 text-xs text-muted-foreground">No Selected Setup Signals Yet. Use The Top-Right Checkbox On A Card To Select.</p>
-        )}
-      </div>
+  if (!activeSelection) {
+    const sectionLabel = activeSection === "funding" ? "Safety Program" : activeSection === "approval" ? "Approval Workflow" : "Delivery Method";
+    return {
+      selectedLabel: null,
+      sections: guidanceSections(
+        { title: `Select a ${sectionLabel} option`, body: `Choose a ${sectionLabel.toLowerCase()} option to see section-specific guidance.` },
+        {
+          title: "How this affects structure",
+          body: setupSectionExplainer(activeSection),
+        },
+        {
+          title: "How this affects adoption",
+          body: "Selections in this section influence how easily employees follow the intended ordering and wear process.",
+        },
+        {
+          title: "How this affects admin effort",
+          body: "The choice here shapes approval volume, handoffs, and support workload as your program scales.",
+        }
+      ),
+    };
+  }
 
-      {active ? (
-        <SetupDetailPanel key={active} active={active} copy={setupExplainer(active)} />
-      ) : (
-        <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
-          Select A Selected Setup Signal To Show Detailed Guidance.
-        </div>
-      )}
-    </>
-  );
-}
-
-function ExposureDetailPanel(args: {
-  active: ProgramExposureRisk;
-  activeCopy: { meaning: string; implications: string; compliance: string };
-}) {
-  const { active, activeCopy } = args;
-
-  return (
-    <>
-      <style>{`@keyframes exposureDetailSlideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
-      <div
-        className="rounded-lg border border-primary/20 bg-primary/5 p-4"
-        style={{ animation: "exposureDetailSlideUp 220ms ease-out" }}
-      >
-        <p className="text-xs font-semibold uppercase tracking-wide text-primary">Selected Exposure Details</p>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-full border border-primary/35 bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
-            {exposureLabel(active)}
-          </div>
-        </div>
-        <p className="mt-3 text-foreground font-medium">What This Exposure Means</p>
-        <p>{activeCopy.meaning}</p>
-        <p className="text-foreground font-medium">Lens And Frame Implications</p>
-        <p>{activeCopy.implications}</p>
-        <p className="text-foreground font-medium">Compliance And Program Setup</p>
-        <p>{activeCopy.compliance}</p>
-      </div>
-    </>
-  );
-}
-
-function SetupDetailPanel(args: {
-  active: CurrentSafetySetup;
-  copy: { structure: string; compliance: string; admin: string };
-}) {
-  const { active, copy } = args;
-
-  return (
-    <>
-      <style>{`@keyframes setupDetailSlideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
-      <div className="rounded-lg border border-primary/20 bg-primary/5 p-4" style={{ animation: "setupDetailSlideUp 220ms ease-out" }}>
-        <p className="text-xs font-semibold uppercase tracking-wide text-primary">Selected Setup Details</p>
-        <div className="mt-2 inline-flex rounded-full border border-primary/35 bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
-          {setupLabel(active)}
-        </div>
-        <p className="mt-3 text-foreground font-medium">Program Structure Impact</p>
-        <p>{copy.structure}</p>
-        <p className="text-foreground font-medium">Compliance Control</p>
-        <p>{copy.compliance}</p>
-        <p className="text-foreground font-medium">Administrative Load</p>
-        <p>{copy.admin}</p>
-      </div>
-    </>
-  );
+  const copy = setupExplainer(activeSelection);
+  return {
+    selectedLabel: setupLabel(activeSelection),
+    sections: guidanceSections(
+      { title: "How this affects your structure", body: copy.structure },
+      { title: "How this supports compliance", body: copy.compliance },
+      { title: "How this changes admin workload", body: copy.admin },
+      {
+        title: "How this connects to the next section",
+        body: "Keep this choice aligned with adjacent setup sections so approval, delivery, and coverage decisions reinforce each other.",
+      }
+    ),
+  };
 }
 
 function workTypeExplainer(workType: ProgramWorkType) {
@@ -1349,6 +1551,20 @@ function setupLabel(item: CurrentSafetySetup) {
     hybrid_eyewear: "Hybrid Model",
   };
   return map[item];
+}
+
+function setupSectionExplainer(sectionId: CurrentSetupSectionId) {
+  const map: Record<CurrentSetupSectionId, string> = {
+    funding:
+      "Program structure decisions in this section determine policy consistency and how smoothly you can scale to more employees.",
+    approval:
+      "Approval design in this section controls exception volume and helps you stay audit-ready without slowing operations.",
+    delivery:
+      "Delivery choices in this section directly affect employee adoption and service uptime across your sites.",
+    coverage_type:
+      "Coverage pathways in this section define how reliably teams receive compliant products without manual rework.",
+  };
+  return map[sectionId];
 }
 
 function setupExplainer(item: CurrentSafetySetup) {

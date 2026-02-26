@@ -16,7 +16,7 @@ test("page hero keeps mobile-first responsive spacing", () => {
 test("recommendation intake keeps responsive layout and actions", () => {
   const source = read("src/features/recommendation-intake/RecommendationIntakePage.tsx");
   assert.match(source, /lg:grid-cols-12/);
-  assert.match(source, /Go to Program Summary/);
+  assert.doesNotMatch(source, /Go to Program Summary/);
   assert.match(source, /Generate Recommendation Preview/);
 });
 
