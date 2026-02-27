@@ -19,7 +19,7 @@
 | Path | Purpose |
 | --- | --- |
 | `src/features/recommendation-intake/RecommendationIntakePage.tsx` | Guided recommendation intake flow |
-| `src/features/recommendation-summary/RecommendationSummaryPage.tsx` | Final front-facing summary |
+| `src/features/recommendation-summary/RecommendationSummaryPage.tsx` | Final client-facing summary |
 
 ## Shared UI
 

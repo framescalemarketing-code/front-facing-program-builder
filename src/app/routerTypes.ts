@@ -1,4 +1,4 @@
-﻿export type PageId = "recommendation" | "recommendation_summary";
+export type PageId = "recommendation" | "recommendation_summary" | "recommendation_congratulations";
 
 export type NavSource = "internal";
 

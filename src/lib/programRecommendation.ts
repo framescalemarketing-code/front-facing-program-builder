@@ -259,7 +259,7 @@ export function buildProgramRecommendation(inputs: RecommendationInputs): {
   const locations = locationsRepresentative(inputs.locationModel);
   const deliverySignals = deriveDeliverySignals(inputs.currentSafetySetup);
   const approvalSignals = deriveApprovalSignals(inputs.currentSafetySetup);
-  const readinessTier = deriveComplexityTier({
+  const postureTier = deriveComplexityTier({
     employees,
     locations,
     exposureCount: inputs.exposureRisks.length,
@@ -310,7 +310,7 @@ export function buildProgramRecommendation(inputs: RecommendationInputs): {
       inputs.budgetPreference,
       recommendation.serviceTier
     )}${rationaleNotes} Final program scope is confirmed during specialist review.`,
-    readinessTier,
+    postureTier,
   };
 
   const draftPatch: DraftPatch = {

@@ -17,15 +17,15 @@ export function RecommendationCongratulationsPage({ onNavigate }: { onNavigate: 
   const companyName = nonEmpty(draft?.program.contact.companyName);
   const contactEmail = nonEmpty(draft?.program.contact.email) ?? nonEmpty(defaultDraft.program.contact.email);
 
-  const subject = "OSSO Program Recommendation Follow Up";
+  const subject = "OSSO Program Recommendation. Follow Up";
   const body = [
     "Hello OSSO team,",
     "",
-    "I would like to follow up on my recommendation summary.",
+    "I completed the OSSO program recommendation and would like to connect on next steps.",
     companyName ? `Company: ${companyName}` : null,
     contactEmail ? `Contact email: ${contactEmail}` : null,
     "",
-    "Please share next steps.",
+    "Please reach out once you've reviewed my profile.",
   ]
     .filter((line): line is string => Boolean(line))
     .join("\n");
@@ -35,8 +35,8 @@ export function RecommendationCongratulationsPage({ onNavigate }: { onNavigate: 
     <section aria-labelledby="recommendation-congratulations-title">
       <PageHero
         id="recommendation-congratulations-title"
-        title="Congratulations"
-        subtitle="Your recommendation is ready. An OSSO program specialist will follow up."
+        title="Your recommendation is ready."
+        subtitle="An OSSO program specialist will review your profile and reach out to confirm next steps."
       />
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
@@ -50,14 +50,14 @@ export function RecommendationCongratulationsPage({ onNavigate }: { onNavigate: 
             />
             <h2 className="text-base font-semibold text-foreground">What happens next</h2>
             <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-              <li>A specialist reviews your recommendation and program profile.</li>
-              <li>You receive a follow-up to confirm implementation details.</li>
-              <li>Your rollout plan is finalized with site and timeline specifics.</li>
+              <li>An OSSO program specialist reviews your recommendation and profile — typically within one business day.</li>
+              <li>You'll receive a follow-up to walk through the recommendation together and confirm structure before anything is locked.</li>
+              <li>Once aligned, your rollout plan is built around your site, your schedule, and your timeline.</li>
             </ul>
 
             <div className="mt-5 flex flex-col gap-2 sm:flex-row">
               <a href={mailtoHref} className={primaryButtonClass}>
-                Contact an OSSO Program Specialist
+                Connect with an OSSO Specialist
               </a>
               <button type="button" onClick={() => onNavigate("recommendation_summary", "internal")} className={secondaryButtonClass}>
                 Back to Summary

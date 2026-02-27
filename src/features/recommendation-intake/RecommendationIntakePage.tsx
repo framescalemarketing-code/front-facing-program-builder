@@ -122,76 +122,76 @@ const RECOMMENDATION_START_STEP_KEY = "osso_recommendation_start_step";
 const WORK_TYPE_OPTIONS: Array<{ value: ProgramWorkType; label: string; helper: string }> = [
   {
     value: "manufacturing",
-    label: "Manufacturing Safety",
-    helper: "Production floors, shift operations, and machine-adjacent roles needing consistent fit and durable protection.",
+    label: "Manufacturing & Production",
+    helper: "Shift floors and production lines where durable daily wear and fast remake access keep operations moving — and programs current.",
   },
   {
     value: "construction",
-    label: "Construction Safety",
-    helper: "Dynamic field environments with impact risk, debris exposure, and changing outdoor light conditions.",
+    label: "Construction & Field Work",
+    helper: "Active sites with impact hazards, debris exposure, and changing light — programs need to flex around crews without adding coordination overhead.",
   },
   {
     value: "utilities",
-    label: "Utilities Safety",
-    helper: "Service teams working across regions with variable weather, visibility demands, and compliance documentation needs.",
+    label: "Utilities & Field Services",
+    helper: "Regional field teams where variable conditions, territory routing, and compliance documentation all have to work at the same time.",
   },
   {
     value: "warehouse",
-    label: "Warehouse Safety",
-    helper: "Distribution operations with forklifts, pick lines, and high repetition tasks requiring dependable daily wear.",
+    label: "Warehouse & Distribution",
+    helper: "High-throughput distribution environments where dependable daily wear and simple reorder access prevent compliance gaps without adding admin overhead.",
   },
   {
     value: "healthcare",
-    label: "Healthcare Safety",
-    helper: "Clinical and support workflows where comfort, clarity, and cleaning compatibility influence consistent usage.",
+    label: "Healthcare & Clinical",
+    helper: "Clinical environments where optical clarity, cleaning-cycle durability, and role-based splash protection determine whether protection actually gets used.",
   },
   {
     value: "public_sector",
-    label: "Public Sector Safety",
-    helper: "Multi-department programs with governance standards and role-specific compliance expectations.",
+    label: "Public Sector & Municipal",
+    helper: "Multi-department environments where procurement standards, role eligibility, and documentation requirements need to be enforced consistently across functions.",
   },
   {
     value: "laboratory",
-    label: "Laboratory Safety",
-    helper: "Controlled environments with splash and fog considerations that require strict protection consistency.",
+    label: "Laboratory & Research",
+    helper: "Controlled research and lab settings where splash protection, anti-fog reliability, and protocol-aligned options aren't preferences — they're required by the work.",
   },
   {
     value: "other",
-    label: "Other Safety Environment",
-    helper: "Mixed or specialized conditions not covered above, with custom policy and coverage requirements.",
+    label: "Specialized / Mixed Environment",
+    helper: "Operations with exposure profiles or policy needs that don't fit standard categories — custom structures and edge cases built in from the start.",
   },
 ];
 
 const COVERAGE_BANDS: Array<{ value: RecommendationInputs["coverageSizeBand"]; label: string; helper: string }> = [
-  { value: "1_30", label: "1 to 30", helper: "Early-stage rollout with direct communication and fast policy alignment." },
-  { value: "31_60", label: "31 to 60", helper: "Growing program volume where scheduling discipline and repeatable intake start to matter." },
-  { value: "61_100", label: "61 to 100", helper: "Multi-team onboarding requiring stronger coordination, reporting rhythm, and exception handling." },
-  { value: "101_250", label: "101 to 250", helper: "Higher operational load with formal approvals, standardized rules, and tighter administration." },
-  { value: "251_500", label: "251 to 500", helper: "Distributed workforce needing role-based controls, scalable support, and governance consistency." },
-  { value: "500_plus", label: "500+", helper: "Enterprise-scale complexity requiring mature workflows, visibility, and cross-site program management." },
+  { value: "1_30", label: "1 to 30", helper: "Small team with direct coordination — one owner, simple eligibility, and a structure tight enough to run without a playbook." },
+  { value: "31_60", label: "31 to 60", helper: "Growing volume where ad hoc coordination starts to break down. Scheduling rhythm and a repeatable intake process start paying off here." },
+  { value: "61_100", label: "61 to 100", helper: "Multiple supervisors feeding requests into the same program — missed handoffs become the main delay source at this size." },
+  { value: "101_250", label: "101 to 250", helper: "Programs running across departments or buildings where approvals stall without clear routing and informal rules stop working." },
+  { value: "251_500", label: "251 to 500", helper: "Distributed workforce where onboarding, reorders, and exceptions are running simultaneously — coordination is continuous work at this scale." },
+  { value: "500_plus", label: "500+", helper: "Enterprise operations where scheduling and fulfillment run as parallel workflows across sites, shifts, and role families — governance and visibility are required infrastructure, not upgrades." },
 ];
 
 const LOCATION_MODELS: Array<{ id: "single" | "multi_same_region" | "multi_across_regions" | "multi_complex"; value: ProgramLocationModel; label: string; helper: string }> = [
-  { id: "single", value: "single", label: "Single Location", helper: "Centralized rollout with straightforward scheduling, approvals, and service execution." },
-  { id: "multi_same_region", value: "multi_same_region", label: "Multiple Locations Same Region", helper: "Regional coordination model with repeatable site scheduling and shared playbooks." },
-  { id: "multi_across_regions", value: "multi_across_regions", label: "Multiple Locations Across Regions", helper: "Distributed program model requiring strong governance, routing, and communication structure." },
+  { id: "single", value: "single", label: "Single Location", helper: "One site, one owner, one execution path — the cleanest structure to build and prove before expanding." },
+  { id: "multi_same_region", value: "multi_same_region", label: "Multiple Locations Same Region", helper: "Multiple sites close enough to share service windows and playbooks — coordination stays manageable when sites move together." },
+  { id: "multi_across_regions", value: "multi_across_regions", label: "Multiple Locations Across Regions", helper: "Sites spread across regions that need strong governance to stay consistent — where the program can't rely on informal coordination anymore." },
   {
     id: "multi_complex",
     value: "multi_across_regions",
     label: "Multiple Locations, International or Complex",
-    helper: "Complex, international, or mixed-location operations that need centralized routing and policy consistency.",
+    helper: "Complex, international, or mixed-footprint operations — centralized policy with local execution, built to stay consistent regardless of geography.",
   },
 ];
 
 const EXPOSURE_OPTIONS: Array<{ value: ProgramExposureRisk; label: string; helper: string }> = [
-  { value: "high_impact", label: "High Impact", helper: "Tool-heavy or machine-adjacent work where impact resistance and secure retention are essential." },
-  { value: "dust_debris", label: "Dust or Debris", helper: "Particulate-heavy environments that increase lens wear and visibility disruption over time." },
-  { value: "chemical_splash", label: "Chemical Splash", helper: "Fluid or irritant exposure requiring stronger splash-oriented protection standards." },
-  { value: "outdoor_glare", label: "Outdoor Glare", helper: "Bright outdoor conditions where glare reduction improves safety, comfort, and consistent wear." },
-  { value: "fog_humidity", label: "Fog or Humidity", helper: "Humidity and temperature shifts that can interrupt visibility and workflow continuity." },
-  { value: "indoor_outdoor_shift", label: "Indoor and Outdoor Shift Changes", helper: "Frequent movement across lighting zones that demands faster visual adaptation." },
-  { value: "screen_intensive", label: "Screen Intensive Tasks", helper: "Extended digital viewing that can increase visual fatigue and reduce comfort." },
-  { value: "temperature_extremes", label: "Temperature Extremes", helper: "Heat and cold swings that affect lens performance, fog behavior, and long-shift comfort." },
+  { value: "high_impact", label: "High Impact", helper: "Machine-adjacent and tool-heavy work where impact-rated frames and secure retention aren't optional — they're the standard." },
+  { value: "dust_debris", label: "Dust or Debris", helper: "Grinding, sanding, and cutting environments where airborne particles degrade lenses fast and interrupt visibility during the shift." },
+  { value: "chemical_splash", label: "Chemical Splash", helper: "Chemical handling, mixing, or lab work where fluid contact risk requires splash-oriented designs, not standard safety frames." },
+  { value: "outdoor_glare", label: "Outdoor Glare", helper: "Sustained outdoor exposure where glare isn't a nuisance — it reduces hazard awareness and drives employees to remove eyewear." },
+  { value: "fog_humidity", label: "Fog or Humidity", helper: "Cold storage, humid processing, or hot environments where fogging interrupts task flow and makes employees remove their eyewear mid-shift." },
+  { value: "indoor_outdoor_shift", label: "Indoor and Outdoor Shift Changes", helper: "Roles that move between facility and yard, dock and floor, or office and field — where slow light adaptation creates real safety lag." },
+  { value: "screen_intensive", label: "Screen Intensive Tasks", helper: "Extended screen work where visual fatigue builds across the shift and reduces comfort, focus, and sustained eyewear use." },
+  { value: "temperature_extremes", label: "Temperature Extremes", helper: "Foundry floors, cold storage, outdoor Texas summers — temperature swings that stress lens performance and make employees want to ditch their eyewear." },
 ];
 
 type CurrentSetupSectionId = "funding" | "approval" | "delivery" | "coverage_type";
@@ -205,68 +205,68 @@ const CURRENT_SETUP_SECTIONS: Array<{
   {
     id: "funding",
     title: "Safety Program",
-    helper: "Select the safety-program model your team uses today.",
+    helper: "How is safety eyewear currently funded and authorized for your team?",
     options: [
-      { value: "no_formal_program", label: "No Formal Program", helper: "Ad hoc purchasing with limited policy control, tracking, and reporting visibility." },
+      { value: "no_formal_program", label: "No Formal Program", helper: "Purchases happen as needed, there's no standard, and the safety manager ends up fielding questions individually every time." },
       {
         value: "voucher",
-        label: "Voucher / Reimbursement System",
-        helper: "Employees use a defined voucher or reimbursement process through approved ordering channels.",
+        label: "Voucher / Reimbursement",
+        helper: "Employees follow a defined voucher or reimbursement process — there's a policy, but execution depends on employees following it correctly.",
       },
       {
         value: "vendor_optometry_partnership",
         label: "Vendor / Optometry Partnership",
-        helper: "Safety eyewear is provided through an existing vision-insurance or partner optometry network.",
+        helper: "Safety eyewear runs through an existing vision benefit or optometry partner — coverage exists but may not be optimized for safety compliance.",
       },
     ],
   },
   {
     id: "approval",
     title: "Approval Workflow",
-    helper: "Select whether orders require approval before fulfillment.",
+    helper: "Does an order need someone's sign-off before it moves forward?",
     options: [
       {
         value: "approval_required",
         label: "Approval Required",
-        helper: "Orders route through a manager or safety reviewer before release.",
+        helper: "Orders wait for a manager or safety reviewer before they move — adds control, but adds queue time.",
       },
     ],
   },
   {
     id: "delivery",
     title: "Delivery Method",
-    helper: "Select how employees access and order eyewear today.",
+    helper: "How do employees currently get their eyewear?",
     options: [
-      { value: "employee_self_order", label: "Employee Self-Order", helper: "Employees place and manage their own orders through approved vendors." },
-      { value: "onsite_events", label: "Onsite Events", helper: "Scheduled onsite fittings and ordering for higher participation and controlled execution." },
-      { value: "mail_fulfillment", label: "Online Ordering", helper: "Employees order through an online workflow with direct fulfillment support." },
-      { value: "hybrid_delivery", label: "Hybrid", helper: "Blended delivery model combining onsite support with remote fulfillment channels." },
+      { value: "employee_self_order", label: "Employee Self-Order", helper: "Employees order directly through approved channels — fastest access, but requires strong guardrails to stay within policy." },
+      { value: "onsite_events", label: "Onsite Events", helper: "Scheduled onsite visits where employees are fitted and ordered in a controlled setting — higher accuracy, better adoption." },
+      { value: "mail_fulfillment", label: "Online Ordering", helper: "Employees order online and receive directly — removes site scheduling, but requires clear instructions and strong support for remakes." },
+      { value: "hybrid_delivery", label: "Hybrid", helper: "Onsite events for primary or high-priority groups, online for others — more to coordinate, but matches delivery to how the workforce actually operates." },
     ],
   },
   {
     id: "coverage_type",
     title: "Coverage Type",
-    helper: "Select whether coverage is prescription, non-prescription, OTG, or hybrid.",
+    helper: "What kind of eyewear does your program cover?",
     options: [
       {
         value: "prescription_safety_eyewear",
         label: "Prescription Safety Eyewear",
-        helper: "Employees are fitted for prescription safety eyewear as their primary compliance option.",
+        helper: "Workers who need vision correction get custom safety eyewear — the highest-adoption path because the glasses actually work for them.",
       },
       {
         value: "otg_non_prescription_eyewear",
-        label: "Bulk Over the Glasses",
-        helper: "OTG safety eyewear is issued in bulk for use over personal prescription glasses.",
+        label: "Bulk Over the Glasses (OTG)",
+        helper: "OTG safety frames issued over personal prescription glasses — fast to deploy, but comfort and compliance drop fast if fit isn't right.",
       },
       {
         value: "non_prescription_safety_eyewear",
-        label: "Non-Prescription Safety Eyewear",
-        helper: "Non-prescription safety eyewear is provided as the primary compliance option.",
+        label: "Non Prescription Safety Eyewear",
+        helper: "Standard safety frames for workers who don't need vision correction — simple to manage, cost-effective, and easy to reorder.",
       },
       {
         value: "hybrid_eyewear",
         label: "Hybrid Model",
-        helper: "Program combines prescription, non-prescription, and OTG pathways based on role and job conditions.",
+        helper: "Different pathways by role — prescription for some, non-prescription or OTG for others. More accurate coverage, more to administer.",
       },
     ],
   },
@@ -298,7 +298,7 @@ const BUDGET_OPTIONS: Array<{
     label: "Growing the Program",
     bestFor: "Teams investing in adoption and fit",
     helper: "Better experience across shifts with fewer workarounds.",
-    impact: "Higher wear compliance and steadier support.",
+    impact: "Higher wear rates and steadier program support.",
   },
   {
     value: "unlimited_budget",
@@ -368,11 +368,32 @@ function consumeInitialStepIndex() {
   return Math.max(0, Math.min(rounded, STEPS.length - 1));
 }
 
+function isInitialWizardFormState(form: RecommendationInputs) {
+  return (
+    !form.contactName.trim() &&
+    !form.contactRole.trim() &&
+    !form.email.trim() &&
+    !form.phone.trim() &&
+    !form.companyName.trim() &&
+    !form.address1.trim() &&
+    !form.city.trim() &&
+    !form.state.trim() &&
+    !form.zip.trim() &&
+    form.exposureRisks.length === 0 &&
+    form.currentSafetySetup.length === 0 &&
+    !form.budgetPreference
+  );
+}
+
 export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateFn }) {
   const { draft, updateDraft } = useProgramDraft();
 
+  const [initialStepIndex] = useState(() => consumeInitialStepIndex());
   const [form, setForm] = useState<RecommendationInputs>(() => ({ ...DEFAULT_RECOMMENDATION_INPUTS }));
-  const [stepIndex, setStepIndex] = useState(() => consumeInitialStepIndex());
+  const [stepIndex, setStepIndex] = useState(initialStepIndex);
+  const [hasSelectedWorkType, setHasSelectedWorkType] = useState(false);
+  const [hasSelectedCoverageBand, setHasSelectedCoverageBand] = useState(false);
+  const [showPreWizardFraming, setShowPreWizardFraming] = useState(initialStepIndex === 0);
   const [locationOptionId, setLocationOptionId] = useState<"single" | "multi_same_region" | "multi_across_regions" | "multi_complex">("single");
   const [showLocationDetails, setShowLocationDetails] = useState(false);
   const [activeExposureFocus, setActiveExposureFocus] = useState<ProgramExposureRisk | null>(null);
@@ -396,20 +417,35 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
   const step = STEPS[stepIndex];
   const progress = clamp01(stepIndex / (STEPS.length - 1));
   const pillarAnchor = FOUR_PILLAR_BY_STEP[step.id];
+  const isFormAtInitialState = isInitialWizardFormState(form);
+  const shouldShowPreWizardFraming = showPreWizardFraming && stepIndex === 0 && isFormAtInitialState;
 
   const guidance = useMemo(() => {
     return buildGuidance({
       stepId: step.id,
       form,
+      hasSelectedWorkType,
+      hasSelectedCoverageBand,
       locationOptionId,
       activeExposureFocus,
       activeSetupFocus,
       activeSetupSection,
       collapsedSetupSections,
     });
-  }, [activeExposureFocus, activeSetupFocus, activeSetupSection, collapsedSetupSections, form, locationOptionId, step.id]);
+  }, [
+    activeExposureFocus,
+    activeSetupFocus,
+    activeSetupSection,
+    collapsedSetupSections,
+    form,
+    hasSelectedCoverageBand,
+    hasSelectedWorkType,
+    locationOptionId,
+    step.id,
+  ]);
 
   function setField<K extends keyof RecommendationInputs>(key: K, value: RecommendationInputs[K]) {
+    setShowPreWizardFraming(false);
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -504,6 +540,7 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
 
   function goToStep(nextIndex: number) {
     setError("");
+    setShowPreWizardFraming(false);
     const clamped = Math.max(0, Math.min(nextIndex, STEPS.length - 1));
     setStepIndex(clamped);
     const nextStepId = STEPS[clamped].id;
@@ -619,6 +656,18 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
 
           <div className="mt-8 grid gap-8 lg:grid-cols-12">
             <div className="space-y-6 lg:col-span-7">
+              {shouldShowPreWizardFraming ? (
+                <div className="rounded-lg border border-border bg-card p-5">
+                  <p className="text-sm font-semibold text-foreground">This takes about five minutes.</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Answer seven questions about your workforce, your exposures, and how your program runs today — we'll build a recommendation and connect you with an OSSO program specialist to review it together.
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Nothing is finalized here. This is a starting point, not a contract.
+                  </p>
+                </div>
+              ) : null}
+
               {step.id === "company" ? (
                 <div className="rounded-lg border border-border bg-card p-5">
                   <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
@@ -763,7 +812,10 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                           key={opt.value}
                           type="button"
                           className={cardClass(selected)}
-                          onClick={() => setField("workType", opt.value)}
+                          onClick={() => {
+                            setHasSelectedWorkType(true);
+                            setField("workType", opt.value);
+                          }}
                         >
                           <div className="absolute right-3 top-3">{selected ? selectedBadge() : null}</div>
                           <div className="pr-10 text-sm font-semibold text-foreground">{opt.label}</div>
@@ -773,7 +825,7 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                     })}
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Do not see your environment? Other Safety Environment covers specialized and custom conditions.
+                    Not seeing your environment? Specialized / Mixed covers custom exposure profiles and edge cases.
                   </p>
                 </div>
               ) : null}
@@ -787,7 +839,10 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                         key={opt.value}
                         type="button"
                         className={cardClass(selected)}
-                        onClick={() => setField("coverageSizeBand", opt.value)}
+                        onClick={() => {
+                          setHasSelectedCoverageBand(true);
+                          setField("coverageSizeBand", opt.value);
+                        }}
                       >
                         <div className="absolute right-3 top-3">{selected ? selectedBadge() : null}</div>
                         <div className="pr-10 text-sm font-semibold text-foreground">{opt.label}</div>
@@ -989,7 +1044,7 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                 ) : (
                   <div className="flex flex-wrap items-center gap-3">
                     <button type="button" onClick={onComplete} className={primaryButtonClass}>
-                      Generate Recommendation Preview
+                      Build My Recommendation
                     </button>
                   </div>
                 )}
@@ -1088,6 +1143,8 @@ function selectedSetupInSection(selectedSetup: CurrentSafetySetup[], sectionId: 
 function buildGuidance(args: {
   stepId: StepId;
   form: RecommendationInputs;
+  hasSelectedWorkType: boolean;
+  hasSelectedCoverageBand: boolean;
   locationOptionId: "single" | "multi_same_region" | "multi_across_regions" | "multi_complex";
   activeExposureFocus: ProgramExposureRisk | null;
   activeSetupFocus: CurrentSafetySetup | null;
@@ -1113,6 +1170,15 @@ function buildGuidance(args: {
   }
 
   if (stepId === "work_type") {
+    if (!args.hasSelectedWorkType) {
+      return {
+        selectedLabel: null,
+        sections: guidanceSections({
+          title: "What this step is deciding",
+          body: "The selection you make here shapes the structure, features, and service depth of your recommendation. There's no wrong answer. The more accurate you are, the more useful the output.",
+        }),
+      };
+    }
     const content = workTypeExplainer(form.workType);
     const selected = WORK_TYPE_OPTIONS.find((option) => option.value === form.workType)?.label ?? null;
     return {
@@ -1125,6 +1191,15 @@ function buildGuidance(args: {
   }
 
   if (stepId === "coverage") {
+    if (!args.hasSelectedCoverageBand) {
+      return {
+        selectedLabel: null,
+        sections: guidanceSections({
+          title: "What this step is deciding",
+          body: "The selection you make here shapes the structure, features, and service depth of your recommendation. There's no wrong answer. The more accurate you are, the more useful the output.",
+        }),
+      };
+    }
     const band = form.coverageSizeBand ?? "31_60";
     const selected = COVERAGE_BANDS.find((option) => option.value === band)?.label ?? null;
     const map: Record<string, { reality: string; coordination: string; nextBand: string }> = {
@@ -1238,11 +1313,11 @@ function buildGuidance(args: {
         sections: guidanceSections(
           {
             title: "What your exposure profile tells us",
-            body: "OSSO uses the exposures you select to determine which product features, lens treatments, and add-ons are included in the recommendation output.",
+            body: "The exposures you select determine which product features, lens treatments, and add-ons are built into the recommendation. More accurate input produces a more useful output.",
           },
           {
             title: "Why accuracy here matters",
-            body: "Exposure accuracy influences wear behavior and replacement frequency. If the profile is incomplete, the recommendation becomes too generic to support consistent daily use.",
+            body: "Exposure accuracy drives wear behavior and replacement frequency. An incomplete profile produces a generic recommendation — the kind that gets overridden the first time conditions don't match the standard.",
           }
         ),
       };
@@ -1273,7 +1348,7 @@ function buildGuidance(args: {
           },
           {
             title: "What the recommendation does differently at each posture",
-            body: "The four posture options do not just relabel the output - they change product depth, service cadence, and support structure. Compliance First produces a leaner, more standardized recommendation, while Full Program Investment is built for complexity and long-term resilience. This selection has the most direct effect on what your specialist brings to the first conversation.",
+            body: "These four options don't just relabel the output — they change product depth, service cadence, and support structure. Compliance First produces a leaner, more controlled recommendation. Full Program Investment is built for complexity and long-term resilience. This has the most direct effect on what your OSSO specialist brings to the first conversation. Pick the one that's true right now, not the one you want to be true.",
           }
         ),
       };
@@ -1297,11 +1372,11 @@ function buildGuidance(args: {
       sections: guidanceSections(
         {
           title: "What this step is actually deciding",
-          body: "Steps 1 through 5 described your program's environment - who, how many, where, and what hazards. Step 6 is where the operating model gets defined. The choices here determine how employees access eyewear, how orders move through approval, and how the program runs day to day without constant manual intervention.",
+          body: "Steps 1 through 5 described the environment — who, how many, where, and what hazards. Step 6 is where the operating model gets defined. These choices determine how employees access eyewear, how orders move through approval, and whether the program runs without someone manually holding it together every week.",
         },
         {
           title: "Why your specialist reviews this most carefully",
-          body: "The setup selections are the ones your OSSO program specialist will spend the most time on before the first call. They determine service cadence, admin load, and whether the program structure holds up as your team grows. Getting these right reduces the gap between what the program is designed to do and what it actually does in the field.",
+          body: "Setup selections are what your OSSO specialist will spend the most time on before the first call. They determine service cadence, admin load, and whether the structure holds up as the team grows. Getting these right is the difference between a program that runs and one that creates more work than it solves.",
         }
       ),
     };
@@ -1341,9 +1416,9 @@ function buildGuidance(args: {
     const sectionTitle = activeSection === "funding" ? "Safety Program" : activeSection === "approval" ? "Approval Workflow" : "Delivery Method";
     const sectionControlMap: Record<Exclude<CurrentSetupSectionId, "coverage_type">, string> = {
       funding:
-        "Safety Program choices set who pays, what is standardized, and how much variation the model allows before exceptions start.",
+        "Funding structure sets who pays, what's standardized, and how much variation the program allows before exceptions become the default response.",
       approval:
-        "Approval Workflow defines who can authorize orders, where exceptions are routed, and how quickly requests move.",
+        "Approval workflow defines who signs off on orders, where exceptions go, and how long employees wait. Every approval that doesn't have a clear owner becomes a delay.",
       delivery:
         "Delivery Method determines how employees access fittings, ordering, and fulfillment in day-to-day operations.",
     };
@@ -1383,9 +1458,9 @@ function workTypeExplainer(workType: ProgramWorkType) {
   const map: Record<ProgramWorkType, { needs: string; pattern: string }> = {
     manufacturing: {
       needs:
-        "Recommendations prioritize impact-rated durability, stable side-shield coverage, and all-shift comfort with fast remake support so production does not stall.",
+        "Recommendations prioritize impact-rated durability, all-shift comfort, and fast remake support — because when a lens scratches out on second shift, the replacement can't wait until Monday.",
       pattern:
-        "Programs that run cleanly in manufacturing build replacement pathways before they are needed, because shift-based staffing turns eligibility over faster than in most environments.",
+        "Programs that hold up in manufacturing build replacement pathways before they're needed — shift-based staffing turns eligibility over fast, and reactive programs always fall behind.",
     },
     construction: {
       needs:
@@ -1401,7 +1476,7 @@ function workTypeExplainer(workType: ProgramWorkType) {
     },
     warehouse: {
       needs:
-        "Warehouse recommendations focus on impact-ready daily wear, scratch resilience, and predictable reorder access for repetitive pick-and-lift operations.",
+        "Warehouse recommendations focus on impact-ready daily wear, scratch resilience, and predictable reorder access — because high-turnover environments need replacement to be automatic, not an exception process.",
       pattern:
         "Programs perform best when onboarding and replacement are triggered from workforce rosters, not ad hoc requests after a problem appears.",
     },
@@ -1421,7 +1496,7 @@ function workTypeExplainer(workType: ProgramWorkType) {
       needs:
         "Laboratory recommendations prioritize sealed or splash-oriented designs, anti-fog performance, and strict option control tied to protocol-driven tasks.",
       pattern:
-        "Lab programs work when approved eyewear tables are mapped to procedure classes, so selections are driven by protocol rather than supervisor preference.",
+        "Lab programs work when approved eyewear options are mapped to procedure classes — selections driven by protocol, not supervisor preference, and not workarounds when the standard option doesn't arrive on time.",
     },
     other: {
       needs:
@@ -1455,7 +1530,7 @@ function exposureExplainer(risk: ProgramExposureRisk) {
       implications:
         "Prioritize high-durability frames, dependable side protection, and fit consistency that holds during active motion.",
       compliance:
-        "Programs should lock approved frame classes and replacement rules to avoid unsafe substitutions or delayed reissue.",
+        "Programs should define approved frame classes and replacement triggers up front — reactive replacement after a damage event is where compliance gaps usually start.",
     },
     dust_debris: {
       meaning:
@@ -1479,7 +1554,7 @@ function exposureExplainer(risk: ProgramExposureRisk) {
       implications:
         "Glare-management options support safer visibility, stronger comfort, and higher day-to-day wear consistency.",
       compliance:
-        "Define whether sun-related options are role-based, restricted, or conditionally approved to prevent policy drift.",
+        "Define whether glare-management options are role-based or open — undefined eligibility here tends to become the most-requested exception category.",
     },
     fog_humidity: {
       meaning:
@@ -1499,7 +1574,7 @@ function exposureExplainer(risk: ProgramExposureRisk) {
     },
     screen_intensive: {
       meaning:
-        "Extended digital viewing and near-focus activity can increase visual fatigue and reduce comfort over long shifts.",
+        "Extended screen time builds visual fatigue across the shift — and fatigued employees are more likely to remove their eyewear or stop wearing it altogether.",
       implications:
         "Anti-reflective and blue-light-support options can improve clarity, comfort, and sustained program adoption.",
       compliance:
@@ -1522,7 +1597,7 @@ function setupLabel(item: CurrentSafetySetup) {
     no_formal_program: "No Formal Program",
     reimbursement: "Vendor / Optometry Partnership",
     vendor_optometry_partnership: "Vendor / Optometry Partnership",
-    voucher: "Voucher / Reimbursement System",
+    voucher: "Voucher / Reimbursement",
     employer_fully_covered: "Employer Fully Covered",
     employer_base_with_upgrades: "Employer Base with Upgrades",
     approval_required: "Approval Required",
@@ -1535,8 +1610,8 @@ function setupLabel(item: CurrentSafetySetup) {
     hybrid_model: "Hybrid",
     hybrid_delivery: "Hybrid",
     prescription_safety_eyewear: "Prescription Safety Eyewear",
-    non_prescription_safety_eyewear: "Non-Prescription Safety Eyewear",
-    otg_non_prescription_eyewear: "Bulk Over the Glasses",
+    non_prescription_safety_eyewear: "Non Prescription Safety Eyewear",
+    otg_non_prescription_eyewear: "Bulk Over the Glasses (OTG)",
     hybrid_eyewear: "Hybrid Model",
   };
   return map[item];
@@ -1546,11 +1621,11 @@ function setupExplainer(item: CurrentSafetySetup) {
   const map: Record<CurrentSafetySetup, { structure: string; compliance: string; admin: string }> = {
     no_formal_program: {
       structure:
-        "Purchasing is mostly ad hoc, with limited eligibility structure and inconsistent enforcement across departments.",
+        "Purchases happen as needed, eligibility isn't defined, and enforcement depends on whoever is paying attention that week.",
       compliance:
         "Compliance performance depends heavily on local manager behavior and individual buying decisions.",
       admin:
-        "Administrative friction is high due to repeated clarifications, corrections, and exception handling.",
+        "Every request becomes a clarification. Every new hire becomes an exception. Administrative friction is high because the program is running on improvisation.",
     },
     reimbursement: {
       structure:
@@ -1606,7 +1681,7 @@ function setupExplainer(item: CurrentSafetySetup) {
       compliance:
         "This adds control over policy adherence and reduces unapproved ordering paths.",
       admin:
-        "Administrative burden increases through approval queues, escalations, and response-time management.",
+        "Queue ownership and turnaround targets matter a lot here — undefined approval chains are where fulfillment quietly becomes unpredictable.",
     },
     manager_approval_required: {
       structure:
@@ -1614,19 +1689,19 @@ function setupExplainer(item: CurrentSafetySetup) {
       compliance:
         "This adds control over policy adherence and reduces unapproved ordering paths.",
       admin:
-        "Administrative burden increases through approval queues, escalations, and response-time management.",
+        "Queue ownership and turnaround targets matter a lot here — undefined approval chains are where fulfillment quietly becomes unpredictable.",
     },
     centralized_safety_approval: {
       structure:
         "A centralized safety team owns approvals, standards, and exception decisions across the organization.",
       compliance:
-        "This model supports stronger consistency, cleaner documentation, and better audit readiness.",
+        "This model supports stronger consistency, cleaner documentation, and stronger audit consistency.",
       admin:
         "Admin workload is concentrated centrally, but process quality and decision clarity are usually higher.",
     },
     onsite_events: {
       structure:
-        "Employees complete fitting and ordering through scheduled onsite events with direct support.",
+        "Employees get fitted and ordered in a controlled, supervised setting — the highest-accuracy delivery model because OSSO is there.",
       compliance:
         "Supervised selection and fitting improve compliance, accuracy, and policy alignment at order time.",
       admin:
@@ -1644,7 +1719,7 @@ function setupExplainer(item: CurrentSafetySetup) {
       structure:
         "Orders are placed online and fulfilled directly, expanding access without requiring onsite event cadence.",
       compliance:
-        "Success depends on strong eligibility controls, clear online ordering instructions, and approved-option boundaries.",
+        "Compliance depends on eligibility guardrails staying tight — without them, self-ordering environments drift toward catalog choices that fall outside policy.",
       admin:
         "Scheduling overhead drops, while fit guidance, support handling, and return management typically increase.",
     },
@@ -1733,7 +1808,7 @@ function budgetPreferenceExplainer(value: ProgramBudgetPreference) {
     },
     good_budget: {
       impact:
-        "Program can support stronger adoption quality, improved employee experience, and cleaner multi-team consistency.",
+        "Program can support stronger adoption, better employee experience, and cleaner consistency across teams — the gap between what's issued and what's worn starts closing here.",
       recommendation:
         "Recommendation steps up depth to reduce exceptions and improve consistency as operations expand.",
       bestFor:
