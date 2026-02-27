@@ -585,6 +585,19 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
     }
   }
 
+  // Per-step image placeholder paths — swap each with your real image when ready
+  const STEP_IMAGES: Record<StepId, string> = {
+    company:       "/images/step-01-company.jpg",
+    work_type:     "/images/step-02-work-type.jpg",
+    coverage:      "/images/step-03-team-size.jpg",
+    locations:     "/images/step-04-locations.jpg",
+    exposures:     "/images/step-05-exposures.jpg",
+    current_setup: "/images/step-06-current-setup.jpg",
+    budget:        "/images/step-07-program-posture.jpg",
+  };
+
+  const stepImage = STEP_IMAGES[step.id];
+
   return (
     <section aria-labelledby="recommendation-title">
       <PageHero
@@ -595,6 +608,8 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
 
       <div className="mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8 lg:pb-0">
         <SectionWrap>
+
+          {/* ── Progress bar + step nav ── */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <button
               type="button"
@@ -602,16 +617,33 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
               disabled={stepIndex === 0}
               className={secondaryButtonClass}
             >
-              Back
+              ← Back
             </button>
-            <div className="text-sm font-semibold text-foreground">{stepProgressLabel(stepIndex)}</div>
+            <div className="flex items-center gap-3">
+              {pillarAnchor ? (
+                <div className="hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground sm:flex">
+                  <span
+                    aria-hidden="true"
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border/80 bg-background text-primary"
+                  >
+                    {PILLAR_DEFINITIONS[pillarAnchor].icon}
+                  </span>
+                  <span className="font-medium text-foreground/90">{PILLAR_DEFINITIONS[pillarAnchor].phrase}</span>
+                </div>
+              ) : null}
+              <div className="text-sm font-semibold text-foreground">{stepProgressLabel(stepIndex)}</div>
+            </div>
           </div>
 
+          {/* Progress track */}
           <div className="mt-3">
-            <div className="h-2 w-full rounded-full bg-secondary">
-              <div className="h-2 rounded-full bg-primary" style={{ width: `${Math.round(progress * 100)}%` }} />
+            <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
+              <div
+                className="h-1.5 rounded-full bg-primary transition-all duration-500"
+                style={{ width: `${Math.round(progress * 100)}%` }}
+              />
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sm:grid-cols-4 lg:grid-cols-7">
+            <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] font-semibold uppercase tracking-wide sm:grid-cols-4 lg:grid-cols-7">
               {STEPS.map((item, idx) => {
                 const active = idx === stepIndex;
                 const complete = idx < stepIndex;
@@ -626,9 +658,12 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                         ? "border-primary bg-primary/10 text-primary"
                         : complete
                           ? "border-primary/40 bg-primary/5 text-primary/80"
-                          : "border-border bg-card hover:border-ring hover:bg-secondary/50"
+                          : "border-border bg-card text-muted-foreground hover:border-ring hover:bg-secondary/50"
                     }`}
                   >
+                    {complete && (
+                      <span className="mr-1 inline-block text-primary/70" aria-hidden="true">✓</span>
+                    )}
                     {item.progressLabel}
                   </button>
                 );
@@ -636,20 +671,8 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
             </div>
           </div>
 
-          {pillarAnchor ? (
-            <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
-              <span
-                aria-hidden="true"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/80 bg-background text-primary"
-              >
-                {PILLAR_DEFINITIONS[pillarAnchor].icon}
-              </span>
-              <span className="font-medium text-foreground/90">{PILLAR_DEFINITIONS[pillarAnchor].phrase}</span>
-            </div>
-          ) : null}
-
           {error ? (
-            <div className="mt-6 rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+            <div className="mt-5 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
               {error}
             </div>
           ) : null}
@@ -657,14 +680,25 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
           <div className="mt-8 grid gap-8 lg:grid-cols-12">
             <div className="space-y-6 lg:col-span-7">
               {shouldShowPreWizardFraming ? (
-                <div className="rounded-lg border border-border bg-card p-5">
-                  <p className="text-sm font-semibold text-foreground">This takes about five minutes.</p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Answer seven questions about your workforce, your exposures, and how your program runs today — we'll build a recommendation and connect you with an OSSO program specialist to review it together.
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Nothing is finalized here. This is a starting point, not a contract.
-                  </p>
+                <div className="rounded-xl overflow-hidden border border-border bg-card">
+                  {/* Image placeholder — intro banner: show the OSSO program experience */}
+                  <div
+                    className="flex h-40 w-full items-center justify-center bg-[#f0f4fb]"
+                    data-placeholder-src="/images/intro-program-builder.jpg"
+                    aria-hidden="true"
+                  >
+                    <span className="font-mono text-xs text-[#244093]/30">/images/intro-program-builder.jpg</span>
+                  </div>
+                  <div className="p-5">
+                    <p className="text-base font-bold text-foreground">Build your program recommendation in about five minutes.</p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Answer seven questions about your workforce, your exposures, and how your program runs today — we'll build a recommendation and connect you with an OSSO program specialist to review it together.
+                    </p>
+                    <p className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
+                      <span aria-hidden="true">✦</span>
+                      Nothing is finalized here. This is a starting point, not a contract.
+                    </p>
+                  </div>
                 </div>
               ) : null}
 
@@ -1052,28 +1086,49 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
             </div>
 
             <aside className="hidden lg:col-span-5 lg:block">
-              <div className="sticky top-6 rounded-lg border border-border bg-card p-5">
-                <div className="text-sm font-semibold text-foreground">Advisory Guidance</div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  {step.id === "budget"
-                    ? "Your posture shapes the structure and depth of your recommendation."
-                    : "Guidance updates as you make selections."}
-                </div>
-                {guidance.selectedLabel ? (
-                  <div className="mt-3">
-                    <span className="inline-flex rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
-                      {guidance.selectedLabel}
+              <div className="sticky top-6 space-y-4">
+
+                {/* ── Per-step image placeholder ── */}
+                {/* Replace the matching /images/step-XX-*.jpg with your real photo */}
+                <div
+                  className="overflow-hidden rounded-xl border border-border bg-[#f0f4fb]"
+                  aria-hidden="true"
+                >
+                  <div
+                    className="flex aspect-[16/9] w-full items-center justify-center"
+                    data-placeholder-src={stepImage}
+                  >
+                    <span className="px-4 text-center font-mono text-[10px] leading-relaxed text-[#244093]/30">
+                      {stepImage}
                     </span>
                   </div>
-                ) : null}
-                <div className="mt-4 space-y-4 text-sm text-muted-foreground">
-                  {guidance.sections.map((section) => (
-                    <section key={section.title}>
-                      <h3 className="text-sm font-semibold text-foreground">{section.title}</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">{section.body}</p>
-                    </section>
-                  ))}
                 </div>
+
+                {/* ── Advisory guidance panel ── */}
+                <div className="rounded-xl border border-border bg-card p-5">
+                  <div className="text-sm font-semibold text-foreground">Advisory Guidance</div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {step.id === "budget"
+                      ? "Your posture shapes the structure and depth of your recommendation."
+                      : "Guidance updates as you make selections."}
+                  </div>
+                  {guidance.selectedLabel ? (
+                    <div className="mt-3">
+                      <span className="inline-flex rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+                        {guidance.selectedLabel}
+                      </span>
+                    </div>
+                  ) : null}
+                  <div className="mt-4 space-y-4 text-sm text-muted-foreground">
+                    {guidance.sections.map((section) => (
+                      <section key={section.title}>
+                        <h3 className="text-sm font-semibold text-foreground">{section.title}</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">{section.body}</p>
+                      </section>
+                    ))}
+                  </div>
+                </div>
+
               </div>
             </aside>
           </div>

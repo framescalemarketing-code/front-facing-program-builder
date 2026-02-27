@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { NavigateFn } from "@/app/routerTypes";
-import { PageHero } from "@/components/layout/PageHero";
 import { SectionWrap } from "@/components/layout/SectionWrap";
 import { primaryButtonClass, secondaryButtonClass } from "@/components/ui/buttonStyles";
 import { useProgramDraft } from "@/hooks/useProgramDraft";
@@ -69,7 +68,6 @@ function budgetPreferenceLabel(value: ProgramBudgetPreference | undefined) {
     good_budget: "Growing the Program",
     unlimited_budget: "Full Program Investment",
   };
-
   if (!value) return null;
   return map[value] ?? null;
 }
@@ -192,30 +190,38 @@ function summarizeExposureRisks(risks: ProgramExposureRisk[] | undefined) {
 }
 
 function postureCard(tier: ProgramComplexityTier) {
-  const map: Record<ProgramComplexityTier, { label: string; badgeClass: string; explanation: string }> = {
+  const map: Record<ProgramComplexityTier, { label: string; badgeClass: string; explanation: string; icon: string; accentColor: string }> = {
     foundational: {
       label: "Structurally Sound",
       badgeClass: "border-sky-300 bg-sky-100 text-sky-900",
       explanation:
         "This recommendation establishes a clear compliance foundation with straightforward execution and defensible documentation. It reduces avoidable complexity, keeps standards consistent, and creates a baseline your team can rely on as demands evolve.",
+      icon: "🏗️",
+      accentColor: "#0ea5e9",
     },
     structured: {
       label: "Operationally Strong",
       badgeClass: "border-emerald-300 bg-emerald-100 text-emerald-900",
       explanation:
         "This recommendation is tuned for momentum in day-to-day operations: faster ordering flow, less workflow friction, and reliable employee access. It helps teams move quickly while preserving the controls that keep execution consistent.",
+      icon: "⚙️",
+      accentColor: "#10b981",
     },
     multi_site_controlled: {
       label: "Scalable System",
       badgeClass: "border-amber-300 bg-amber-100 text-amber-900",
       explanation:
         "This recommendation is designed to stay steady as operational demands expand. It keeps standards aligned across locations, limits exception drift, and makes execution predictable without constant intervention.",
+      icon: "🗺️",
+      accentColor: "#f59e0b",
     },
     enterprise_scale: {
       label: "Enterprise Grade",
       badgeClass: "border-violet-300 bg-violet-100 text-violet-900",
       explanation:
         "This recommendation delivers full-depth program support: specialist partnership, leadership-level visibility, and governance built for complex operating environments. It is designed for resilience, consistency, and long-term performance under pressure.",
+      icon: "🏢",
+      accentColor: "#8b5cf6",
     },
   };
   return map[tier];
@@ -246,9 +252,9 @@ function SummaryRow(props: {
   const hasValue = Boolean(props.value);
   if (!hasValue && !props.showPlaceholderWhenEmpty) return null;
   return (
-    <div>
-      {props.label}:{" "}
-      <span className={hasValue ? "font-medium text-foreground" : "font-medium text-muted-foreground"}>
+    <div className="flex items-start justify-between gap-3 py-2 border-b border-border last:border-0">
+      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground shrink-0">{props.label}</span>
+      <span className={`text-sm text-right ${hasValue ? "font-semibold text-foreground" : "font-medium text-muted-foreground"}`}>
         {hasValue ? props.value : props.placeholderText ?? "Not provided"}
       </span>
     </div>
@@ -258,9 +264,9 @@ function SummaryRow(props: {
 function ExposurePills(props: { risks: ProgramExposureRisk[] | undefined }) {
   if (!props.risks || props.risks.length === 0) return null;
   return (
-    <div className="pt-1">
-      <div className="text-xs uppercase tracking-wide text-muted-foreground">Exposure Risks</div>
-      <div className="mt-2 flex flex-wrap gap-2">
+    <div className="pt-3">
+      <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Exposure Risks</div>
+      <div className="flex flex-wrap gap-2">
         {props.risks.map((risk) => (
           <span key={risk} className="inline-flex rounded-full border border-primary/35 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
             {exposureRiskLabel(risk)}
@@ -283,6 +289,254 @@ function PrintDataRow(props: { label: string; value: string | null }) {
     </tr>
   );
 }
+
+// ─── NEW: Interactive Program Summary Card (replaces SVG placeholder) ───────
+
+type SummaryCardSection = "snapshot" | "posture" | "coverage" | "logistics" | "contact";
+
+function ProgramSummaryCard(props: {
+  companyName: string | null;
+  contactName: string | null;
+  workType: string | null;
+  coverageBand: string | null;
+  locationModel: string | null;
+  programPosture: string | null;
+  deliveryModel: string | null;
+  approvalModel: string | null;
+  selectedPackage: EUPackage | null;
+  serviceTier: ServiceTier | null;
+  postureData: ReturnType<typeof postureCard>;
+  revealSummary: string;
+  exposureRisks: ProgramExposureRisk[] | undefined;
+  packageTierSummary: string | null;
+}) {
+  const [activeSection, setActiveSection] = useState<SummaryCardSection>("snapshot");
+
+  const sections: Array<{ id: SummaryCardSection; label: string; icon: string }> = [
+    { id: "snapshot", label: "Snapshot", icon: "📋" },
+    { id: "posture", label: "Posture", icon: "🎯" },
+    { id: "coverage", label: "Coverage", icon: "🛡️" },
+    { id: "logistics", label: "Logistics", icon: "🔄" },
+    { id: "contact", label: "Contact", icon: "👤" },
+  ];
+
+  const packageTierColors: Record<string, string> = {
+    "Compliance": "#0ea5e9",
+    "Comfort": "#10b981",
+    "Complete": "#f59e0b",
+    "Covered": "#8b5cf6",
+  };
+
+  const packageColor = props.selectedPackage ? (packageTierColors[props.selectedPackage] ?? "#244093") : "#244093";
+
+  return (
+    <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
+      {/* Card Header - Visual Program Identity */}
+      <div
+        className="relative p-6 pb-5 overflow-hidden"
+        style={{
+          background: `linear-gradient(135deg, #00092f 0%, #244093 60%, ${packageColor}33 100%)`,
+        }}
+      >
+        {/* Decorative geometric background */}
+        <svg className="absolute inset-0 w-full h-full opacity-10" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+              <path d="M 32 0 L 0 0 0 32" fill="none" stroke="white" strokeWidth="0.5" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid)" />
+        </svg>
+
+        <div className="relative">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              {props.companyName && (
+                <p className="text-xs font-semibold uppercase tracking-widest text-white/60 mb-1">
+                  {props.companyName}
+                </p>
+              )}
+              <h2 className="text-xl font-bold text-white leading-tight">Program Recommendation</h2>
+              <p className="text-sm text-white/70 mt-1">Reviewed by a specialist before anything moves</p>
+            </div>
+            <div
+              className="shrink-0 rounded-lg px-3 py-2 text-center"
+              style={{ backgroundColor: `${packageColor}30`, border: `1px solid ${packageColor}60` }}
+            >
+              <div className="text-lg font-bold text-white">{props.selectedPackage ?? "—"}</div>
+              <div className="text-[10px] font-medium text-white/60 uppercase tracking-wide">{props.serviceTier ?? "Service Tier"}</div>
+            </div>
+          </div>
+
+          {/* Quick Stat Pills */}
+          <div className="flex flex-wrap gap-2 mt-4">
+            {props.workType && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-medium text-white/90">
+                <span aria-hidden="true">🏭</span> {props.workType}
+              </span>
+            )}
+            {props.coverageBand && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-medium text-white/90">
+                <span aria-hidden="true">👥</span> {props.coverageBand} employees
+              </span>
+            )}
+            {props.locationModel && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-medium text-white/90">
+                <span aria-hidden="true">📍</span> {props.locationModel}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Tabbed Navigation */}
+      <div className="border-b border-border bg-secondary/30">
+        <div className="flex overflow-x-auto no-scrollbar">
+          {sections.map((section) => (
+            <button
+              key={section.id}
+              type="button"
+              onClick={() => setActiveSection(section.id)}
+              className={`shrink-0 flex items-center gap-1.5 px-4 py-3 text-xs font-semibold uppercase tracking-wide transition-colors border-b-2 ${activeSection === section.id
+                  ? "border-primary text-primary bg-white"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                }`}
+            >
+              <span aria-hidden="true">{section.icon}</span>
+              {section.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      <div className="p-5">
+        {activeSection === "snapshot" && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground leading-relaxed">{props.revealSummary}</p>
+
+            {/* Package / Tier Feature Highlight */}
+            {props.packageTierSummary && (
+              <div className="rounded-lg border-l-4 bg-primary/5 p-4" style={{ borderLeftColor: packageColor }}>
+                <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: packageColor }}>
+                  Why this combination
+                </p>
+                <p className="text-sm text-muted-foreground">{props.packageTierSummary}</p>
+              </div>
+            )}
+
+            {/* Exposure pills */}
+            <ExposurePills risks={props.exposureRisks} />
+          </div>
+        )}
+
+        {activeSection === "posture" && (
+          <div className="space-y-4">
+            <div
+              className="rounded-xl p-5"
+              style={{ backgroundColor: `${props.postureData.accentColor}10`, border: `1px solid ${props.postureData.accentColor}30` }}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-2xl" aria-hidden="true">{props.postureData.icon}</span>
+                <div>
+                  <div
+                    className="inline-flex rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide"
+                    style={{
+                      borderColor: `${props.postureData.accentColor}50`,
+                      backgroundColor: `${props.postureData.accentColor}15`,
+                      color: props.postureData.accentColor,
+                    }}
+                  >
+                    {props.postureData.label}
+                  </div>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">{props.postureData.explanation}</p>
+            </div>
+
+            {props.programPosture && (
+              <div className="rounded-lg border border-border bg-secondary/30 px-4 py-3 flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Program Posture</span>
+                <span className="text-sm font-semibold text-foreground">{props.programPosture}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeSection === "coverage" && (
+          <div className="space-y-3">
+            {/* Package card */}
+            <div className="rounded-xl overflow-hidden border border-border">
+              <div className="px-4 py-3 flex items-center justify-between" style={{ backgroundColor: `${packageColor}15` }}>
+                <span className="text-xs font-semibold uppercase tracking-wide text-foreground/70">EU Package</span>
+                <span className="text-lg font-bold" style={{ color: packageColor }}>{props.selectedPackage ?? "—"}</span>
+              </div>
+              <div className="px-4 py-3 flex items-center justify-between bg-white border-t border-border">
+                <span className="text-xs font-semibold uppercase tracking-wide text-foreground/70">Service Tier</span>
+                <span className="text-sm font-bold text-foreground">{props.serviceTier ?? "—"}</span>
+              </div>
+              <div className="px-4 py-3 flex items-center justify-between bg-white border-t border-border">
+                <span className="text-xs font-semibold uppercase tracking-wide text-foreground/70">Coverage Band</span>
+                <span className="text-sm font-semibold text-foreground">{props.coverageBand ? `${props.coverageBand} employees` : "—"}</span>
+              </div>
+            </div>
+
+            <ExposurePills risks={props.exposureRisks} />
+          </div>
+        )}
+
+        {activeSection === "logistics" && (
+          <div className="space-y-2">
+            <SummaryRow label="Work Type" value={props.workType} showPlaceholderWhenEmpty />
+            <SummaryRow label="Location Model" value={props.locationModel} showPlaceholderWhenEmpty />
+            <SummaryRow label="Program Posture" value={props.programPosture} showPlaceholderWhenEmpty />
+            <SummaryRow label="Delivery Model" value={props.deliveryModel} showPlaceholderWhenEmpty />
+            <SummaryRow label="Approval Model" value={props.approvalModel} showPlaceholderWhenEmpty />
+          </div>
+        )}
+
+        {activeSection === "contact" && (
+          <div className="space-y-2">
+            <SummaryRow label="Company" value={props.companyName} showPlaceholderWhenEmpty />
+            <SummaryRow label="Safety Contact" value={props.contactName} showPlaceholderWhenEmpty />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Checklist Item ─────────────────────────────────────────────────────────
+
+function ChecklistItem({ children, done = false }: { children: React.ReactNode; done?: boolean }) {
+  const [checked, setChecked] = useState(done);
+  return (
+    <button
+      type="button"
+      onClick={() => setChecked((v) => !v)}
+      className="flex items-start gap-3 w-full text-left group"
+      aria-pressed={checked}
+    >
+      <span
+        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all ${checked
+            ? "border-emerald-500 bg-emerald-500"
+            : "border-border group-hover:border-primary"
+          }`}
+      >
+        {checked && (
+          <svg viewBox="0 0 12 12" className="h-3 w-3 fill-none stroke-white stroke-2">
+            <path d="M2.5 6L5 8.5L9.5 4" />
+          </svg>
+        )}
+      </span>
+      <span className={`text-sm transition-colors ${checked ? "line-through text-muted-foreground" : "text-muted-foreground group-hover:text-foreground"}`}>
+        {children}
+      </span>
+    </button>
+  );
+}
+
+// ─── Main Page ───────────────────────────────────────────────────────────────
 
 export function RecommendationSummaryPage({ onNavigate }: { onNavigate: NavigateFn }) {
   const { draft } = useProgramDraft();
@@ -385,168 +639,203 @@ export function RecommendationSummaryPage({ onNavigate }: { onNavigate: Navigate
   return (
     <section aria-labelledby="recommendation-preview-title">
       <div data-pdf-exclude="true">
-        <PageHero
-          id="recommendation-preview-title"
-          title="Program Recommendation Summary"
-          subtitle="Built from your inputs. Reviewed by a specialist before anything moves forward."
-        />
+        {/* ── Redesigned Page Hero ── */}
+        <header className="bg-gradient-to-br from-[#00092f] to-[#244093] text-white">
+          <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white/80 mb-3">
+                  <span aria-hidden="true">✓</span>
+                  Recommendation Ready
+                </div>
+                <h1 id="recommendation-preview-title" className="text-3xl font-bold tracking-tight">
+                  {companyName ? `${companyName}'s Program Summary` : "Your Program Summary"}
+                </h1>
+                <p className="mt-2 max-w-2xl text-white/70 text-sm">
+                  Built from your inputs. An OSSO specialist reviews this before anything moves forward — nothing is locked until you say so.
+                </p>
+              </div>
+              <div className="text-xs text-white/40 mt-3 sm:mt-0 shrink-0">
+                Generated {generatedOn}
+              </div>
+            </div>
+          </div>
+        </header>
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionWrap>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <button type="button" onClick={openRecommendationAtDirection} className={secondaryButtonClass}>
-              Back to Recommendation
-            </button>
-            <button type="button" onClick={() => onNavigate("recommendation", "internal")} className={primaryButtonClass}>
-              Start Over
-            </button>
-          </div>
+            {/* Nav row */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+              <button type="button" onClick={openRecommendationAtDirection} className={secondaryButtonClass}>
+                ← Back to Recommendation
+              </button>
+              <button type="button" onClick={() => onNavigate("recommendation", "internal")} className={secondaryButtonClass}>
+                Start Over
+              </button>
+            </div>
 
-          <div className="mt-6 grid gap-5 lg:grid-cols-12">
-            <div className="lg:col-span-8">
-              <article className="rounded-md border border-border bg-card p-4 sm:p-5">
-                <img
-                  src="/images/placeholders/summary-overview.svg"
-                  alt="Program planning overview illustration"
-                  className="mb-4 w-full rounded-md border border-border"
-                  loading="lazy"
+            <div className="grid gap-6 lg:grid-cols-12">
+              {/* ── Main column ── */}
+              <div className="lg:col-span-8 space-y-6">
+
+                {/* Interactive Program Summary Card — replaces the SVG placeholder */}
+                <ProgramSummaryCard
+                  companyName={companyName}
+                  contactName={contactName}
+                  workType={workType}
+                  coverageBand={coverageBand}
+                  locationModel={locationModel}
+                  programPosture={programPosture}
+                  deliveryModel={deliveryModel}
+                  approvalModel={approvalModel}
+                  selectedPackage={selectedPackage}
+                  serviceTier={serviceTier}
+                  postureData={posture}
+                  revealSummary={revealSummary}
+                  exposureRisks={programConfig.programProfile.exposureRisks}
+                  packageTierSummary={packageTierSummary}
                 />
-                <h2 className="text-lg font-semibold text-foreground">Recommendation summary</h2>
 
-                <section className="mt-4">
-                  <h3 className="text-sm font-semibold text-foreground">Program snapshot</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">{revealSummary}</p>
-                  {snapshotContext ? <p className="mt-3 text-sm font-medium text-foreground">{snapshotContext}</p> : null}
-                </section>
+                {/* Snapshot context callout */}
+                {snapshotContext && (
+                  <div className="rounded-lg border border-primary/25 bg-primary/5 px-5 py-4">
+                    <p className="text-sm font-semibold text-primary">{snapshotContext}</p>
+                  </div>
+                )}
 
-                <section className="mt-4 border-t border-border pt-4">
-                  <h3 className="text-sm font-semibold text-foreground">Program posture and rationale</h3>
-                  <div className="mt-2 rounded-lg bg-secondary/40 p-4">
-                    <div className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${posture.badgeClass}`}>
-                      {posture.label}
+                {/* Detailed Sections */}
+                <article className="rounded-xl border border-border bg-card overflow-hidden">
+                  {/* Coverage Section */}
+                  <div className="p-5 border-b border-border">
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-foreground mb-3">Coverage Details</h3>
+                    <div className="space-y-1">
+                      <SummaryRow label="EU Package" value={selectedPackage} showPlaceholderWhenEmpty />
+                      <SummaryRow label="Service Tier" value={serviceTier} showPlaceholderWhenEmpty />
+                      <SummaryRow label="Coverage Band" value={coverageBand} showPlaceholderWhenEmpty />
                     </div>
-                    <p className="mt-3 text-sm text-muted-foreground">{posture.explanation}</p>
+                    {packageTierSummary && (
+                      <div className="mt-4 rounded-md border border-primary/15 bg-primary/5 p-3 text-sm text-muted-foreground">
+                        {packageTierSummary}
+                      </div>
+                    )}
+                    <ExposurePills risks={programConfig.programProfile.exposureRisks} />
                   </div>
-                </section>
 
-                <section className="mt-4 border-t border-border pt-4">
-                  <h3 className="text-sm font-semibold text-foreground">Coverage</h3>
-                  <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
-                    <SummaryRow label="EU Package" value={selectedPackage} showPlaceholderWhenEmpty />
-                    <SummaryRow label="Service Tier" value={serviceTier} showPlaceholderWhenEmpty />
-                    <SummaryRow label="Coverage Band" value={coverageBand} showPlaceholderWhenEmpty />
-                  </div>
-                  {packageTierSummary ? (
-                    <div className="mt-3 rounded-md border border-primary/15 bg-primary/5 p-3 text-sm text-muted-foreground">
-                      {packageTierSummary}
+                  {/* Approvals & Logistics */}
+                  <div className="p-5 border-b border-border">
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-foreground mb-3">Approvals & Logistics</h3>
+                    <div className="space-y-1">
+                      <SummaryRow label="Work Type" value={workType} showPlaceholderWhenEmpty />
+                      <SummaryRow label="Location Model" value={locationModel} showPlaceholderWhenEmpty />
+                      <SummaryRow label="Program Posture" value={programPosture} showPlaceholderWhenEmpty />
+                      <SummaryRow label="Delivery Model" value={deliveryModel} showPlaceholderWhenEmpty />
+                      <SummaryRow label="Approval Model" value={approvalModel} showPlaceholderWhenEmpty />
                     </div>
-                  ) : null}
-                  <ExposurePills risks={programConfig.programProfile.exposureRisks} />
-                </section>
-
-                <section className="mt-4 border-t border-border pt-4">
-                  <h3 className="text-sm font-semibold text-foreground">Approvals and logistics</h3>
-                  <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
-                    <SummaryRow label="Work Type" value={workType} showPlaceholderWhenEmpty />
-                    <SummaryRow label="Location Model" value={locationModel} showPlaceholderWhenEmpty />
-                    <SummaryRow label="Program Posture" value={programPosture} showPlaceholderWhenEmpty />
-                    <SummaryRow label="Delivery Model" value={deliveryModel} showPlaceholderWhenEmpty />
-                    <SummaryRow label="Approval Model" value={approvalModel} showPlaceholderWhenEmpty />
                   </div>
-                </section>
 
-                <section className="mt-4 border-t border-border pt-4">
-                  <h3 className="text-sm font-semibold text-foreground">Locations</h3>
-                  <div className="mt-2 space-y-2 text-sm text-muted-foreground">
+                  {/* Locations */}
+                  <div className="p-5 border-b border-border">
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-foreground mb-3">Locations</h3>
                     {locations.length === 0 ? (
-                      <div className="rounded-md border border-dashed border-border bg-background p-3">
-                        <p className="text-sm text-muted-foreground">
+                      <div className="rounded-lg border border-dashed border-border bg-secondary/30 p-5 text-center">
+                        <p className="text-sm text-muted-foreground mb-3">
                           No locations added yet. Your specialist can collect these on the first call, or add them now.
                         </p>
-                        <button type="button" onClick={openRecommendationAtLocations} className={`${secondaryButtonClass} mt-3`}>
+                        <button type="button" onClick={openRecommendationAtLocations} className={secondaryButtonClass}>
                           Add Locations
                         </button>
                       </div>
                     ) : (
-                      locations.map((location, idx) => (
-                        <div key={`${location.label}_${idx}`} className="rounded-md border border-border bg-background p-3">
-                          <div>
-                            Location <span className="font-medium text-foreground">{idx + 1}</span>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {locations.map((location, idx) => (
+                          <div key={`${location.label}_${idx}`} className="rounded-lg border border-border bg-secondary/20 p-3">
+                            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                              Location {idx + 1}
+                            </div>
+                            {location.oneWayMiles > 50 && (
+                              <div className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">
+                                ⚠ Potential travel surcharge
+                              </div>
+                            )}
                           </div>
-                          {location.oneWayMiles > 50 ? (
-                            <div className="mt-1 font-medium text-foreground">Potential travel surcharge</div>
-                          ) : null}
-                        </div>
-                      ))
+                        ))}
+                      </div>
                     )}
                   </div>
-                </section>
 
-                <section className="mt-4 border-t border-border pt-4">
-                  <h3 className="text-sm font-semibold text-foreground">Contact and profile</h3>
-                  <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
-                    <SummaryRow label="Company" value={companyName} showPlaceholderWhenEmpty />
-                    <SummaryRow label="Safety Contact" value={contactName} showPlaceholderWhenEmpty />
-                    <SummaryRow label="Role" value={contactRole} showPlaceholderWhenEmpty />
-                    <SummaryRow label="Email" value={email} showPlaceholderWhenEmpty />
-                    <SummaryRow label="Phone" value={phone} showPlaceholderWhenEmpty />
+                  {/* Contact */}
+                  <div className="p-5">
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-foreground mb-3">Contact & Profile</h3>
+                    <div className="space-y-1">
+                      <SummaryRow label="Company" value={companyName} showPlaceholderWhenEmpty />
+                      <SummaryRow label="Safety Contact" value={contactName} showPlaceholderWhenEmpty />
+                      <SummaryRow label="Role" value={contactRole} showPlaceholderWhenEmpty />
+                      <SummaryRow label="Email" value={email} showPlaceholderWhenEmpty />
+                      <SummaryRow label="Phone" value={phone} showPlaceholderWhenEmpty />
+                    </div>
                   </div>
-                </section>
-              </article>
-            </div>
+                </article>
+              </div>
 
-            <aside className="space-y-4 lg:col-span-4">
-              <article className="rounded-md border border-border bg-card p-4 sm:p-5">
-                <h2 className="text-lg font-semibold text-foreground">Next actions</h2>
+              {/* ── Sidebar ── */}
+              <aside className="space-y-5 lg:col-span-4">
 
-                <section className="mt-4">
-                  <h3 className="text-sm font-semibold text-foreground">Submit and save</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
+                {/* Submit Card */}
+                <article className="rounded-xl border border-primary/30 bg-gradient-to-b from-primary/5 to-transparent p-5">
+                  <h2 className="text-base font-bold text-foreground mb-1">Ready to move forward?</h2>
+                  <p className="text-xs text-muted-foreground mb-4">
                     Submit this recommendation to an OSSO specialist, or save a copy for your records.
                   </p>
-                  <div className="mt-4 grid gap-2">
+                  <div className="grid gap-2">
                     <button type="button" onClick={navigateToCongratulations} className={`${primaryButtonClass} w-full`}>
-                      Submit to an OSSO Specialist
+                      Submit to an OSSO Specialist →
                     </button>
                     <button type="button" onClick={handlePrintOrSavePdf} className={`${secondaryButtonClass} w-full`}>
                       Print or Save as PDF
                     </button>
                   </div>
-                  {showPrintContinue ? (
-                    <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3">
-                      <p className="text-sm text-emerald-900">Print dialog closed. Continue when you are ready.</p>
-                      <button type="button" onClick={navigateToCongratulations} className={`${primaryButtonClass} mt-2 w-full`}>
-                        Continue
+                  {showPrintContinue && (
+                    <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                      <p className="text-sm text-emerald-900 font-medium mb-2">Print dialog closed. Continue when you're ready.</p>
+                      <button type="button" onClick={navigateToCongratulations} className={`${primaryButtonClass} w-full`}>
+                        Continue →
                       </button>
                     </div>
-                  ) : null}
-                </section>
+                  )}
+                </article>
 
-                <section className="mt-4 border-t border-border pt-4">
-                  <h3 className="text-sm font-semibold text-foreground">Before your specialist call</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Have these ready. Your OSSO specialist will work through them with you on the first call.
+                {/* Interactive Checklist */}
+                <article className="rounded-xl border border-border bg-card p-5">
+                  <h2 className="text-sm font-bold text-foreground mb-1">Before your specialist call</h2>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    Check these off as you gather them — your OSSO specialist will work through everything with you.
                   </p>
-                  <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-                    <li>Eligibility rules and replacement frequency</li>
-                    <li>Approval path and who owns exceptions</li>
-                    <li>Delivery preference, onsite, mail, or hybrid</li>
-                    <li>Primary contacts per site or department</li>
-                    <li>Locations and any scheduling constraints</li>
-                  </ul>
-                </section>
+                  <div className="space-y-3">
+                    <ChecklistItem>Eligibility rules and replacement frequency</ChecklistItem>
+                    <ChecklistItem>Approval path and who owns exceptions</ChecklistItem>
+                    <ChecklistItem>Delivery preference — onsite, mail, or hybrid</ChecklistItem>
+                    <ChecklistItem>Primary contacts per site or department</ChecklistItem>
+                    <ChecklistItem>Locations and any scheduling constraints</ChecklistItem>
+                  </div>
+                </article>
 
-                <section className="mt-4 border-t border-border pt-4">
-                  <h3 className="text-sm font-semibold text-foreground">Trust note</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">{trustNote}</p>
-                </section>
-              </article>
-            </aside>
-          </div>
+                {/* Trust Note */}
+                <article className="rounded-xl border border-border bg-secondary/20 p-5">
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl shrink-0" aria-hidden="true">🤝</span>
+                    <div>
+                      <h3 className="text-sm font-bold text-foreground mb-1">A note on how this works</h3>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{trustNote}</p>
+                    </div>
+                  </div>
+                </article>
+              </aside>
+            </div>
           </SectionWrap>
         </div>
       </div>
 
+      {/* Print-only version (unchanged) */}
       <div className="print-only recommendation-summary-print">
         <header className="print-header">
           <img src="/brand/osso/osso-logo-horizontal.png" alt="OSSO logo" className="print-logo" />
@@ -631,4 +920,3 @@ export function RecommendationSummaryPage({ onNavigate }: { onNavigate: Navigate
     </section>
   );
 }
-
