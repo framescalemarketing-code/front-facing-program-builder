@@ -100,7 +100,8 @@ export type ProgramConfig = {
 
   planningNotes?: string;
 
-  readinessTier: ProgramComplexityTier;
+  postureTier: ProgramComplexityTier;
+  readinessTier?: ProgramComplexityTier;
 };
 
 export type ProgramConfigEnvelope = {
@@ -147,7 +148,7 @@ export function deriveProgramConfigFromDraft(draft: Draft): ProgramConfig {
       model: draft.builder.guidelines.approvalWorkflowEnabled ? "manager" : "none",
     },
     planningNotes: "",
-    readinessTier: derivedTier,
+    postureTier: derivedTier,
   };
 }
 

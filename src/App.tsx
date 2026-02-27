@@ -13,6 +13,11 @@ const RecommendationSummaryPage = lazy(() =>
     default: module.RecommendationSummaryPage,
   }))
 );
+const RecommendationCongratulationsPage = lazy(() =>
+  import("./features/recommendation-congratulations").then((module) => ({
+    default: module.RecommendationCongratulationsPage,
+  }))
+);
 
 export default function App() {
   return (
@@ -21,6 +26,7 @@ export default function App() {
         pages={{
           recommendation: RecommendationIntakePage,
           recommendation_summary: RecommendationSummaryPage,
+          recommendation_congratulations: RecommendationCongratulationsPage,
         }}
       />
     </ProgramDraftProvider>

@@ -17,7 +17,7 @@ test("recommendation intake keeps responsive layout and actions", () => {
   const source = read("src/features/recommendation-intake/RecommendationIntakePage.tsx");
   assert.match(source, /lg:grid-cols-12/);
   assert.doesNotMatch(source, /Go to Program Summary/);
-  assert.match(source, /Generate Recommendation Preview/);
+  assert.match(source, /Build My Recommendation/);
 });
 
 test("recommendation summary keeps responsive columns and location flag copy", () => {

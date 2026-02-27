@@ -1,12 +1,13 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { NavigateFn } from "@/app/routerTypes";
 import { PageHero } from "@/components/layout/PageHero";
 import { SectionWrap } from "@/components/layout/SectionWrap";
 import { primaryButtonClass, secondaryButtonClass } from "@/components/ui/buttonStyles";
 import { useProgramDraft } from "@/hooks/useProgramDraft";
 import { formatPhoneAsUs, isValidEmailFormat } from "@/lib/contactValidation";
+import { PILLAR_DEFINITIONS, type PillarIconKey } from "@/lib/pillarAnchors";
 import {
   DEFAULT_RECOMMENDATION_INPUTS,
   buildProgramRecommendation,
@@ -33,6 +34,7 @@ type WizardStep = {
   id: StepId;
   sectionLabel: string;
   heroTitle: string;
+  heroSubtitle: string;
   progressLabel: string;
 };
 
@@ -43,95 +45,69 @@ type GuidanceSection = {
 
 type GuidanceContent = {
   selectedLabel: string | null;
-  sections: [GuidanceSection, GuidanceSection, GuidanceSection, GuidanceSection];
+  sections: GuidanceSection[];
 };
 
 const STEPS: WizardStep[] = [
   {
     id: "company",
     sectionLabel: "Contact",
-    heroTitle: "Let's start with your team",
+    heroTitle: "Tell us who owns this program",
+    heroSubtitle: "Your contact becomes the anchor point for everything that follows",
     progressLabel: "Contact",
   },
   {
     id: "work_type",
     sectionLabel: "Work Type",
-    heroTitle: "What kind of work does your workforce do?",
+    heroTitle: "What does the work actually look like day to day?",
+    heroSubtitle: "The environment shapes the recommendation",
     progressLabel: "Work Type",
   },
   {
     id: "coverage",
     sectionLabel: "Team Size",
-    heroTitle: "How should coverage be structured?",
+    heroTitle: "How many workers need coverage?",
+    heroSubtitle: "Coverage structure follows your team size",
     progressLabel: "Team Size",
   },
   {
     id: "locations",
     sectionLabel: "Locations",
-    heroTitle: "Where will service be delivered?",
+    heroTitle: "Where does your workforce operate?",
+    heroSubtitle: "Service follows your footprint",
     progressLabel: "Locations",
   },
   {
     id: "exposures",
     sectionLabel: "Exposures",
-    heroTitle: "What hazards are your workers exposed to?",
+    heroTitle: "What are your workers up against every shift?",
+    heroSubtitle: "Accuracy here is what separates a tailored program from a generic one",
     progressLabel: "Exposures",
   },
   {
     id: "current_setup",
     sectionLabel: "Setup",
-    heroTitle: "How should this program be set up?",
+    heroTitle: "How does your program run today?",
+    heroSubtitle: "We build around how your program works today, not an assumed starting point",
     progressLabel: "Setup",
   },
   {
     id: "budget",
     sectionLabel: "Program Posture",
-    heroTitle: "How is your program operating today?",
+    heroTitle: "Where does your program actually stand right now?",
+    heroSubtitle: "The most useful recommendation starts with where you actually are",
     progressLabel: "Posture",
   },
 ];
 
-type PillarIconKey = "human_first" | "reliability" | "follow_through" | "adoption";
-
-const FOUR_PILLAR_BY_STEP: Record<StepId, { icon: PillarIconKey; phrase: string } | null> = {
+const FOUR_PILLAR_BY_STEP: Record<StepId, PillarIconKey | null> = {
   company: null,
-  work_type: { icon: "human_first", phrase: "Human First Safety" },
-  coverage: { icon: "reliability", phrase: "Reliability by Design" },
-  locations: { icon: "reliability", phrase: "Reliability by Design" },
-  exposures: { icon: "human_first", phrase: "Human First Safety" },
-  current_setup: { icon: "follow_through", phrase: "Follow Through as a Feature" },
-  budget: { icon: "adoption", phrase: "Adoption over Allowance" },
-};
-
-const PILLAR_ICONS: Record<PillarIconKey, ReactElement> = {
-  human_first: (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-[1.5]">
-      <circle cx="8" cy="4" r="2" />
-      <path d="M8 6.5V11.5M5.5 13H10.5M6.25 8.5L4.5 10M9.75 8.5L11.5 10" />
-      <path d="M11 5.25L12.75 6V8L11 8.75L9.25 8V6L11 5.25Z" />
-    </svg>
-  ),
-  reliability: (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-[1.5]">
-      <path d="M3.5 6.25A4.75 4.75 0 0 1 11.4 3.2L12.5 4.1M12.5 9.75A4.75 4.75 0 0 1 4.6 12.8L3.5 11.9" />
-      <path d="M12.5 2.75V4.75H10.5M3.5 13.25V11.25H5.5M6.25 8.1L7.45 9.35L10 6.8" />
-    </svg>
-  ),
-  follow_through: (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-[1.5]">
-      <path d="M2.5 8H13.5M11.25 5.75L13.5 8L11.25 10.25" />
-      <path d="M6.75 4.5V11.5" />
-      <path d="M5 4.5H8.5V11.5H5Z" />
-    </svg>
-  ),
-  adoption: (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-[1.5]">
-      <circle cx="5.25" cy="10.75" r="1.25" />
-      <circle cx="9.75" cy="10.75" r="1.25" />
-      <path d="M3.75 13.25C4.2 12.45 4.95 12 5.75 12C6.55 12 7.3 12.45 7.75 13.25M8.25 13.25C8.7 12.45 9.45 12 10.25 12C11.05 12 11.8 12.45 12.25 13.25" />
-      <path d="M3.5 6.5H7.5L9 5L12.5 8.5" />
-    </svg>
-  ),
+  work_type: "human_first",
+  coverage: "reliability",
+  locations: "reliability",
+  exposures: "human_first",
+  current_setup: "follow_through",
+  budget: "adoption",
 };
 
 const SETUP_SECTION_BADGES: Record<CurrentSetupSectionId, string> = {
@@ -146,76 +122,76 @@ const RECOMMENDATION_START_STEP_KEY = "osso_recommendation_start_step";
 const WORK_TYPE_OPTIONS: Array<{ value: ProgramWorkType; label: string; helper: string }> = [
   {
     value: "manufacturing",
-    label: "Manufacturing Safety",
-    helper: "Production floors, shift operations, and machine-adjacent roles needing consistent fit and durable protection.",
+    label: "Manufacturing & Production",
+    helper: "Shift floors and production lines where durable daily wear and fast remake access keep operations moving — and programs current.",
   },
   {
     value: "construction",
-    label: "Construction Safety",
-    helper: "Dynamic field environments with impact risk, debris exposure, and changing outdoor light conditions.",
+    label: "Construction & Field Work",
+    helper: "Active sites with impact hazards, debris exposure, and changing light — programs need to flex around crews without adding coordination overhead.",
   },
   {
     value: "utilities",
-    label: "Utilities Safety",
-    helper: "Service teams working across regions with variable weather, visibility demands, and compliance documentation needs.",
+    label: "Utilities & Field Services",
+    helper: "Regional field teams where variable conditions, territory routing, and compliance documentation all have to work at the same time.",
   },
   {
     value: "warehouse",
-    label: "Warehouse Safety",
-    helper: "Distribution operations with forklifts, pick lines, and high repetition tasks requiring dependable daily wear.",
+    label: "Warehouse & Distribution",
+    helper: "High-throughput distribution environments where dependable daily wear and simple reorder access prevent compliance gaps without adding admin overhead.",
   },
   {
     value: "healthcare",
-    label: "Healthcare Safety",
-    helper: "Clinical and support workflows where comfort, clarity, and cleaning compatibility influence consistent usage.",
+    label: "Healthcare & Clinical",
+    helper: "Clinical environments where optical clarity, cleaning-cycle durability, and role-based splash protection determine whether protection actually gets used.",
   },
   {
     value: "public_sector",
-    label: "Public Sector Safety",
-    helper: "Multi-department programs with governance standards and role-specific compliance expectations.",
+    label: "Public Sector & Municipal",
+    helper: "Multi-department environments where procurement standards, role eligibility, and documentation requirements need to be enforced consistently across functions.",
   },
   {
     value: "laboratory",
-    label: "Laboratory Safety",
-    helper: "Controlled environments with splash and fog considerations that require strict protection consistency.",
+    label: "Laboratory & Research",
+    helper: "Controlled research and lab settings where splash protection, anti-fog reliability, and protocol-aligned options aren't preferences — they're required by the work.",
   },
   {
     value: "other",
-    label: "Other Safety Environment",
-    helper: "Mixed or specialized conditions not covered above, with custom policy and coverage requirements.",
+    label: "Specialized / Mixed Environment",
+    helper: "Operations with exposure profiles or policy needs that don't fit standard categories — custom structures and edge cases built in from the start.",
   },
 ];
 
 const COVERAGE_BANDS: Array<{ value: RecommendationInputs["coverageSizeBand"]; label: string; helper: string }> = [
-  { value: "1_30", label: "1 to 30", helper: "Early-stage rollout with direct communication and fast policy alignment." },
-  { value: "31_60", label: "31 to 60", helper: "Growing program volume where scheduling discipline and repeatable intake start to matter." },
-  { value: "61_100", label: "61 to 100", helper: "Multi-team onboarding requiring stronger coordination, reporting rhythm, and exception handling." },
-  { value: "101_250", label: "101 to 250", helper: "Higher operational load with formal approvals, standardized rules, and tighter administration." },
-  { value: "251_500", label: "251 to 500", helper: "Distributed workforce needing role-based controls, scalable support, and governance consistency." },
-  { value: "500_plus", label: "500+", helper: "Enterprise-scale complexity requiring mature workflows, visibility, and cross-site program management." },
+  { value: "1_30", label: "1 to 30", helper: "Small team with direct coordination — one owner, simple eligibility, and a structure tight enough to run without a playbook." },
+  { value: "31_60", label: "31 to 60", helper: "Growing volume where ad hoc coordination starts to break down. Scheduling rhythm and a repeatable intake process start paying off here." },
+  { value: "61_100", label: "61 to 100", helper: "Multiple supervisors feeding requests into the same program — missed handoffs become the main delay source at this size." },
+  { value: "101_250", label: "101 to 250", helper: "Programs running across departments or buildings where approvals stall without clear routing and informal rules stop working." },
+  { value: "251_500", label: "251 to 500", helper: "Distributed workforce where onboarding, reorders, and exceptions are running simultaneously — coordination is continuous work at this scale." },
+  { value: "500_plus", label: "500+", helper: "Enterprise operations where scheduling and fulfillment run as parallel workflows across sites, shifts, and role families — governance and visibility are required infrastructure, not upgrades." },
 ];
 
 const LOCATION_MODELS: Array<{ id: "single" | "multi_same_region" | "multi_across_regions" | "multi_complex"; value: ProgramLocationModel; label: string; helper: string }> = [
-  { id: "single", value: "single", label: "Single Location", helper: "Centralized rollout with straightforward scheduling, approvals, and service execution." },
-  { id: "multi_same_region", value: "multi_same_region", label: "Multiple Locations Same Region", helper: "Regional coordination model with repeatable site scheduling and shared playbooks." },
-  { id: "multi_across_regions", value: "multi_across_regions", label: "Multiple Locations Across Regions", helper: "Distributed program model requiring strong governance, routing, and communication structure." },
+  { id: "single", value: "single", label: "Single Location", helper: "One site, one owner, one execution path — the cleanest structure to build and prove before expanding." },
+  { id: "multi_same_region", value: "multi_same_region", label: "Multiple Locations Same Region", helper: "Multiple sites close enough to share service windows and playbooks — coordination stays manageable when sites move together." },
+  { id: "multi_across_regions", value: "multi_across_regions", label: "Multiple Locations Across Regions", helper: "Sites spread across regions that need strong governance to stay consistent — where the program can't rely on informal coordination anymore." },
   {
     id: "multi_complex",
     value: "multi_across_regions",
     label: "Multiple Locations, International or Complex",
-    helper: "Complex, international, or mixed-location operations that need centralized routing and policy consistency.",
+    helper: "Complex, international, or mixed-footprint operations — centralized policy with local execution, built to stay consistent regardless of geography.",
   },
 ];
 
 const EXPOSURE_OPTIONS: Array<{ value: ProgramExposureRisk; label: string; helper: string }> = [
-  { value: "high_impact", label: "High Impact", helper: "Tool-heavy or machine-adjacent work where impact resistance and secure retention are essential." },
-  { value: "dust_debris", label: "Dust or Debris", helper: "Particulate-heavy environments that increase lens wear and visibility disruption over time." },
-  { value: "chemical_splash", label: "Chemical Splash", helper: "Fluid or irritant exposure requiring stronger splash-oriented protection standards." },
-  { value: "outdoor_glare", label: "Outdoor Glare", helper: "Bright outdoor conditions where glare reduction improves safety, comfort, and consistent wear." },
-  { value: "fog_humidity", label: "Fog or Humidity", helper: "Humidity and temperature shifts that can interrupt visibility and workflow continuity." },
-  { value: "indoor_outdoor_shift", label: "Indoor and Outdoor Shift Changes", helper: "Frequent movement across lighting zones that demands faster visual adaptation." },
-  { value: "screen_intensive", label: "Screen Intensive Tasks", helper: "Extended digital viewing that can increase visual fatigue and reduce comfort." },
-  { value: "temperature_extremes", label: "Temperature Extremes", helper: "Heat and cold swings that affect lens performance, fog behavior, and long-shift comfort." },
+  { value: "high_impact", label: "High Impact", helper: "Machine-adjacent and tool-heavy work where impact-rated frames and secure retention aren't optional — they're the standard." },
+  { value: "dust_debris", label: "Dust or Debris", helper: "Grinding, sanding, and cutting environments where airborne particles degrade lenses fast and interrupt visibility during the shift." },
+  { value: "chemical_splash", label: "Chemical Splash", helper: "Chemical handling, mixing, or lab work where fluid contact risk requires splash-oriented designs, not standard safety frames." },
+  { value: "outdoor_glare", label: "Outdoor Glare", helper: "Sustained outdoor exposure where glare isn't a nuisance — it reduces hazard awareness and drives employees to remove eyewear." },
+  { value: "fog_humidity", label: "Fog or Humidity", helper: "Cold storage, humid processing, or hot environments where fogging interrupts task flow and makes employees remove their eyewear mid-shift." },
+  { value: "indoor_outdoor_shift", label: "Indoor and Outdoor Shift Changes", helper: "Roles that move between facility and yard, dock and floor, or office and field — where slow light adaptation creates real safety lag." },
+  { value: "screen_intensive", label: "Screen Intensive Tasks", helper: "Extended screen work where visual fatigue builds across the shift and reduces comfort, focus, and sustained eyewear use." },
+  { value: "temperature_extremes", label: "Temperature Extremes", helper: "Foundry floors, cold storage, outdoor Texas summers — temperature swings that stress lens performance and make employees want to ditch their eyewear." },
 ];
 
 type CurrentSetupSectionId = "funding" | "approval" | "delivery" | "coverage_type";
@@ -229,68 +205,68 @@ const CURRENT_SETUP_SECTIONS: Array<{
   {
     id: "funding",
     title: "Safety Program",
-    helper: "Select the core safety-program structure used by your organization.",
+    helper: "How is safety eyewear currently funded and authorized for your team?",
     options: [
-      { value: "no_formal_program", label: "No Formal Program", helper: "Ad hoc purchasing with limited policy control, tracking, and reporting visibility." },
+      { value: "no_formal_program", label: "No Formal Program", helper: "Purchases happen as needed, there's no standard, and the safety manager ends up fielding questions individually every time." },
       {
         value: "voucher",
-        label: "Voucher / Reimbursement System",
-        helper: "Employees use a defined voucher or reimbursement process through approved ordering channels.",
+        label: "Voucher / Reimbursement",
+        helper: "Employees follow a defined voucher or reimbursement process — there's a policy, but execution depends on employees following it correctly.",
       },
       {
         value: "vendor_optometry_partnership",
         label: "Vendor / Optometry Partnership",
-        helper: "Safety eyewear is provided through an existing vision-insurance or partner optometry network.",
+        helper: "Safety eyewear runs through an existing vision benefit or optometry partner — coverage exists but may not be optimized for safety compliance.",
       },
     ],
   },
   {
     id: "approval",
     title: "Approval Workflow",
-    helper: "Select whether orders require an approval checkpoint before fulfillment.",
+    helper: "Does an order need someone's sign-off before it moves forward?",
     options: [
       {
         value: "approval_required",
         label: "Approval Required",
-        helper: "Orders route through a manager or safety reviewer before release.",
+        helper: "Orders wait for a manager or safety reviewer before they move — adds control, but adds queue time.",
       },
     ],
   },
   {
     id: "delivery",
     title: "Delivery Method",
-    helper: "Select how employees access and order eyewear.",
+    helper: "How do employees currently get their eyewear?",
     options: [
-      { value: "employee_self_order", label: "Employee Self-Order", helper: "Employees place and manage their own orders through approved vendors." },
-      { value: "onsite_events", label: "Onsite Events", helper: "Scheduled onsite fittings and ordering for higher participation and controlled execution." },
-      { value: "mail_fulfillment", label: "Online Ordering", helper: "Employees order through an online workflow with direct fulfillment support." },
-      { value: "hybrid_delivery", label: "Hybrid", helper: "Blended delivery model combining onsite support with remote fulfillment channels." },
+      { value: "employee_self_order", label: "Employee Self-Order", helper: "Employees order directly through approved channels — fastest access, but requires strong guardrails to stay within policy." },
+      { value: "onsite_events", label: "Onsite Events", helper: "Scheduled onsite visits where employees are fitted and ordered in a controlled setting — higher accuracy, better adoption." },
+      { value: "mail_fulfillment", label: "Online Ordering", helper: "Employees order online and receive directly — removes site scheduling, but requires clear instructions and strong support for remakes." },
+      { value: "hybrid_delivery", label: "Hybrid", helper: "Onsite events for primary or high-priority groups, online for others — more to coordinate, but matches delivery to how the workforce actually operates." },
     ],
   },
   {
     id: "coverage_type",
     title: "Coverage Type",
-    helper: "Select whether coverage is prescription, over-glasses non prescription, or hybrid.",
+    helper: "What kind of eyewear does your program cover?",
     options: [
       {
         value: "prescription_safety_eyewear",
         label: "Prescription Safety Eyewear",
-        helper: "Employees are fitted for prescription safety eyewear as their primary compliance option.",
+        helper: "Workers who need vision correction get custom safety eyewear — the highest-adoption path because the glasses actually work for them.",
       },
       {
         value: "otg_non_prescription_eyewear",
-        label: "Bulk Over the Glasses",
-        helper: "OTG safety eyewear is issued in bulk for use over personal prescription glasses.",
+        label: "Bulk Over the Glasses (OTG)",
+        helper: "OTG safety frames issued over personal prescription glasses — fast to deploy, but comfort and compliance drop fast if fit isn't right.",
       },
       {
         value: "non_prescription_safety_eyewear",
-        label: "Non-Prescription Safety Eyewear",
-        helper: "Non-prescription safety eyewear is provided as the primary compliance option.",
+        label: "Non Prescription Safety Eyewear",
+        helper: "Standard safety frames for workers who don't need vision correction — simple to manage, cost-effective, and easy to reorder.",
       },
       {
         value: "hybrid_eyewear",
         label: "Hybrid Model",
-        helper: "Program combines prescription, non-prescription, and OTG pathways based on role and job conditions.",
+        helper: "Different pathways by role — prescription for some, non-prescription or OTG for others. More accurate coverage, more to administer.",
       },
     ],
   },
@@ -306,34 +282,30 @@ const BUDGET_OPTIONS: Array<{
   {
     value: "super_strict",
     label: "Compliance First",
-    bestFor: "New programs or tightening a loose setup",
-    helper:
-      "We have limited structure today. We need clear standards, defined eligibility, and a program that runs predictably without exceptions.",
-    impact: "Prioritizes a predictable compliance foundation with tightly controlled exceptions.",
+    bestFor: "New programs or tightening standards",
+    helper: "Clear rules, defined eligibility, and predictable approvals.",
+    impact: "Strong control and fewer exceptions.",
   },
   {
     value: "low_budget",
     label: "Operationally Steady",
-    bestFor: "Established programs managing consistent coverage",
-    helper:
-      "Our program works but we want it running more reliably without adding heavy overhead or reworking what is already in place.",
-    impact: "Balances consistency and support while keeping day-to-day execution manageable.",
+    bestFor: "Stable programs improving consistency",
+    helper: "Keep what works and add reliability with lighter admin load.",
+    impact: "Smoother execution and fewer gaps.",
   },
   {
     value: "good_budget",
     label: "Growing the Program",
-    bestFor: "Programs ready to invest in adoption and consistency",
-    helper:
-      "We want to improve coverage quality, reduce exceptions, and give employees a better experience across shifts and teams.",
-    impact: "Raises support depth to improve adoption quality and operational consistency.",
+    bestFor: "Teams investing in adoption and fit",
+    helper: "Better experience across shifts with fewer workarounds.",
+    impact: "Higher wear rates and steadier program support.",
   },
   {
     value: "unlimited_budget",
     label: "Full Program Investment",
-    bestFor: "Large, complex, or performance-driven operations",
-    helper:
-      "We want the strongest possible program structure with full support depth and the scalability to handle growth without rework.",
-    impact: "Prioritizes maximum scalability, support depth, and long-term operational resilience.",
+    bestFor: "Complex operations scaling across sites",
+    helper: "Deep support and governance built for growth.",
+    impact: "Most resilient structure long term.",
   },
 ];
 
@@ -396,21 +368,42 @@ function consumeInitialStepIndex() {
   return Math.max(0, Math.min(rounded, STEPS.length - 1));
 }
 
+function isInitialWizardFormState(form: RecommendationInputs) {
+  return (
+    !form.contactName.trim() &&
+    !form.contactRole.trim() &&
+    !form.email.trim() &&
+    !form.phone.trim() &&
+    !form.companyName.trim() &&
+    !form.address1.trim() &&
+    !form.city.trim() &&
+    !form.state.trim() &&
+    !form.zip.trim() &&
+    form.exposureRisks.length === 0 &&
+    form.currentSafetySetup.length === 0 &&
+    !form.budgetPreference
+  );
+}
+
 export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateFn }) {
   const { draft, updateDraft } = useProgramDraft();
 
+  const [initialStepIndex] = useState(() => consumeInitialStepIndex());
   const [form, setForm] = useState<RecommendationInputs>(() => ({ ...DEFAULT_RECOMMENDATION_INPUTS }));
-  const [stepIndex, setStepIndex] = useState(() => consumeInitialStepIndex());
+  const [stepIndex, setStepIndex] = useState(initialStepIndex);
+  const [hasSelectedWorkType, setHasSelectedWorkType] = useState(false);
+  const [hasSelectedCoverageBand, setHasSelectedCoverageBand] = useState(false);
+  const [showPreWizardFraming, setShowPreWizardFraming] = useState(initialStepIndex === 0);
   const [locationOptionId, setLocationOptionId] = useState<"single" | "multi_same_region" | "multi_across_regions" | "multi_complex">("single");
   const [showLocationDetails, setShowLocationDetails] = useState(false);
   const [activeExposureFocus, setActiveExposureFocus] = useState<ProgramExposureRisk | null>(null);
   const [activeSetupFocus, setActiveSetupFocus] = useState<CurrentSafetySetup | null>(null);
   const [activeSetupSection, setActiveSetupSection] = useState<CurrentSetupSectionId>("funding");
   const [collapsedSetupSections, setCollapsedSetupSections] = useState<Record<CurrentSetupSectionId, boolean>>({
-    funding: false,
-    approval: false,
-    delivery: false,
-    coverage_type: false,
+    funding: true,
+    approval: true,
+    delivery: true,
+    coverage_type: true,
   });
   const [mobileGuidanceOpen, setMobileGuidanceOpen] = useState(false);
   const [error, setError] = useState<string>("");
@@ -424,19 +417,35 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
   const step = STEPS[stepIndex];
   const progress = clamp01(stepIndex / (STEPS.length - 1));
   const pillarAnchor = FOUR_PILLAR_BY_STEP[step.id];
+  const isFormAtInitialState = isInitialWizardFormState(form);
+  const shouldShowPreWizardFraming = showPreWizardFraming && stepIndex === 0 && isFormAtInitialState;
 
   const guidance = useMemo(() => {
     return buildGuidance({
       stepId: step.id,
       form,
+      hasSelectedWorkType,
+      hasSelectedCoverageBand,
       locationOptionId,
       activeExposureFocus,
       activeSetupFocus,
       activeSetupSection,
+      collapsedSetupSections,
     });
-  }, [activeExposureFocus, activeSetupFocus, activeSetupSection, form, locationOptionId, step.id]);
+  }, [
+    activeExposureFocus,
+    activeSetupFocus,
+    activeSetupSection,
+    collapsedSetupSections,
+    form,
+    hasSelectedCoverageBand,
+    hasSelectedWorkType,
+    locationOptionId,
+    step.id,
+  ]);
 
   function setField<K extends keyof RecommendationInputs>(key: K, value: RecommendationInputs[K]) {
+    setShowPreWizardFraming(false);
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -451,6 +460,7 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
     const section = setupSectionForItem(item);
     if (section) {
       setActiveSetupSection(section.id);
+      setCollapsedSetupSections((prev) => (prev[section.id] ? { ...prev, [section.id]: false } : prev));
     }
   }
 
@@ -486,6 +496,7 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
     const next = [...form.currentSafetySetup.filter((v) => !sectionValues.includes(v)), item];
     setField("currentSafetySetup", next);
     setActiveSetupSection(section.id);
+    setCollapsedSetupSections((prev) => (prev[section.id] ? { ...prev, [section.id]: false } : prev));
     setSetupFocus(item);
     setMobileGuidanceOpen(true);
   }
@@ -529,6 +540,7 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
 
   function goToStep(nextIndex: number) {
     setError("");
+    setShowPreWizardFraming(false);
     const clamped = Math.max(0, Math.min(nextIndex, STEPS.length - 1));
     setStepIndex(clamped);
     const nextStepId = STEPS[clamped].id;
@@ -543,7 +555,7 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
       }
       if (!isValidEmailFormat(form.email)) {
         setError(
-          "We need your email to send your recommendation and connect you with a specialist - it is the only way we can make this useful for you."
+          "Your email is how we send your recommendation and connect you with a specialist — without it, we can't make this useful."
         );
         return;
       }
@@ -578,7 +590,7 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
       <PageHero
         id="recommendation-title"
         title={step.heroTitle}
-        subtitle={`Program Recommendation - ${step.sectionLabel}`}
+        subtitle={step.heroSubtitle}
       />
 
       <div className="mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8 lg:pb-0">
@@ -626,10 +638,13 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
 
           {pillarAnchor ? (
             <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
-              <span aria-hidden="true" className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary">
-                {PILLAR_ICONS[pillarAnchor.icon]}
+              <span
+                aria-hidden="true"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/80 bg-background text-primary"
+              >
+                {PILLAR_DEFINITIONS[pillarAnchor].icon}
               </span>
-              <span className="font-medium text-foreground/90">{pillarAnchor.phrase}</span>
+              <span className="font-medium text-foreground/90">{PILLAR_DEFINITIONS[pillarAnchor].phrase}</span>
             </div>
           ) : null}
 
@@ -641,15 +656,27 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
 
           <div className="mt-8 grid gap-8 lg:grid-cols-12">
             <div className="space-y-6 lg:col-span-7">
+              {shouldShowPreWizardFraming ? (
+                <div className="rounded-lg border border-border bg-card p-5">
+                  <p className="text-sm font-semibold text-foreground">This takes about five minutes.</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Answer seven questions about your workforce, your exposures, and how your program runs today — we'll build a recommendation and connect you with an OSSO program specialist to review it together.
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Nothing is finalized here. This is a starting point, not a contract.
+                  </p>
+                </div>
+              ) : null}
+
               {step.id === "company" ? (
                 <div className="rounded-lg border border-border bg-card p-5">
                   <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
                     <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                      Required for recommendation preview
+                      This is how we personalize your recommendation
                     </p>
                     <div className="mt-3 grid gap-4 sm:grid-cols-2">
                       <label className="space-y-2">
-                        <div className="text-sm font-semibold text-foreground">Full Name</div>
+                        <div className="text-sm font-semibold text-foreground">Your Name</div>
                         <input
                           value={form.contactName}
                           onChange={(e) => setField("contactName", e.target.value)}
@@ -785,7 +812,10 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                           key={opt.value}
                           type="button"
                           className={cardClass(selected)}
-                          onClick={() => setField("workType", opt.value)}
+                          onClick={() => {
+                            setHasSelectedWorkType(true);
+                            setField("workType", opt.value);
+                          }}
                         >
                           <div className="absolute right-3 top-3">{selected ? selectedBadge() : null}</div>
                           <div className="pr-10 text-sm font-semibold text-foreground">{opt.label}</div>
@@ -795,7 +825,7 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                     })}
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Do not see your environment? Other Safety Environment covers specialized and custom conditions.
+                    Not seeing your environment? Specialized / Mixed covers custom exposure profiles and edge cases.
                   </p>
                 </div>
               ) : null}
@@ -809,7 +839,10 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                         key={opt.value}
                         type="button"
                         className={cardClass(selected)}
-                        onClick={() => setField("coverageSizeBand", opt.value)}
+                        onClick={() => {
+                          setHasSelectedCoverageBand(true);
+                          setField("coverageSizeBand", opt.value);
+                        }}
                       >
                         <div className="absolute right-3 top-3">{selected ? selectedBadge() : null}</div>
                         <div className="pr-10 text-sm font-semibold text-foreground">{opt.label}</div>
@@ -1011,7 +1044,7 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
                 ) : (
                   <div className="flex flex-wrap items-center gap-3">
                     <button type="button" onClick={onComplete} className={primaryButtonClass}>
-                      Generate Recommendation Preview
+                      Build My Recommendation
                     </button>
                   </div>
                 )}
@@ -1020,11 +1053,6 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
 
             <aside className="hidden lg:col-span-5 lg:block">
               <div className="sticky top-6 rounded-lg border border-border bg-card p-5">
-                {step.id === "company" ? (
-                  <div className="mb-2 text-xs italic text-muted-foreground">
-                    You are shaping service consistency, adoption outcomes, uptime continuity, and audit readiness.
-                  </div>
-                ) : null}
                 <div className="text-sm font-semibold text-foreground">Advisory Guidance</div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   {step.id === "budget"
@@ -1073,11 +1101,6 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
 
               {mobileGuidanceOpen ? (
                 <div id="mobile-program-guidance" className="max-h-[70vh] space-y-4 overflow-y-auto border-t border-border p-4 text-sm text-muted-foreground">
-                  {step.id === "company" ? (
-                    <div className="text-xs italic leading-relaxed text-muted-foreground">
-                      You are shaping service consistency, adoption outcomes, uptime continuity, and audit readiness.
-                    </div>
-                  ) : null}
                   {guidance.selectedLabel ? (
                     <div>
                       <span className="inline-flex rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
@@ -1107,13 +1130,8 @@ export function RecommendationIntakePage({ onNavigate }: { onNavigate: NavigateF
   );
 }
 
-function guidanceSections(
-  first: GuidanceSection,
-  second: GuidanceSection,
-  third: GuidanceSection,
-  fourth: GuidanceSection
-): [GuidanceSection, GuidanceSection, GuidanceSection, GuidanceSection] {
-  return [first, second, third, fourth];
+function guidanceSections(...sections: GuidanceSection[]): GuidanceSection[] {
+  return sections;
 }
 
 function selectedSetupInSection(selectedSetup: CurrentSafetySetup[], sectionId: CurrentSetupSectionId) {
@@ -1125,10 +1143,13 @@ function selectedSetupInSection(selectedSetup: CurrentSafetySetup[], sectionId: 
 function buildGuidance(args: {
   stepId: StepId;
   form: RecommendationInputs;
+  hasSelectedWorkType: boolean;
+  hasSelectedCoverageBand: boolean;
   locationOptionId: "single" | "multi_same_region" | "multi_across_regions" | "multi_complex";
   activeExposureFocus: ProgramExposureRisk | null;
   activeSetupFocus: CurrentSafetySetup | null;
   activeSetupSection: CurrentSetupSectionId;
+  collapsedSetupSections: Record<CurrentSetupSectionId, boolean>;
 }): GuidanceContent {
   const { stepId, form } = args;
 
@@ -1143,117 +1164,142 @@ function buildGuidance(args: {
         {
           title: "How this shapes rollout speed",
           body: "A clean primary contact prevents mixed messages from day one. Your team, your employees, and your OSSO specialist all communicate through one path, which means decisions happen faster and your program launches without the friction of unclear ownership.",
-        },
-        {
-          title: "How this affects employee trust in the program",
-          body: "When employees see a consistent name attached to their safety program, they trust the process more. Consistent contact ownership reduces confusion about how to get help, request replacements, or raise issues, and that trust directly improves wear compliance.",
-        },
-        {
-          title: "Operational payoff you feel every week",
-          body: "When ownership is clear, execution stays consistent. Your team spends less time chasing exceptions and more time running a program that follows through across sites.",
         }
       ),
     };
   }
 
   if (stepId === "work_type") {
+    if (!args.hasSelectedWorkType) {
+      return {
+        selectedLabel: null,
+        sections: guidanceSections({
+          title: "What this step is deciding",
+          body: "The selection you make here shapes the structure, features, and service depth of your recommendation. There's no wrong answer. The more accurate you are, the more useful the output.",
+        }),
+      };
+    }
     const content = workTypeExplainer(form.workType);
     const selected = WORK_TYPE_OPTIONS.find((option) => option.value === form.workType)?.label ?? null;
     return {
       selectedLabel: selected,
       sections: guidanceSections(
-        { title: "What this environment looks like", body: content.conditions },
-        { title: "What keeps service steady", body: content.needs },
-        { title: "What keeps audits cleaner", body: content.compliance },
-        { title: "How this scales without resets", body: content.why }
+        { title: "What this environment typically needs", body: content.needs },
+        { title: "What makes programs work here", body: content.pattern }
       ),
     };
   }
 
   if (stepId === "coverage") {
+    if (!args.hasSelectedCoverageBand) {
+      return {
+        selectedLabel: null,
+        sections: guidanceSections({
+          title: "What this step is deciding",
+          body: "The selection you make here shapes the structure, features, and service depth of your recommendation. There's no wrong answer. The more accurate you are, the more useful the output.",
+        }),
+      };
+    }
     const band = form.coverageSizeBand ?? "31_60";
     const selected = COVERAGE_BANDS.find((option) => option.value === band)?.label ?? null;
-    const map: Record<string, { complexity: string; admin: string; scale: string; nextMove: string }> = {
+    const map: Record<string, { reality: string; coordination: string; nextBand: string }> = {
       "1_30": {
-        complexity: "Scheduling is usually direct with quick coordination and fewer exception cycles.",
-        admin: "One owner can often manage policy checks, questions, and replacements without extra layers.",
-        scale: "Early consistency matters now so you do not need to reset structure when headcount grows.",
-        nextMove: "Set simple standards now so every new hire follows the same intake and ordering path.",
+        reality:
+          "At this headcount, coverage is usually coordinated directly between one program owner and frontline supervisors, so schedule changes are handled in real time.",
+        coordination:
+          "Coordination load typically sits with the safety lead who is simultaneously validating eligibility, answering employee questions, and tracking replacements manually.",
+        nextBand:
+          "Crossing into 31 to 60 introduces recurring onboarding volume, so you usually need a standard intake rhythm instead of one-by-one ordering.",
       },
       "31_60": {
-        complexity: "Scheduling starts to include grouped onboarding and higher question volume across shifts.",
-        admin: "Clear eligibility and replacement rules reduce one-off requests that slow the team down.",
-        scale: "Repeatable communication and ordering flows become important for steady service quality.",
-        nextMove: "Document ownership for approvals and employee questions before volume climbs further.",
+        reality:
+          "With 31 to 60 employees, shift overlap starts to matter and onboarding groups begin to compete with replacement needs in the same weekly schedule.",
+        coordination:
+          "Friction usually concentrates on the person maintaining eligibility lists and processing replacement requests by hand before tooling catches up.",
+        nextBand:
+          "At 61 to 100, grouped onboarding events become more efficient than individual ordering, and reporting cadence needs to be designed instead of handled reactively.",
       },
       "61_100": {
-        complexity: "Cross-team handoffs increase, so scheduling consistency and role clarity matter more.",
-        admin: "Admin work expands into tracking, exception handling, and a steadier reporting rhythm.",
-        scale: "Standardized workflows reduce manual follow-up and stabilize execution across departments.",
-        nextMove: "Lock in repeatable timelines for approvals, fittings, replacements, and escalations.",
+        reality:
+          "At this size, multiple supervisors feed requests into the program at once, so missed handoffs become the main source of delays.",
+        coordination:
+          "Coordination pressure often falls on the safety coordinator who must reconcile manager requests with approval status and delivery timing.",
+        nextBand:
+          "Moving to 101 to 250 usually requires explicit response-time targets and a formal exception path so bottlenecks do not spread across teams.",
       },
       "101_250": {
-        complexity: "Coordination spans more managers and sites, creating heavier schedule orchestration.",
-        admin: "Admin load usually needs defined lanes, response targets, and clear ownership checkpoints.",
-        scale: "Growth is smoother when governance and process ownership are already documented.",
-        nextMove: "Formalize coverage rules now to keep policy decisions consistent between teams.",
+        reality:
+          "Programs in this band are operating across several teams or sites, which means scheduling now depends on shared calendars rather than informal coordination.",
+        coordination:
+          "The heaviest friction usually appears in approval routing, where requests stall between local managers and central safety reviewers.",
+        nextBand:
+          "At 251 to 500, site-level execution owners become necessary, and centralized reporting has to run on a fixed cadence to stay trustworthy.",
       },
       "251_500": {
-        complexity: "Scheduling and exception work become ongoing operational workflows, not occasional events.",
-        admin: "Approvals and policy enforcement require regular oversight and clean reporting cadence.",
-        scale: "Role-based controls and program governance keep throughput fair and predictable at size.",
-        nextMove: "Build site-level accountability with centralized standards to avoid local policy drift.",
+        reality:
+          "At this scale, coverage is continuous work: onboarding, reorders, and exceptions are all happening at the same time across many managers.",
+        coordination:
+          "Coordination load typically concentrates in whoever governs cross-site standards and resolves policy conflicts between local operating practices.",
+        nextBand:
+          "Crossing 500+ shifts the program into enterprise governance, where specialist support, formal controls, and executive reporting become non-optional.",
       },
       "500_plus": {
-        complexity: "Scheduling spans multiple channels, stakeholders, and local constraints simultaneously.",
-        admin: "Centralized controls and escalation governance are typically required for reliable execution.",
-        scale: "Enterprise readiness depends on standardized playbooks and strong cross-site ownership.",
-        nextMove: "Set operating guardrails early so scale does not increase exceptions or audit risk.",
+        reality:
+          "At 500+, scheduling and fulfillment run as enterprise operations with parallel workflows across sites, shifts, and role families.",
+        coordination:
+          "Friction concentrates at the governance layer, especially in policy harmonization, audit evidence management, and enterprise escalation handling.",
+        nextBand:
+          "You are already at enterprise scale; the next shift is deeper specialist engagement for architecture reviews, regional governance, and continuous optimization.",
       },
     };
     const copy = map[band] ?? map["31_60"];
     return {
       selectedLabel: selected,
       sections: guidanceSections(
-        { title: "What this size means for your team", body: copy.complexity },
-        { title: "Where the admin pressure lands", body: copy.admin },
-        { title: "How to set yourself up to scale", body: copy.scale },
-        { title: "What to lock in before you move forward", body: copy.nextMove }
+        { title: "What this size means for your team", body: copy.reality },
+        { title: "Where the coordination load actually falls", body: copy.coordination },
+        { title: "What shifts when you move to the next band", body: copy.nextBand }
       ),
     };
   }
 
   if (stepId === "locations") {
     const selected = LOCATION_MODELS.find((option) => option.id === args.locationOptionId)?.label ?? null;
-    const model = form.locationModel;
-    const map: Record<ProgramLocationModel, { scheduling: string; oversight: string; execution: string; nextMove: string }> = {
+    const map: Record<
+      "single" | "multi_same_region" | "multi_across_regions" | "multi_complex",
+      { easier: string; change: string }
+    > = {
       single: {
-        scheduling: "Scheduling stays centralized, which helps launch quickly and keep turnaround predictable.",
-        oversight: "One coordinator can usually manage communication, policy updates, and issue routing cleanly.",
-        execution: "Service delivery is easier to standardize when teams share one location and one process owner.",
-        nextMove: "Define a repeatable baseline now so expansion to additional sites does not require rework.",
+        easier:
+          "A single-site model keeps operations simple: one approval path, one delivery cadence, one exception contact, and no need for cross-region scheduling logic.",
+        change:
+          "When you add a second site, you introduce routing decisions, a second cadence to manage, and usually a review of whether approval ownership should split.",
       },
       multi_same_region: {
-        scheduling: "Regional batching by site and shift keeps calendars manageable and reduces missed coverage.",
-        oversight: "Shared playbooks allow a central owner to keep policy enforcement consistent across locations.",
-        execution: "Execution improves when each site follows the same handoff, escalation, and support expectations.",
-        nextMove: "Confirm site contacts and escalation paths so regional coordination remains predictable.",
+        easier:
+          "Same-region multi-site programs simplify service by sharing travel windows, standardizing playbooks, and reusing one regional escalation path.",
+        change:
+          "If sites spread beyond the region, timezone and carrier variability force you to redesign scheduling windows and tighten handoff rules.",
       },
       multi_across_regions: {
-        scheduling: "Scheduling spans different local timelines, constraints, and staffing rhythms across regions.",
-        oversight: "Distributed operations need standardized approvals and reporting to prevent policy drift.",
-        execution: "Cross-region delivery works best with clear governance and flexible but controlled routing rules.",
-        nextMove: "Set cross-site standards for approvals and exception handling before volume increases further.",
+        easier:
+          "Across-region structure makes it easier to localize scheduling by region while keeping one governance standard for approvals and reporting.",
+        change:
+          "International expansion adds compliance documentation requirements and routing complexity that usually triggers a full program-structure review.",
+      },
+      multi_complex: {
+        easier:
+          "International or complex networks make it possible to run tiered governance, with central policy control and local execution tuned to legal and operational constraints.",
+        change:
+          "If complexity increases through acquisitions or new countries, program ownership, documentation, and fulfillment routing usually need dedicated specialist redesign.",
       },
     };
-    const copy = map[model];
+    const copy = map[args.locationOptionId];
     return {
       selectedLabel: selected,
       sections: guidanceSections(
-        { title: "How coordination will feel day to day", body: copy.scheduling },
-        { title: "How to keep standards consistent", body: copy.oversight },
-        { title: "How this protects service uptime", body: copy.execution },
-        { title: "What to lock in next", body: copy.nextMove }
+        { title: "What this structure makes easier", body: copy.easier },
+        { title: "What to think about when this changes", body: copy.change }
       ),
     };
   }
@@ -1266,20 +1312,12 @@ function buildGuidance(args: {
         selectedLabel: null,
         sections: guidanceSections(
           {
-            title: "Start by selecting exposures",
-            body: "Select one or more exposures to see how they shape your program guidance.",
+            title: "What your exposure profile tells us",
+            body: "The exposures you select determine which product features, lens treatments, and add-ons are built into the recommendation. More accurate input produces a more useful output.",
           },
           {
-            title: "How this affects fit and comfort",
-            body: "Exposure choices influence which product features improve consistent daily wear across your workforce.",
-          },
-          {
-            title: "How this affects uptime",
-            body: "The right exposure profile reduces visibility disruptions and lowers avoidable replacement friction.",
-          },
-          {
-            title: "How this affects compliance",
-            body: "Exposure-based standards make policy decisions easier to document and audit later.",
+            title: "Why accuracy here matters",
+            body: "Exposure accuracy drives wear behavior and replacement frequency. An incomplete profile produces a generic recommendation — the kind that gets overridden the first time conditions don't match the standard.",
           }
         ),
       };
@@ -1289,12 +1327,8 @@ function buildGuidance(args: {
       selectedLabel: exposureLabel(active),
       sections: guidanceSections(
         { title: "What this means in real work conditions", body: copy.meaning },
-        { title: "What keeps service uptime steady", body: copy.implications },
-        { title: "What keeps your policy clear", body: copy.compliance },
-        {
-          title: "How to apply this across teams",
-          body: "Use this exposure as a baseline and add role-specific controls only where they are operationally necessary.",
-        }
+        { title: "How OSSO applies this to the recommendation", body: copy.implications },
+        { title: "Where accuracy protects consistency", body: copy.compliance }
       ),
     };
   }
@@ -1313,37 +1347,36 @@ function buildGuidance(args: {
             body: "Your posture sets how much structure, service depth, and governance support the recommendation should include right now.",
           },
           {
-            title: "How this affects adoption and uptime",
-            body: "Posture influences whether the recommendation prioritizes a lean baseline or broader support resilience.",
-          },
-          {
-            title: "How to decide confidently",
-            body: "Pick the option that best matches how your program operates today, not where you hope it will be later.",
+            title: "What the recommendation does differently at each posture",
+            body: "These four options don't just relabel the output — they change product depth, service cadence, and support structure. Compliance First produces a leaner, more controlled recommendation. Full Program Investment is built for complexity and long-term resilience. This has the most direct effect on what your OSSO specialist brings to the first conversation. Pick the one that's true right now, not the one you want to be true.",
           }
         ),
       };
     }
     const selectedBudget = form.budgetPreference;
     const copy = budgetPreferenceExplainer(selectedBudget);
-    const specialistBuildMap: Record<ProgramBudgetPreference, string> = {
-      super_strict:
-        "Your specialist will structure a program that sets a clear standard, limits edge cases, and gives your safety team something they can enforce without chasing exceptions.",
-      low_budget:
-        "Your specialist will design for reliable day to day execution. Not the flashiest option, but the one that keeps running when headcount shifts and priorities change.",
-      good_budget:
-        "Your specialist will balance adoption support with governance depth, so employees get a good experience and your program produces audit ready outcomes at the same time.",
-      unlimited_budget:
-        "Your specialist will build for long term resilience, a program architecture that handles scale, complexity, and evolving requirements without requiring constant manual intervention.",
-    };
     return {
       selectedLabel: budgetPreferenceLabel(selectedBudget),
       sections: guidanceSections(
         { title: "How this changes your operating model", body: copy.impact },
         { title: "How this shapes the recommendation", body: copy.recommendation },
-        { title: "Who this path is best for", body: copy.bestFor },
+        { title: "Who this path is best for", body: copy.bestFor }
+      ),
+    };
+  }
+
+  const isSetupCollapsedDefault = Object.values(args.collapsedSetupSections).every(Boolean);
+  if (isSetupCollapsedDefault) {
+    return {
+      selectedLabel: null,
+      sections: guidanceSections(
         {
-          title: "What your OSSO specialist will build from this",
-          body: specialistBuildMap[selectedBudget],
+          title: "What this step is actually deciding",
+          body: "Steps 1 through 5 described the environment — who, how many, where, and what hazards. Step 6 is where the operating model gets defined. These choices determine how employees access eyewear, how orders move through approval, and whether the program runs without someone manually holding it together every week.",
+        },
+        {
+          title: "Why your specialist reviews this most carefully",
+          body: "Setup selections are what your OSSO specialist will spend the most time on before the first call. They determine service cadence, admin load, and whether the structure holds up as the team grows. Getting these right is the difference between a program that runs and one that creates more work than it solves.",
         }
       ),
     };
@@ -1358,20 +1391,12 @@ function buildGuidance(args: {
         selectedLabel: null,
         sections: guidanceSections(
           {
-            title: "Choose a coverage type",
-            body: "Select a coverage type to see how it shapes compliance, adoption, replacement rhythm, and daily operations.",
+            title: "What this section controls",
+            body: "Coverage type determines whether employees are routed through prescription, non-prescription, OTG, or hybrid pathways.",
           },
           {
-            title: "Compliance and audit trail",
-            body: "Coverage type controls what eligibility and verification evidence your team must maintain to keep audit documentation clean.",
-          },
-          {
-            title: "Employee adoption and wear consistency",
-            body: "Prescription versus OTG is often a compliance versus comfort tradeoff at the job level, so matching pathway to role is critical for consistent daily wear.",
-          },
-          {
-            title: "Replacement cadence and admin load",
-            body: "This choice sets remake frequency, inventory expectations, and approval volume, so make it with long-term operations in mind.",
+            title: "Where this decision shows up first",
+            body: "This choice immediately affects eligibility validation, replacement cadence, and the support workload tied to remakes and exceptions.",
           }
         ),
       };
@@ -1382,32 +1407,37 @@ function buildGuidance(args: {
       sections: guidanceSections(
         { title: "Compliance and audit trail", body: copy.compliance },
         { title: "Employee adoption and wear consistency", body: copy.structure },
-        { title: "Replacement frequency expectations", body: copy.admin },
-        {
-          title: "Administrative load and approvals",
-          body: "Plan clear approval boundaries for exceptions so coverage choices stay consistent as request volume grows.",
-        }
+        { title: "Replacement cadence and coordination load", body: copy.admin }
       ),
     };
   }
 
   if (!activeSelection) {
-    const sectionLabel = activeSection === "funding" ? "Safety Program" : activeSection === "approval" ? "Approval Workflow" : "Delivery Method";
+    const sectionTitle = activeSection === "funding" ? "Safety Program" : activeSection === "approval" ? "Approval Workflow" : "Delivery Method";
+    const sectionControlMap: Record<Exclude<CurrentSetupSectionId, "coverage_type">, string> = {
+      funding:
+        "Funding structure sets who pays, what's standardized, and how much variation the program allows before exceptions become the default response.",
+      approval:
+        "Approval workflow defines who signs off on orders, where exceptions go, and how long employees wait. Every approval that doesn't have a clear owner becomes a delay.",
+      delivery:
+        "Delivery Method determines how employees access fittings, ordering, and fulfillment in day-to-day operations.",
+    };
+    const sectionPressureMap: Record<Exclude<CurrentSetupSectionId, "coverage_type">, string> = {
+      funding:
+        "The first operational signal is exception traffic; unclear funding boundaries quickly create manual overrides and follow-up.",
+      approval:
+        "The first breakdown point is queue ownership; when no role owns turnaround targets, fulfillment becomes unpredictable.",
+      delivery:
+        "Early friction appears at handoffs between ordering and receipt, especially when support channels are unclear by site.",
+    };
+    const scopedSection = (activeSection === "funding" || activeSection === "approval" || activeSection === "delivery") ? activeSection : "funding";
     return {
       selectedLabel: null,
       sections: guidanceSections(
-        { title: `Select a ${sectionLabel} option`, body: `Choose a ${sectionLabel.toLowerCase()} option to see section-specific guidance.` },
+        { title: `What ${sectionTitle} is deciding`, body: sectionControlMap[scopedSection] },
         {
-          title: "How this affects structure",
-          body: setupSectionExplainer(activeSection),
-        },
-        {
-          title: "How this affects adoption",
-          body: "Selections in this section influence how easily employees follow the intended ordering and wear process.",
-        },
-        {
-          title: "How this affects admin effort",
-          body: "The choice here shapes approval volume, handoffs, and support workload as your program scales.",
+          title: "Where execution pressure appears first",
+          body: sectionPressureMap[scopedSection],
         }
       ),
     };
@@ -1417,98 +1447,62 @@ function buildGuidance(args: {
   return {
     selectedLabel: setupLabel(activeSelection),
     sections: guidanceSections(
-      { title: "How this affects your structure", body: copy.structure },
-      { title: "How this supports compliance", body: copy.compliance },
-      { title: "How this changes admin workload", body: copy.admin },
-      {
-        title: "How this connects to the next section",
-        body: "Keep this choice aligned with adjacent setup sections so approval, delivery, and coverage decisions reinforce each other.",
-      }
+      { title: "How this shapes the operating structure", body: copy.structure },
+      { title: "How this influences compliance consistency", body: copy.compliance },
+      { title: "How this changes coordination load", body: copy.admin }
     ),
   };
 }
 
 function workTypeExplainer(workType: ProgramWorkType) {
-  const map: Record<ProgramWorkType, { conditions: string; needs: string; compliance: string; why: string }> = {
+  const map: Record<ProgramWorkType, { needs: string; pattern: string }> = {
     manufacturing: {
-      conditions:
-        "Production lines, machinery zones, and shift-based staffing create repeated exposure patterns that require dependable daily protection.",
       needs:
-        "Programs typically need durable frames, consistent side shield standards, reliable replacement pathways, and comfort that supports all-shift wear.",
-      compliance:
-        "ANSI-aligned standards and site PPE policies are usually mandatory, with clear documentation expected during internal and external reviews.",
-      why:
-        "A structured program limits exceptions, keeps eligibility consistent across teams, and protects productivity when replacements are needed.",
+        "Recommendations prioritize impact-rated durability, all-shift comfort, and fast remake support — because when a lens scratches out on second shift, the replacement can't wait until Monday.",
+      pattern:
+        "Programs that hold up in manufacturing build replacement pathways before they're needed — shift-based staffing turns eligibility over fast, and reactive programs always fall behind.",
     },
     construction: {
-      conditions:
-        "Field environments involve high movement, variable weather, debris exposure, and changing light conditions across active job sites.",
       needs:
-        "High-durability frame options, secure fit performance, glare-management choices, and fast replacement support are critical for continuity.",
-      compliance:
-        "Construction programs frequently face site audits and require documented issuance patterns that prove policy adherence.",
-      why:
-        "Standardized ordering and approval rules reduce coverage gaps when crews rotate between sites and supervisors.",
+        "Field-heavy recommendations emphasize secure retention, debris coverage, glare control, and rapid replacement support for crews moving between active sites.",
+      pattern:
+        "Construction programs hold up when every site lead enforces one standard ordering path across crews and subcontractors instead of local one-off rules.",
     },
     utilities: {
-      conditions:
-        "Field dispatch models create frequent weather, lighting, and visibility changes across routes, facilities, and service regions.",
       needs:
-        "Programs often need glare management, fog control, PPE compatibility, and dependable availability for mobile crews.",
-      compliance:
-        "Regulated environments typically require clear proof of compliant eyewear access and role-appropriate controls.",
-      why:
-        "A defined program lowers operational friction as teams move across regions and supervisors need predictable fulfillment.",
+        "Utility recommendations center on variable-light visibility, anti-fog reliability, and PPE-compatible fit that performs during mobile dispatch work.",
+      pattern:
+        "Programs succeed here when approvals and fulfillment are anchored to territory ownership, so coverage remains consistent as crews rotate and routes change.",
     },
     warehouse: {
-      conditions:
-        "Forklift traffic, pick-pack cadence, particulate exposure, and multi-shift staffing demand durable day-to-day eye protection.",
       needs:
-        "Programs perform best with impact-ready standards, long-wear comfort, and predictable replacement cadence for active teams.",
-      compliance:
-        "Warehouse PPE policy usually requires consistent side-shield coverage and straightforward issuance traceability.",
-      why:
-        "Repeatable issuance and tracking reduces missed coverage, minimizes escalations, and supports faster onboarding.",
+        "Warehouse recommendations focus on impact-ready daily wear, scratch resilience, and predictable reorder access — because high-turnover environments need replacement to be automatic, not an exception process.",
+      pattern:
+        "Programs perform best when onboarding and replacement are triggered from workforce rosters, not ad hoc requests after a problem appears.",
     },
     healthcare: {
-      conditions:
-        "Clinical and support roles often combine frequent cleaning cycles, screen-intensive work, and occasional splash-risk scenarios.",
       needs:
-        "Clarity-first lens options, anti-reflective support, sustained comfort, and role-specific splash protection are common requirements.",
-      compliance:
-        "Infection-control requirements and documented PPE consistency may apply across departments and facilities.",
-      why:
-        "Structured programs reduce reimbursement variability while supporting consistent policy enforcement and employee adoption.",
+        "Healthcare recommendations prioritize optical clarity, cleaning-cycle durability, and role-based splash protection that staff can wear continuously during clinical flow.",
+      pattern:
+        "Healthcare programs stay reliable when infection-control and unit leaders share one approved coverage matrix instead of maintaining parallel local lists.",
     },
     public_sector: {
-      conditions:
-        "Public-sector environments blend diverse roles, facility types, and hazard levels under strong governance and approval controls.",
       needs:
-        "Role-based coverage definitions, clear eligibility policy, and standard reporting are essential for shared accountability.",
-      compliance:
-        "Procurement governance and audit-readiness expectations typically require strong documentation and process consistency.",
-      why:
-        "A structured program provides dependable cross-department governance while reducing policy drift between locations.",
+        "Public-sector recommendations emphasize standardized options, role-linked eligibility, and reporting outputs that map directly to governance and procurement requirements.",
+      pattern:
+        "Successful public-sector programs document policy once at the governance level and execute it consistently through named department contacts.",
     },
     laboratory: {
-      conditions:
-        "Lab workflows frequently involve chemical handling, splash risk, and environmental factors that increase fog events.",
       needs:
-        "Sealed or splash-oriented protection options, anti-fog support, and strict standardization are commonly required.",
-      compliance:
-        "Laboratory safety programs usually maintain strict documented controls for approved options and replacement handling.",
-      why:
-        "Strong policy control prevents mismatched protection decisions that can create compliance and safety exposure.",
+        "Laboratory recommendations prioritize sealed or splash-oriented designs, anti-fog performance, and strict option control tied to protocol-driven tasks.",
+      pattern:
+        "Lab programs work when approved eyewear options are mapped to procedure classes — selections driven by protocol, not supervisor preference, and not workarounds when the standard option doesn't arrive on time.",
     },
     other: {
-      conditions:
-        "Mixed or specialized environments often include role-specific hazards that do not fit a single predefined template.",
       needs:
-        "Programs benefit from a compliant baseline plus controlled add-on flexibility for distinct exposure profiles.",
-      compliance:
-        "Compliance expectations should be mapped to site-level policy, role exposure, and documented approval boundaries.",
-      why:
-        "A structured baseline enables growth while keeping controls consistent as hazards, staffing, and locations evolve.",
+        "For mixed environments, recommendations start with a compliant core package and add tightly controlled features for roles that face distinct exposure profiles.",
+      pattern:
+        "These programs stay stable when every exception has a named owner and review cadence, preventing custom requests from becoming the default model.",
     },
   };
   return map[workType];
@@ -1536,7 +1530,7 @@ function exposureExplainer(risk: ProgramExposureRisk) {
       implications:
         "Prioritize high-durability frames, dependable side protection, and fit consistency that holds during active motion.",
       compliance:
-        "Programs should lock approved frame classes and replacement rules to avoid unsafe substitutions or delayed reissue.",
+        "Programs should define approved frame classes and replacement triggers up front — reactive replacement after a damage event is where compliance gaps usually start.",
     },
     dust_debris: {
       meaning:
@@ -1560,7 +1554,7 @@ function exposureExplainer(risk: ProgramExposureRisk) {
       implications:
         "Glare-management options support safer visibility, stronger comfort, and higher day-to-day wear consistency.",
       compliance:
-        "Define whether sun-related options are role-based, restricted, or conditionally approved to prevent policy drift.",
+        "Define whether glare-management options are role-based or open — undefined eligibility here tends to become the most-requested exception category.",
     },
     fog_humidity: {
       meaning:
@@ -1580,7 +1574,7 @@ function exposureExplainer(risk: ProgramExposureRisk) {
     },
     screen_intensive: {
       meaning:
-        "Extended digital viewing and near-focus activity can increase visual fatigue and reduce comfort over long shifts.",
+        "Extended screen time builds visual fatigue across the shift — and fatigued employees are more likely to remove their eyewear or stop wearing it altogether.",
       implications:
         "Anti-reflective and blue-light-support options can improve clarity, comfort, and sustained program adoption.",
       compliance:
@@ -1603,7 +1597,7 @@ function setupLabel(item: CurrentSafetySetup) {
     no_formal_program: "No Formal Program",
     reimbursement: "Vendor / Optometry Partnership",
     vendor_optometry_partnership: "Vendor / Optometry Partnership",
-    voucher: "Voucher / Reimbursement System",
+    voucher: "Voucher / Reimbursement",
     employer_fully_covered: "Employer Fully Covered",
     employer_base_with_upgrades: "Employer Base with Upgrades",
     approval_required: "Approval Required",
@@ -1616,36 +1610,22 @@ function setupLabel(item: CurrentSafetySetup) {
     hybrid_model: "Hybrid",
     hybrid_delivery: "Hybrid",
     prescription_safety_eyewear: "Prescription Safety Eyewear",
-    non_prescription_safety_eyewear: "Non-Prescription Safety Eyewear",
-    otg_non_prescription_eyewear: "Bulk Over the Glasses",
+    non_prescription_safety_eyewear: "Non Prescription Safety Eyewear",
+    otg_non_prescription_eyewear: "Bulk Over the Glasses (OTG)",
     hybrid_eyewear: "Hybrid Model",
   };
   return map[item];
-}
-
-function setupSectionExplainer(sectionId: CurrentSetupSectionId) {
-  const map: Record<CurrentSetupSectionId, string> = {
-    funding:
-      "Program structure decisions in this section determine policy consistency and how smoothly you can scale to more employees.",
-    approval:
-      "Approval design in this section controls exception volume and helps you stay audit-ready without slowing operations.",
-    delivery:
-      "Delivery choices in this section directly affect employee adoption and service uptime across your sites.",
-    coverage_type:
-      "Coverage pathways in this section define how reliably teams receive compliant products without manual rework.",
-  };
-  return map[sectionId];
 }
 
 function setupExplainer(item: CurrentSafetySetup) {
   const map: Record<CurrentSafetySetup, { structure: string; compliance: string; admin: string }> = {
     no_formal_program: {
       structure:
-        "Purchasing is mostly ad hoc, with limited eligibility structure and inconsistent enforcement across departments.",
+        "Purchases happen as needed, eligibility isn't defined, and enforcement depends on whoever is paying attention that week.",
       compliance:
         "Compliance performance depends heavily on local manager behavior and individual buying decisions.",
       admin:
-        "Administrative friction is high due to repeated clarifications, corrections, and exception handling.",
+        "Every request becomes a clarification. Every new hire becomes an exception. Administrative friction is high because the program is running on improvisation.",
     },
     reimbursement: {
       structure:
@@ -1701,7 +1681,7 @@ function setupExplainer(item: CurrentSafetySetup) {
       compliance:
         "This adds control over policy adherence and reduces unapproved ordering paths.",
       admin:
-        "Administrative burden increases through approval queues, escalations, and response-time management.",
+        "Queue ownership and turnaround targets matter a lot here — undefined approval chains are where fulfillment quietly becomes unpredictable.",
     },
     manager_approval_required: {
       structure:
@@ -1709,19 +1689,19 @@ function setupExplainer(item: CurrentSafetySetup) {
       compliance:
         "This adds control over policy adherence and reduces unapproved ordering paths.",
       admin:
-        "Administrative burden increases through approval queues, escalations, and response-time management.",
+        "Queue ownership and turnaround targets matter a lot here — undefined approval chains are where fulfillment quietly becomes unpredictable.",
     },
     centralized_safety_approval: {
       structure:
         "A centralized safety team owns approvals, standards, and exception decisions across the organization.",
       compliance:
-        "This model supports stronger consistency, cleaner documentation, and better audit readiness.",
+        "This model supports stronger consistency, cleaner documentation, and stronger audit consistency.",
       admin:
         "Admin workload is concentrated centrally, but process quality and decision clarity are usually higher.",
     },
     onsite_events: {
       structure:
-        "Employees complete fitting and ordering through scheduled onsite events with direct support.",
+        "Employees get fitted and ordered in a controlled, supervised setting — the highest-accuracy delivery model because OSSO is there.",
       compliance:
         "Supervised selection and fitting improve compliance, accuracy, and policy alignment at order time.",
       admin:
@@ -1739,7 +1719,7 @@ function setupExplainer(item: CurrentSafetySetup) {
       structure:
         "Orders are placed online and fulfilled directly, expanding access without requiring onsite event cadence.",
       compliance:
-        "Success depends on strong eligibility controls, clear online ordering instructions, and approved-option boundaries.",
+        "Compliance depends on eligibility guardrails staying tight — without them, self-ordering environments drift toward catalog choices that fall outside policy.",
       admin:
         "Scheduling overhead drops, while fit guidance, support handling, and return management typically increase.",
     },
@@ -1828,7 +1808,7 @@ function budgetPreferenceExplainer(value: ProgramBudgetPreference) {
     },
     good_budget: {
       impact:
-        "Program can support stronger adoption quality, improved employee experience, and cleaner multi-team consistency.",
+        "Program can support stronger adoption, better employee experience, and cleaner consistency across teams — the gap between what's issued and what's worn starts closing here.",
       recommendation:
         "Recommendation steps up depth to reduce exceptions and improve consistency as operations expand.",
       bestFor:

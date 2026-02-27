@@ -1,0 +1,1 @@
+export { RecommendationCongratulationsPage } from "./RecommendationCongratulationsPage";
