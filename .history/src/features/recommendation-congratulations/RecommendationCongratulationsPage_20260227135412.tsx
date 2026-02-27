@@ -1,0 +1,245 @@
+"use client";
+
+import type { NavigateFn } from "@/app/routerTypes";
+import { SectionWrap } from "@/components/layout/SectionWrap";
+import {
+  primaryButtonClass,
+  secondaryButtonClass,
+} from "@/components/ui/buttonStyles";
+import { useProgramDraft } from "@/hooks/useProgramDraft";
+import { defaultDraft } from "@/lib/programDraft";
+
+function nonEmpty(value: string | null | undefined) {
+  const trimmed = (value ?? "").trim();
+  return trimmed ? trimmed : null;
+}
+
+function StepBadge({
+  number,
+  label,
+  description,
+}: {
+  number: string;
+  label: string;
+  description: string;
+}) {
+  return (
+    <div className="flex items-start gap-4">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold">
+        {number}
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-foreground">{label}</p>
+        <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+export function RecommendationCongratulationsPage({
+  onNavigate,
+}: {
+  onNavigate: NavigateFn;
+}) {
+  const { draft } = useProgramDraft();
+  const companyName = nonEmpty(draft?.program.contact.companyName);
+  const contactEmail =
+    nonEmpty(draft?.program.contact.email) ??
+    nonEmpty(defaultDraft.program.contact.email);
+  const contactName = nonEmpty(draft?.program.contact.fullName);
+
+  const subject = "OSSO Program Recommendation. Follow Up";
+  const body = [
+    "Hello OSSO team,",
+    "",
+    "I completed the OSSO program recommendation and would like to connect on next steps.",
+    companyName ? `Company: ${companyName}` : null,
+    contactEmail ? `Contact email: ${contactEmail}` : null,
+    "",
+    "Please reach out once you've reviewed my profile.",
+  ]
+    .filter((line): line is string => Boolean(line))
+    .join("\n");
+  const mailtoHref = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+  return (
+    <section aria-labelledby="recommendation-congratulations-title">
+      <header className="relative border-b border-gray-200/60 bg-white">
+        <div className="h-1 bg-gradient-to-r from-[#2971b5] via-[#5e97dd] to-[#2971b5]" aria-hidden="true" />
+
+        <div className="relative mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+          <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
+            <div>
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                <svg
+                  viewBox="0 0 16 16"
+                  className="h-3.5 w-3.5 fill-none stroke-current stroke-[2.5]"
+                  aria-hidden="true"
+                >
+                  <path d="M3 8.5L6.5 12L13 5" />
+                </svg>
+                Recommendation Submitted
+              </div>
+              <h1
+                id="recommendation-congratulations-title"
+                className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl"
+              >
+                {contactName
+                  ? `You're all set, ${contactName.split(" ")[0]}!`
+                  : "Your recommendation is ready!"}
+              </h1>
+              <p className="mt-3 max-w-md text-base leading-relaxed text-gray-500">
+                We've got everything we need. An OSSO program specialist will
+                review your details and reach out to walk through next steps
+                together. Nothing moves until you're comfortable.
+              </p>
+            </div>
+
+            <div
+              className="hidden overflow-hidden rounded-2xl lg:block"
+              aria-hidden="true"
+            >
+              <img
+                src="/images/congrats-specialist-handoff.jpg"
+                alt=""
+                className="aspect-[4/3] w-full rounded-2xl border border-gray-200 object-cover"
+                loading="lazy"
+              />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        <SectionWrap>
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="space-y-5 lg:col-span-2">
+              <article className="overflow-hidden rounded-xl border border-border bg-card">
+                <div className="border-b border-border bg-secondary/30 px-5 py-4">
+                  <h2 className="text-base font-bold text-foreground">
+                    Here's what happens next
+                  </h2>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Three simple steps — no surprises
+                  </p>
+                </div>
+                <div className="space-y-6 p-5">
+                  <StepBadge
+                    number="1"
+                    label="We'll review your details — usually within one business day"
+                    description="Your dedicated OSSO specialist will go through your recommendation before reaching out, so they already understand your setup when you connect."
+                  />
+
+                  <div
+                    className="overflow-hidden rounded-lg"
+                    aria-hidden="true"
+                  >
+                    <img
+                      src="/images/congrats-specialist-review.jpg"
+                      alt=""
+                      className="h-36 w-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+
+                  <StepBadge
+                    number="2"
+                    label="We'll talk it through together — no pressure"
+                    description="You and your specialist will walk through the recommendation, tweak anything that doesn't quite fit, and make sure the structure works for your team before anything is set."
+                  />
+                  <StepBadge
+                    number="3"
+                    label="Your rollout plan, built around your timeline"
+                    description="Once you're aligned, we'll put together a rollout plan that fits your site, your schedule, and how your team actually works day to day."
+                  />
+                </div>
+              </article>
+
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <a
+                  href={mailtoHref}
+                  className={`${primaryButtonClass} flex-1 text-center`}
+                >
+                  Connect with an OSSO Specialist
+                </a>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onNavigate("recommendation_summary", "internal")
+                  }
+                  className={`${secondaryButtonClass} flex-1`}
+                >
+                  Review Your Summary
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              {(companyName || contactEmail) && (
+                <article className="rounded-xl border border-border bg-card p-5">
+                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Submitted for
+                  </h3>
+                  {companyName && (
+                    <p className="text-base font-bold text-foreground">
+                      {companyName}
+                    </p>
+                  )}
+                  {contactEmail && (
+                    <p className="mt-0.5 text-sm text-muted-foreground">
+                      {contactEmail}
+                    </p>
+                  )}
+                </article>
+              )}
+
+              <div className="overflow-hidden rounded-xl" aria-hidden="true">
+                <img
+                  src="/images/congrats-team.jpg"
+                  alt=""
+                  className="aspect-[3/2] w-full rounded-xl border border-border object-cover"
+                  loading="lazy"
+                />
+              </div>
+
+              <article className="rounded-xl border border-border bg-secondary/20 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5">
+                    <svg
+                      viewBox="0 0 20 20"
+                      className="h-5 w-5 text-foreground"
+                      aria-hidden="true"
+                    >
+                      <path
+                        fill="currentColor"
+                        d="M10 1a4 4 0 0 0-4 4v2H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-1V5a4 4 0 0 0-4-4Zm-2 6V5a2 2 0 1 1 4 0v2H8Z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-xs font-semibold text-foreground">
+                      Your information is safe with us
+                    </p>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      Your recommendation is only shared with your assigned OSSO
+                      specialist. We never sell or share your data with third
+                      parties — it's used solely to set up your program.
+                    </p>
+                  </div>
+                </div>
+              </article>
+
+              <button
+                type="button"
+                onClick={() => onNavigate("recommendation", "internal")}
+                className={`${secondaryButtonClass} w-full text-center`}
+              >
+                Start a new recommendation
+              </button>
+            </div>
+          </div>
+        </SectionWrap>
+      </div>
+    </section>
+  );
+}
