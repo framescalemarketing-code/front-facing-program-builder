@@ -17,7 +17,6 @@ import {
   recommendProgram,
   type RecommendProgramInputs,
   type RecommendationAddOn,
-  type CoatingRecommendation,
 } from "@/lib/recommendProgram";
 
 export type RecommendationInputs = Omit<

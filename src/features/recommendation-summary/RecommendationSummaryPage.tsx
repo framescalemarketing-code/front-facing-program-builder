@@ -151,24 +151,6 @@ function trustNoteVariant(
   return "This recommendation is your starting point. Your OSSO specialist will go through it with you and make sure everything fits before anything is finalized.";
 }
 
-function recommendationSnapshotContext(
-  band: CoverageSizeBand | undefined,
-  location: ProgramLocationModel | undefined,
-  posture: ProgramBudgetPreference | undefined,
-  setup: ProgramConfig["programProfile"]["currentSafetySetup"] = [],
-) {
-  const hasNoFormalProgram = (setup ?? []).includes("no_formal_program");
-  if (hasNoFormalProgram && posture === "super_strict") {
-    return "Starting from scratch is actually the cleanest way to build this right. Your specialist will design it around your operation — not someone else's template.";
-  }
-
-  if (band === "500_plus" && location === "multi_across_regions") {
-    return "At this scale, we assign a dedicated program specialist before anything is configured. This is a partnership - not a self-serve program.";
-  }
-
-  return null;
-}
-
 function deliveryModelLabel(value: string | undefined) {
   const map: Record<string, string> = {
     onsite: "Onsite",
@@ -278,28 +260,6 @@ function generatedRecommendationSummary(args: {
   const serviceTier = args.serviceTier ?? "the recommended service tier";
 
   return `Based on your ${workType.toLowerCase()}, ${coverageBand}, and ${exposureSummary}, we're recommending ${packageName} with ${serviceTier} service. This combination is built to keep adoption high, reduce day-to-day friction, and give you a program you can count on.`;
-}
-
-function SummaryRow(props: {
-  label: string;
-  value: string | null;
-  showPlaceholderWhenEmpty?: boolean;
-  placeholderText?: string;
-}) {
-  const hasValue = Boolean(props.value);
-  if (!hasValue && !props.showPlaceholderWhenEmpty) return null;
-  return (
-    <div className="flex items-start justify-between gap-3 py-2 border-b border-border last:border-0">
-      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground shrink-0">
-        {props.label}
-      </span>
-      <span
-        className={`text-sm text-right ${hasValue ? "font-semibold text-foreground" : "font-medium text-muted-foreground"}`}
-      >
-        {hasValue ? props.value : (props.placeholderText ?? "Not provided")}
-      </span>
-    </div>
-  );
 }
 
 function ExposurePills(props: { risks: ProgramExposureRisk[] | undefined }) {
@@ -572,12 +532,6 @@ export function RecommendationSummaryPage({
     programConfig.programProfile.budgetPreference,
     programConfig.programProfile.currentSafetySetup,
     programConfig.programProfile.exposureRisks?.length ?? 0,
-  );
-  const snapshotContext = recommendationSnapshotContext(
-    programConfig.programProfile.coverageSizeBand,
-    programConfig.programProfile.locationModel,
-    programConfig.programProfile.budgetPreference,
-    programConfig.programProfile.currentSafetySetup,
   );
 
   const revealSummary = generatedRecommendationSummary({
