@@ -1,0 +1,249 @@
+.print-only {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: letter;
+    margin: 0.45in 0.55in;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  header,
+  footer,
+  [data-pdf-exclude="true"] {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  /* ── Base ── */
+  .recommendation-summary-print {
+    width: 100%;
+    margin: 0;
+    color: #334155;
+    font-family:
+      "Univers LT Std",
+      "Segoe UI",
+      system-ui,
+      -apple-system,
+      sans-serif;
+    font-size: 9pt;
+    line-height: 1.4;
+  }
+
+  /* ── Header ── */
+  .recommendation-summary-print .print-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0.12in;
+    margin-bottom: 0.12in;
+    border-bottom: 2px solid #e2e8f0;
+  }
+
+  .recommendation-summary-print .print-logo {
+    width: 140px;
+    height: auto;
+  }
+
+  .recommendation-summary-print .print-header-right {
+    text-align: right;
+  }
+
+  .recommendation-summary-print .print-title {
+    font-size: 14pt;
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: -0.01em;
+  }
+
+  .recommendation-summary-print .print-meta {
+    font-size: 8pt;
+    color: #94a3b8;
+    margin-top: 2pt;
+  }
+
+  /* ── Banner ── */
+  .recommendation-summary-print .print-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #5e97dd;
+    border-radius: 5px;
+    padding: 0.1in 0.18in;
+    margin-bottom: 0.14in;
+  }
+
+  .recommendation-summary-print .print-banner-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1pt;
+  }
+
+  .recommendation-summary-print .print-banner-label {
+    font-size: 7pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+  }
+
+  .recommendation-summary-print .print-banner-value {
+    font-size: 13pt;
+    font-weight: 700;
+    color: #1e293b;
+  }
+
+  .recommendation-summary-print .print-banner-stats {
+    display: flex;
+    gap: 0.1in;
+  }
+
+  .recommendation-summary-print .print-stat {
+    text-align: center;
+    padding: 0.05in 0.12in;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    min-width: 0.6in;
+  }
+
+  .recommendation-summary-print .print-stat-num {
+    display: block;
+    font-size: 11pt;
+    font-weight: 700;
+    color: #2971b5;
+  }
+
+  .recommendation-summary-print .print-stat-label {
+    display: block;
+    font-size: 6.5pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    margin-top: 1pt;
+  }
+
+  /* ── Two-Column Grid ── */
+  .recommendation-summary-print .print-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 0.3in;
+  }
+
+  .recommendation-summary-print .print-col {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Group (replaces sections) ── */
+  .recommendation-summary-print .print-group {
+    margin-bottom: 0.12in;
+  }
+
+  .recommendation-summary-print .print-group-title {
+    font-size: 8pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #475569;
+    padding: 0.03in 0 0.03in 0.1in;
+    border-left: 2.5px solid #5e97dd;
+    background: #f8fafc;
+    margin-bottom: 0.05in;
+  }
+
+  /* ── Data Rows ── */
+  .recommendation-summary-print .print-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.06in;
+    padding: 1.5pt 0 1.5pt 0.1in;
+    font-size: 9pt;
+    line-height: 1.35;
+  }
+
+  .recommendation-summary-print .print-label {
+    color: #64748b;
+    flex-shrink: 0;
+    min-width: 0.9in;
+    font-size: 8pt;
+    font-weight: 500;
+  }
+
+  .recommendation-summary-print .print-val {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 9pt;
+  }
+
+  .recommendation-summary-print .print-val-sub {
+    color: #64748b;
+    font-size: 8pt;
+    line-height: 1.35;
+  }
+
+  .recommendation-summary-print .print-row-note {
+    font-size: 8pt;
+    color: #94a3b8;
+    font-style: italic;
+    padding-left: 0.1in;
+    padding-top: 2pt;
+  }
+
+  /* ── Pills ── */
+  .recommendation-summary-print .print-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3pt;
+    padding: 2pt 0 0 0.1in;
+  }
+
+  .recommendation-summary-print .print-pill {
+    display: inline-block;
+    background: #eff6ff;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    padding: 1pt 7pt;
+    font-size: 7.5pt;
+    color: #2563eb;
+    font-weight: 600;
+  }
+
+  /* ── Footer ── */
+  .recommendation-summary-print .print-footer {
+    margin-top: auto;
+    padding-top: 0.08in;
+    border-top: 2px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 7.5pt;
+    color: #94a3b8;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+
+  .recommendation-summary-print .print-footer-brand {
+    font-weight: 700;
+    color: #2971b5;
+    font-size: 8pt;
+  }
+
+  .recommendation-summary-print .print-footer-note {
+    font-style: italic;
+    text-align: right;
+  }
+}

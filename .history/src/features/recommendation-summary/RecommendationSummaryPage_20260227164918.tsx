@@ -1142,7 +1142,7 @@ export function RecommendationSummaryPage({
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                           <div>
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
-                              Industry
+                              Work Type
                             </span>
                             <span className="text-sm font-bold text-slate-800">
                               {workType ?? "Not set"}
@@ -1373,223 +1373,269 @@ export function RecommendationSummaryPage({
         </div>
       </div>
 
-      {/* Print-only version — single-page snapshot */}
+      {/* Print-only version — styled to match the OSSO program builder */}
       <div className="print-only recommendation-summary-print">
-        {/* ── Header ── */}
-        <div className="print-header">
+        {/* ── Brand Accent Bar ── */}
+        <div className="print-brand-bar" />
+
+        {/* ── Document Header ── */}
+        <div className="print-doc-header">
           <img
             src="/brand/osso/osso-logo-horizontal.png"
             alt="OSSO Safety Eyewear"
-            className="print-logo"
+            className="print-doc-logo"
           />
-          <div className="print-header-right">
-            <div className="print-title">Program Recommendation</div>
-            <div className="print-meta">
-              {generatedOn}
-              {companyName && ` · ${companyName}`}
+          <div className="print-doc-header-right">
+            <h1>Program Recommendation</h1>
+            <div className="print-doc-meta">
+              <span>{generatedOn}</span>
+              {companyName && <span> · {companyName}</span>}
             </div>
           </div>
         </div>
 
-        {/* ── Hero Card ── */}
-        <div className="print-hero">
-          <div className="print-hero-left">
-            <span className="print-hero-eyebrow">
-              Recommended Configuration
+        {/* ── Hero Banner — Package + Key Stats ── */}
+        <div className="print-hero-banner">
+          <div className="print-hero-banner-left">
+            <span className="print-hero-label">Recommended Configuration</span>
+            <span className="print-hero-title">
+              {selectedPackage ?? "—"} · {serviceTier ?? "—"} Service
             </span>
-            <span className="print-hero-package">{posture.label}</span>
-            {(programConfig.programProfile.exposureRisks ?? []).length > 0 && (
-              <div className="print-pills print-hero-pills">
-                {(programConfig.programProfile.exposureRisks ?? []).map(
-                  (risk) => (
-                    <span key={risk} className="print-pill">
-                      {exposureRiskLabel(risk)}
-                    </span>
-                  ),
-                )}
-              </div>
-            )}
           </div>
-          <div className="print-hero-kpis">
-            <div className="print-kpi">
-              <span className="print-kpi-value">
-                {displayValue(selectedPackage)}
-              </span>
-              <span className="print-kpi-label">EU Package</span>
-            </div>
-            <div className="print-kpi">
-              <span className="print-kpi-value">
-                {displayValue(serviceTier)}
-              </span>
-              <span className="print-kpi-label">Service Tier</span>
-            </div>
+          <div className="print-hero-stats">
             {coverageBand && (
-              <div className="print-kpi">
-                <span className="print-kpi-value">{coverageBand}</span>
-                <span className="print-kpi-label">Team Size</span>
+              <div className="print-hero-stat">
+                <span className="print-hero-stat-value">{coverageBand}</span>
+                <span className="print-hero-stat-label">Employees</span>
               </div>
             )}
-            <div className="print-kpi">
-              <span className="print-kpi-value">{displayValue(workType)}</span>
-              <span className="print-kpi-label">Industry</span>
+            <div className="print-hero-stat">
+              <span className="print-hero-stat-value">
+                {posture.label.split(" ")[0]}
+              </span>
+              <span className="print-hero-stat-label">Profile</span>
             </div>
           </div>
         </div>
 
-        {/* ── Two Card Row: Coverage + Guidelines ── */}
-        <div className="print-card-row">
-          <div className="print-card">
-            <div className="print-card-title">Coverage &amp; Service</div>
-            <table className="print-table">
-              <tbody>
-                <tr>
-                  <td className="print-td-label">EU Package</td>
-                  <td className="print-td-value">
-                    {displayValue(selectedPackage)}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="print-td-label">Service Tier</td>
-                  <td className="print-td-value">
-                    {displayValue(serviceTier)}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="print-td-label">Coverage Band</td>
-                  <td className="print-td-value">
-                    {coverageBand ? `${coverageBand} employees` : "—"}
-                  </td>
-                </tr>
-                {exposureSummary && (
-                  <tr>
-                    <td className="print-td-label">Exposure</td>
-                    <td className="print-td-value">{exposureSummary}</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+        {/* ── Program Snapshot ── */}
+        <section className="print-section">
+          <div className="print-section-bar">Program Snapshot</div>
+          <div className="print-section-body">
+            <p className="print-narrative">{revealSummary}</p>
+            {packageTierSummary ? (
+              <p className="print-narrative-note">{packageTierSummary}</p>
+            ) : null}
+            {snapshotContext ? (
+              <p className="print-narrative-note">{snapshotContext}</p>
+            ) : null}
           </div>
+        </section>
 
-          <div className="print-card">
-            <div className="print-card-title">Program Guidelines</div>
-            <table className="print-table">
-              <tbody>
-                <tr>
-                  <td className="print-td-label">Industry</td>
-                  <td className="print-td-value">{displayValue(workType)}</td>
-                </tr>
-                <tr>
-                  <td className="print-td-label">Location Model</td>
-                  <td className="print-td-value">
-                    {displayValue(locationModel)}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="print-td-label">Delivery</td>
-                  <td className="print-td-value">
-                    {displayValue(deliveryModel)}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="print-td-label">Approval</td>
-                  <td className="print-td-value">
-                    {displayValue(approvalModel)}
-                  </td>
-                </tr>
-                {programPosture && (
-                  <tr>
-                    <td className="print-td-label">Budget</td>
-                    <td className="print-td-value">{programPosture}</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+        {/* ── Coverage & Service ── */}
+        <section className="print-section">
+          <div className="print-section-bar">Coverage &amp; Service</div>
+          <div className="print-section-body">
+            <div className="print-two-col">
+              <div className="print-data-row">
+                <span className="print-data-label">EU Package</span>
+                <span className="print-data-value">
+                  {displayValue(selectedPackage)}
+                </span>
+              </div>
+              <div className="print-data-row">
+                <span className="print-data-label">Service Tier</span>
+                <span className="print-data-value">
+                  {displayValue(serviceTier)}
+                </span>
+              </div>
+              <div className="print-data-row">
+                <span className="print-data-label">Coverage Band</span>
+                <span className="print-data-value">
+                  {coverageBand ? `${coverageBand} employees` : "Not provided"}
+                </span>
+              </div>
+              {exposureSummary && (
+                <div className="print-data-row">
+                  <span className="print-data-label">Exposure Profile</span>
+                  <span className="print-data-value">{exposureSummary}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Exposure pills */}
+            {(programConfig.programProfile.exposureRisks ?? []).length > 0 && (
+              <>
+                <div className="print-sub-heading">Exposure Risks</div>
+                <div className="print-pill-row">
+                  {(programConfig.programProfile.exposureRisks ?? []).map(
+                    (risk) => (
+                      <span key={risk} className="print-pill">
+                        {exposureRiskLabel(risk)}
+                      </span>
+                    ),
+                  )}
+                </div>
+              </>
+            )}
           </div>
-        </div>
+        </section>
 
-        {/* ── Two Card Row: Coatings + Locations/Contact ── */}
-        <div className="print-card-row">
-          {(programConfig.coatingRecommendations ?? []).length > 0 && (
-            <div className="print-card">
-              <div className="print-card-title">Recommended Coatings</div>
+        {/* ── Program Profile ── */}
+        <section className="print-section">
+          <div className="print-section-bar">Program Profile</div>
+          <div className="print-section-body">
+            <div className="print-profile-badge">{posture.label}</div>
+            <p className="print-narrative">{posture.explanation}</p>
+            <p className="print-narrative-note">{trustNote}</p>
+          </div>
+        </section>
+
+        {/* ── Recommended Coatings ── */}
+        {(programConfig.coatingRecommendations ?? []).length > 0 && (
+          <section className="print-section">
+            <div className="print-section-bar">Recommended Coatings</div>
+            <div className="print-section-body">
               {(programConfig.coatingRecommendations ?? []).map(
                 (coating: CoatingRecommendation) => (
-                  <div key={coating.id} className="print-coating">
+                  <div key={coating.id} className="print-coating-row">
                     <div className="print-coating-name">{coating.label}</div>
-                    <div className="print-coating-desc">
-                      {coating.description || coating.reason}
+                    {coating.description && (
+                      <div className="print-coating-desc">
+                        {coating.description}
+                      </div>
+                    )}
+                    <div className="print-coating-reason">
+                      → {coating.reason}
                     </div>
                   </div>
                 ),
               )}
             </div>
-          )}
+          </section>
+        )}
 
-          <div className="print-card">
-            <div className="print-card-title">
-              Locations{locations.length > 0 ? ` (${locations.length})` : ""}{" "}
-              &amp; Contact
-            </div>
-            {locations.length === 0 ? (
-              <div className="print-note">
-                Site details collected on first specialist call.
+        {/* ── Program Guidelines ── */}
+        <section className="print-section">
+          <div className="print-section-bar">Program Guidelines</div>
+          <div className="print-section-body">
+            <div className="print-two-col">
+              <div className="print-data-row">
+                <span className="print-data-label">Work Type</span>
+                <span className="print-data-value">
+                  {displayValue(workType)}
+                </span>
               </div>
+              <div className="print-data-row">
+                <span className="print-data-label">Location Model</span>
+                <span className="print-data-value">
+                  {displayValue(locationModel)}
+                </span>
+              </div>
+              {programPosture && (
+                <div className="print-data-row">
+                  <span className="print-data-label">Budget Direction</span>
+                  <span className="print-data-value">{programPosture}</span>
+                </div>
+              )}
+              <div className="print-data-row">
+                <span className="print-data-label">Delivery Model</span>
+                <span className="print-data-value">
+                  {displayValue(deliveryModel)}
+                </span>
+              </div>
+              <div className="print-data-row">
+                <span className="print-data-label">Approval Model</span>
+                <span className="print-data-value">
+                  {displayValue(approvalModel)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Locations ── */}
+        <section className="print-section">
+          <div className="print-section-bar">
+            Locations{locations.length > 0 ? ` (${locations.length})` : ""}
+          </div>
+          <div className="print-section-body">
+            {locations.length === 0 ? (
+              <p className="print-narrative">
+                No locations provided yet. Your OSSO specialist will collect
+                site details on the first call.
+              </p>
             ) : (
               locations.map((location, idx) => (
-                <div key={`${location.label}_${idx}`} className="print-loc-row">
-                  <span className="print-loc-num">#{idx + 1}</span>
-                  <span className="print-loc-name">
-                    {location.label || `Location ${idx + 1}`}
-                    {location.oneWayMiles > 0
-                      ? ` · ${location.oneWayMiles} mi`
-                      : ""}
-                  </span>
+                <div
+                  key={`${location.label}_${idx}`}
+                  className="print-location-card"
+                >
+                  <div className="print-location-card-header">
+                    <strong>
+                      Location {idx + 1}
+                      {location.label ? ` — ${location.label}` : ""}
+                    </strong>
+                    {location.oneWayMiles > 50 && (
+                      <span>Travel surcharge may apply</span>
+                    )}
+                  </div>
+                  {location.oneWayMiles > 0 && (
+                    <div className="print-data-row">
+                      <span className="print-data-label">Distance</span>
+                      <span className="print-data-value">
+                        {location.oneWayMiles} miles (one way)
+                      </span>
+                    </div>
+                  )}
                 </div>
               ))
             )}
-            {(companyName || contactName || email || phone) && (
-              <div className="print-contact-block">
-                <table className="print-table">
-                  <tbody>
-                    {companyName && (
-                      <tr>
-                        <td className="print-td-label">Company</td>
-                        <td className="print-td-value">{companyName}</td>
-                      </tr>
-                    )}
-                    {contactName && (
-                      <tr>
-                        <td className="print-td-label">Name</td>
-                        <td className="print-td-value">{contactName}</td>
-                      </tr>
-                    )}
-                    {email && (
-                      <tr>
-                        <td className="print-td-label">Email</td>
-                        <td className="print-td-value">{email}</td>
-                      </tr>
-                    )}
-                    {phone && (
-                      <tr>
-                        <td className="print-td-label">Phone</td>
-                        <td className="print-td-value">{phone}</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </div>
-        </div>
+        </section>
 
-        {/* ── Footer ── */}
-        <div className="print-footer">
-          <p className="print-footer-disclaimer">
-            This document is a preliminary recommendation only and does not
-            constitute a final program agreement. An OSSO Program Specialist
-            will review this information with you and all details, including
-            coverage, coatings, and service options, are subject to change.
-          </p>
+        {/* ── Contact Details ── */}
+        <section className="print-section">
+          <div className="print-section-bar">Contact Details</div>
+          <div className="print-section-body">
+            <div className="print-two-col">
+              <div className="print-data-row">
+                <span className="print-data-label">Company</span>
+                <span className="print-data-value">
+                  {displayValue(companyName)}
+                </span>
+              </div>
+              <div className="print-data-row">
+                <span className="print-data-label">Contact Name</span>
+                <span className="print-data-value">
+                  {displayValue(contactName)}
+                </span>
+              </div>
+              <div className="print-data-row">
+                <span className="print-data-label">Email</span>
+                <span className="print-data-value">{displayValue(email)}</span>
+              </div>
+              <div className="print-data-row">
+                <span className="print-data-label">Phone</span>
+                <span className="print-data-value">{displayValue(phone)}</span>
+              </div>
+              {contactRole && (
+                <div className="print-data-row">
+                  <span className="print-data-label">Role</span>
+                  <span className="print-data-value">{contactRole}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Document Footer ── */}
+        <div className="print-doc-footer">
+          <span className="print-doc-footer-brand">OSSO Safety Eyewear</span>
+          <span className="print-doc-footer-note">
+            This recommendation is a starting point — your OSSO specialist will
+            review and adjust before anything is finalized.
+          </span>
         </div>
       </div>
     </section>

@@ -29,16 +29,9 @@
     height: 100%;
     margin: 0;
     color: #334155;
-    font-family:
-      "Univers LT Std",
-      "Univers",
-      "Univers LT Std Cn",
-      "Segoe UI",
-      system-ui,
-      -apple-system,
-      sans-serif;
-    font-size: 11.5pt;
-    line-height: 1.55;
+    font-family: "Univers LT Std", "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 11pt;
+    line-height: 1.5;
     display: flex;
     flex-direction: column;
   }
@@ -48,8 +41,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-bottom: 0.18in;
-    margin-bottom: 0.22in;
+    padding-bottom: 0.14in;
+    margin-bottom: 0.14in;
     border-bottom: 2px solid #e2e8f0;
   }
 
@@ -60,11 +53,10 @@
 
   .recommendation-summary-print .print-header-right {
     text-align: right;
-    padding-right: 0.05in;
   }
 
   .recommendation-summary-print .print-title {
-    font-size: 18pt;
+    font-size: 20pt;
     font-weight: 700;
     color: #1e293b;
     letter-spacing: -0.02em;
@@ -73,7 +65,7 @@
   .recommendation-summary-print .print-meta {
     font-size: 9pt;
     color: #94a3b8;
-    margin-top: 6pt;
+    margin-top: 3pt;
   }
 
   /* ── Hero Card ── */
@@ -81,12 +73,12 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #f8fafc;
-    border: 1px solid #e9ecf0;
-    border-left: 4px solid #5e97dd;
-    border-radius: 6px;
-    padding: 0.22in 0.3in;
-    margin-bottom: 0.26in;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-left: 5px solid #5e97dd;
+    border-radius: 8px;
+    padding: 0.2in 0.28in;
+    margin-bottom: 0.18in;
   }
 
   .recommendation-summary-print .print-hero-left {
@@ -108,11 +100,6 @@
     font-weight: 700;
     color: #1e293b;
     letter-spacing: -0.01em;
-    white-space: nowrap;
-  }
-
-  .recommendation-summary-print .print-hero-pills {
-    margin-top: 6pt;
   }
 
   .recommendation-summary-print .print-hero-kpis {
@@ -131,11 +118,10 @@
 
   .recommendation-summary-print .print-kpi-value {
     display: block;
-    font-size: 10pt;
+    font-size: 11pt;
     font-weight: 700;
     color: #2971b5;
     line-height: 1.2;
-    white-space: nowrap;
   }
 
   .recommendation-summary-print .print-kpi-label {
@@ -152,26 +138,26 @@
   .recommendation-summary-print .print-card-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.36in;
-    margin-bottom: 0.26in;
+    gap: 0.16in;
+    margin-bottom: 0.16in;
   }
 
   /* ── Card ── */
   .recommendation-summary-print .print-card {
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    padding: 0 0.12in;
+    background: #fafbfc;
+    border: 1px solid #e8ecf0;
+    border-radius: 8px;
+    padding: 0.16in 0.2in;
   }
 
   .recommendation-summary-print .print-card-title {
-    font-size: 9.5pt;
+    font-size: 9pt;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: #475569;
-    padding-bottom: 0.08in;
-    margin-bottom: 0.12in;
+    padding-bottom: 0.06in;
+    margin-bottom: 0.08in;
     border-bottom: 2px solid #5e97dd;
   }
 
@@ -186,8 +172,8 @@
   }
 
   .recommendation-summary-print .print-td-label {
-    padding: 6pt 8pt 6pt 0;
-    font-size: 10.5pt;
+    padding: 4pt 6pt 4pt 0;
+    font-size: 10pt;
     font-weight: 500;
     color: #64748b;
     width: 42%;
@@ -195,11 +181,49 @@
   }
 
   .recommendation-summary-print .print-td-value {
-    padding: 6pt 0;
-    font-size: 11.5pt;
+    padding: 4pt 0;
+    font-size: 11pt;
     font-weight: 600;
     color: #1e293b;
     vertical-align: baseline;
+  }
+
+  /* ── Profile Strip (full-width) ── */
+  .recommendation-summary-print .print-profile-strip {
+    background: #eff6ff;
+    border: 1px solid #dbeafe;
+    border-radius: 8px;
+    padding: 0.14in 0.2in;
+    margin-bottom: 0.16in;
+    display: flex;
+    align-items: center;
+    gap: 0.2in;
+  }
+
+  .recommendation-summary-print .print-profile-header {
+    display: flex;
+    align-items: center;
+    gap: 0.1in;
+    flex-shrink: 0;
+  }
+
+  .recommendation-summary-print .print-profile-badge {
+    display: inline-block;
+    background: #2971b5;
+    color: #ffffff;
+    border-radius: 20px;
+    padding: 3pt 14pt;
+    font-size: 10pt;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  .recommendation-summary-print .print-profile-label {
+    font-size: 8pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
   }
 
   /* ── Pills (exposure risks) ── */
@@ -211,7 +235,7 @@
 
   .recommendation-summary-print .print-pill {
     display: inline-block;
-    background: #eff6ff;
+    background: #ffffff;
     border: 1px solid #bfdbfe;
     border-radius: 14px;
     padding: 2pt 10pt;
@@ -222,7 +246,7 @@
 
   /* ── Coating items ── */
   .recommendation-summary-print .print-coating {
-    padding: 7pt 0;
+    padding: 5pt 0;
   }
 
   .recommendation-summary-print .print-coating + .print-coating {
@@ -232,69 +256,71 @@
   .recommendation-summary-print .print-coating-name {
     font-weight: 700;
     color: #1e293b;
-    font-size: 11.5pt;
+    font-size: 11pt;
   }
 
   .recommendation-summary-print .print-coating-desc {
-    font-size: 10pt;
+    font-size: 9.5pt;
     color: #64748b;
-    margin-top: 2pt;
-    line-height: 1.45;
+    margin-top: 1pt;
+    line-height: 1.4;
   }
 
   /* ── Location rows ── */
   .recommendation-summary-print .print-loc-row {
     display: flex;
     align-items: baseline;
-    gap: 0.1in;
-    padding: 5pt 0;
-  }
-
-  .recommendation-summary-print .print-loc-row + .print-loc-row {
-    border-top: 1px solid #f0f2f5;
+    gap: 0.08in;
+    padding: 3pt 0;
   }
 
   .recommendation-summary-print .print-loc-num {
-    font-size: 10.5pt;
+    font-size: 10pt;
     font-weight: 700;
     color: #5e97dd;
     min-width: 0.3in;
   }
 
   .recommendation-summary-print .print-loc-name {
-    font-size: 11.5pt;
+    font-size: 11pt;
     font-weight: 600;
     color: #1e293b;
   }
 
   .recommendation-summary-print .print-note {
-    font-size: 10.5pt;
+    font-size: 10pt;
     color: #94a3b8;
     font-style: italic;
-    padding: 5pt 0;
+    padding: 3pt 0;
   }
 
   /* ── Contact block inside card ── */
   .recommendation-summary-print .print-contact-block {
-    margin-top: 0.12in;
-    padding-top: 0.12in;
-    border-top: 1px solid #e2e8f0;
+    margin-top: 0.08in;
+    padding-top: 0.08in;
+    border-top: 1px solid #e8ecf0;
   }
 
   /* ── Footer ── */
   .recommendation-summary-print .print-footer {
-    padding: 0.14in 0.2in;
+    padding-top: 0.1in;
     border-top: 2px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 8.5pt;
+    color: #94a3b8;
     margin-top: auto;
-    background: #f8fafc;
-    border-radius: 4px;
   }
 
-  .recommendation-summary-print .print-footer-disclaimer {
-    font-size: 8.5pt;
-    color: #64748b;
-    line-height: 1.55;
-    text-align: center;
-    margin: 0;
+  .recommendation-summary-print .print-footer-brand {
+    font-weight: 700;
+    color: #2971b5;
+    font-size: 9.5pt;
+  }
+
+  .recommendation-summary-print .print-footer-note {
+    font-style: italic;
+    text-align: right;
   }
 }

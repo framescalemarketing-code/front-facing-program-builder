@@ -217,26 +217,26 @@ function budgetConstraint(
     if (isLargeTeam) {
       return {
         allowedEu: ["Comfort", "Complete"],
-        label: "Operations Focused",
+        label: "Operationally Steady",
       };
     }
     return {
       allowedEu: ["Compliance", "Comfort", "Complete"],
-      label: "Operations Focused",
+      label: "Operationally Steady",
     };
   }
 
   if (budgetPreference === "good_budget") {
     return {
       allowedEu: ["Comfort", "Complete", "Covered"],
-      label: "Ready to Grow",
+      label: "Growing the Program",
     };
   }
 
   // unlimited_budget
   return {
     allowedEu: ["Complete", "Covered"],
-    label: "Full Program Investment",
+    label: "Full Investment",
   };
 }
 
@@ -253,6 +253,17 @@ const ALL_COATINGS: Omit<CoatingRecommendation, "reason">[] = [
     id: "anti_reflective",
     label: "Anti-Reflective",
     description: "Reduces glare and improves clarity in bright lighting.",
+  },
+  {
+    id: "anti_reflective_anti_fog",
+    label: "Anti-Reflective + Anti-Fog",
+    description: "Includes both anti-reflective and anti-fog treatments.",
+  },
+  {
+    id: "blue_light_anti_reflective",
+    label: "Blue Light + Anti-Reflective",
+    description:
+      "Reduces blue light exposure and adds anti-reflective coating.",
   },
   {
     id: "blue_light_filter",
@@ -303,6 +314,10 @@ export function recommendCoatings(inputs: {
           "anti_fog",
           "Recommended for your fog and humidity exposure to maintain clear visibility.",
         );
+        addCoating(
+          "anti_reflective_anti_fog",
+          "Combines anti-fog with glare reduction for humid, bright environments.",
+        );
         break;
       case "screen_intensive":
         addCoating(
@@ -310,8 +325,8 @@ export function recommendCoatings(inputs: {
           "Recommended for screen-intensive work to reduce eye strain over long shifts.",
         );
         addCoating(
-          "anti_reflective",
-          "Reduces screen glare for more comfortable extended screen use.",
+          "blue_light_anti_reflective",
+          "Pairs blue light protection with anti-reflective coating for extended screen use.",
         );
         break;
       case "outdoor_glare":
@@ -332,8 +347,8 @@ export function recommendCoatings(inputs: {
         break;
       case "chemical_splash":
         addCoating(
-          "anti_fog",
-          "Helps maintain visibility in chemical handling environments.",
+          "anti_reflective_anti_fog",
+          "Dual treatment helps maintain visibility in chemical handling environments.",
         );
         addCoating(
           "extra_scratch_coating",

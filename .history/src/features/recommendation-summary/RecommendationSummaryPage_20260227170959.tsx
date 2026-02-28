@@ -1142,7 +1142,7 @@ export function RecommendationSummaryPage({
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                           <div>
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
-                              Industry
+                              Work Type
                             </span>
                             <span className="text-sm font-bold text-slate-800">
                               {workType ?? "Not set"}
@@ -1397,41 +1397,22 @@ export function RecommendationSummaryPage({
             <span className="print-hero-eyebrow">
               Recommended Configuration
             </span>
-            <span className="print-hero-package">{posture.label}</span>
-            {(programConfig.programProfile.exposureRisks ?? []).length > 0 && (
-              <div className="print-pills print-hero-pills">
-                {(programConfig.programProfile.exposureRisks ?? []).map(
-                  (risk) => (
-                    <span key={risk} className="print-pill">
-                      {exposureRiskLabel(risk)}
-                    </span>
-                  ),
-                )}
-              </div>
-            )}
+            <span className="print-hero-package">{selectedPackage ?? "—"}</span>
           </div>
           <div className="print-hero-kpis">
-            <div className="print-kpi">
-              <span className="print-kpi-value">
-                {displayValue(selectedPackage)}
-              </span>
-              <span className="print-kpi-label">EU Package</span>
-            </div>
-            <div className="print-kpi">
-              <span className="print-kpi-value">
-                {displayValue(serviceTier)}
-              </span>
-              <span className="print-kpi-label">Service Tier</span>
-            </div>
             {coverageBand && (
               <div className="print-kpi">
                 <span className="print-kpi-value">{coverageBand}</span>
-                <span className="print-kpi-label">Team Size</span>
+                <span className="print-kpi-label">Employees</span>
               </div>
             )}
             <div className="print-kpi">
+              <span className="print-kpi-value">{posture.label}</span>
+              <span className="print-kpi-label">Profile</span>
+            </div>
+            <div className="print-kpi">
               <span className="print-kpi-value">{displayValue(workType)}</span>
-              <span className="print-kpi-label">Industry</span>
+              <span className="print-kpi-label">Work Type</span>
             </div>
           </div>
         </div>
@@ -1475,7 +1456,7 @@ export function RecommendationSummaryPage({
             <table className="print-table">
               <tbody>
                 <tr>
-                  <td className="print-td-label">Industry</td>
+                  <td className="print-td-label">Work Type</td>
                   <td className="print-td-value">{displayValue(workType)}</td>
                 </tr>
                 <tr>
@@ -1505,6 +1486,25 @@ export function RecommendationSummaryPage({
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* ── Profile Strip ── */}
+        <div className="print-profile-strip">
+          <div className="print-profile-header">
+            <span className="print-profile-badge">{posture.label}</span>
+            <span className="print-profile-label">Program Profile</span>
+          </div>
+          {(programConfig.programProfile.exposureRisks ?? []).length > 0 && (
+            <div className="print-pills">
+              {(programConfig.programProfile.exposureRisks ?? []).map(
+                (risk) => (
+                  <span key={risk} className="print-pill">
+                    {exposureRiskLabel(risk)}
+                  </span>
+                ),
+              )}
+            </div>
+          )}
         </div>
 
         {/* ── Two Card Row: Coatings + Locations/Contact ── */}

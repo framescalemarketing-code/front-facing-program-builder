@@ -1142,7 +1142,7 @@ export function RecommendationSummaryPage({
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                           <div>
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
-                              Industry
+                              Work Type
                             </span>
                             <span className="text-sm font-bold text-slate-800">
                               {workType ?? "Not set"}
@@ -1394,44 +1394,25 @@ export function RecommendationSummaryPage({
         {/* ── Hero Card ── */}
         <div className="print-hero">
           <div className="print-hero-left">
-            <span className="print-hero-eyebrow">
-              Recommended Configuration
+            <span className="print-hero-eyebrow">Recommended Configuration</span>
+            <span className="print-hero-package">
+              {selectedPackage ?? "—"} · {serviceTier ?? "—"} Service
             </span>
-            <span className="print-hero-package">{posture.label}</span>
-            {(programConfig.programProfile.exposureRisks ?? []).length > 0 && (
-              <div className="print-pills print-hero-pills">
-                {(programConfig.programProfile.exposureRisks ?? []).map(
-                  (risk) => (
-                    <span key={risk} className="print-pill">
-                      {exposureRiskLabel(risk)}
-                    </span>
-                  ),
-                )}
-              </div>
-            )}
           </div>
           <div className="print-hero-kpis">
-            <div className="print-kpi">
-              <span className="print-kpi-value">
-                {displayValue(selectedPackage)}
-              </span>
-              <span className="print-kpi-label">EU Package</span>
-            </div>
-            <div className="print-kpi">
-              <span className="print-kpi-value">
-                {displayValue(serviceTier)}
-              </span>
-              <span className="print-kpi-label">Service Tier</span>
-            </div>
             {coverageBand && (
               <div className="print-kpi">
                 <span className="print-kpi-value">{coverageBand}</span>
-                <span className="print-kpi-label">Team Size</span>
+                <span className="print-kpi-label">Employees</span>
               </div>
             )}
             <div className="print-kpi">
+              <span className="print-kpi-value">{posture.label}</span>
+              <span className="print-kpi-label">Profile</span>
+            </div>
+            <div className="print-kpi">
               <span className="print-kpi-value">{displayValue(workType)}</span>
-              <span className="print-kpi-label">Industry</span>
+              <span className="print-kpi-label">Work Type</span>
             </div>
           </div>
         </div>
@@ -1444,15 +1425,11 @@ export function RecommendationSummaryPage({
               <tbody>
                 <tr>
                   <td className="print-td-label">EU Package</td>
-                  <td className="print-td-value">
-                    {displayValue(selectedPackage)}
-                  </td>
+                  <td className="print-td-value">{displayValue(selectedPackage)}</td>
                 </tr>
                 <tr>
                   <td className="print-td-label">Service Tier</td>
-                  <td className="print-td-value">
-                    {displayValue(serviceTier)}
-                  </td>
+                  <td className="print-td-value">{displayValue(serviceTier)}</td>
                 </tr>
                 <tr>
                   <td className="print-td-label">Coverage Band</td>
@@ -1475,26 +1452,20 @@ export function RecommendationSummaryPage({
             <table className="print-table">
               <tbody>
                 <tr>
-                  <td className="print-td-label">Industry</td>
+                  <td className="print-td-label">Work Type</td>
                   <td className="print-td-value">{displayValue(workType)}</td>
                 </tr>
                 <tr>
                   <td className="print-td-label">Location Model</td>
-                  <td className="print-td-value">
-                    {displayValue(locationModel)}
-                  </td>
+                  <td className="print-td-value">{displayValue(locationModel)}</td>
                 </tr>
                 <tr>
                   <td className="print-td-label">Delivery</td>
-                  <td className="print-td-value">
-                    {displayValue(deliveryModel)}
-                  </td>
+                  <td className="print-td-value">{displayValue(deliveryModel)}</td>
                 </tr>
                 <tr>
                   <td className="print-td-label">Approval</td>
-                  <td className="print-td-value">
-                    {displayValue(approvalModel)}
-                  </td>
+                  <td className="print-td-value">{displayValue(approvalModel)}</td>
                 </tr>
                 {programPosture && (
                   <tr>
@@ -1505,6 +1476,23 @@ export function RecommendationSummaryPage({
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* ── Profile Strip ── */}
+        <div className="print-profile-strip">
+          <div className="print-profile-header">
+            <span className="print-profile-badge">{posture.label}</span>
+            <span className="print-profile-label">Program Profile</span>
+          </div>
+          {(programConfig.programProfile.exposureRisks ?? []).length > 0 && (
+            <div className="print-pills">
+              {(programConfig.programProfile.exposureRisks ?? []).map((risk) => (
+                <span key={risk} className="print-pill">
+                  {exposureRiskLabel(risk)}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ── Two Card Row: Coatings + Locations/Contact ── */}
@@ -1527,8 +1515,7 @@ export function RecommendationSummaryPage({
 
           <div className="print-card">
             <div className="print-card-title">
-              Locations{locations.length > 0 ? ` (${locations.length})` : ""}{" "}
-              &amp; Contact
+              Locations{locations.length > 0 ? ` (${locations.length})` : ""} &amp; Contact
             </div>
             {locations.length === 0 ? (
               <div className="print-note">
@@ -1584,12 +1571,10 @@ export function RecommendationSummaryPage({
 
         {/* ── Footer ── */}
         <div className="print-footer">
-          <p className="print-footer-disclaimer">
-            This document is a preliminary recommendation only and does not
-            constitute a final program agreement. An OSSO Program Specialist
-            will review this information with you and all details, including
-            coverage, coatings, and service options, are subject to change.
-          </p>
+          <span className="print-footer-brand">OSSO Safety Eyewear</span>
+          <span className="print-footer-note">
+            Starting point — your specialist will review and finalize.
+          </span>
         </div>
       </div>
     </section>

@@ -1142,7 +1142,7 @@ export function RecommendationSummaryPage({
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                           <div>
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
-                              Industry
+                              Work Type
                             </span>
                             <span className="text-sm font-bold text-slate-800">
                               {workType ?? "Not set"}
@@ -1391,192 +1391,171 @@ export function RecommendationSummaryPage({
           </div>
         </div>
 
-        {/* ── Hero Card ── */}
-        <div className="print-hero">
-          <div className="print-hero-left">
-            <span className="print-hero-eyebrow">
-              Recommended Configuration
+        {/* ── Recommendation Banner ── */}
+        <div className="print-banner">
+          <div className="print-banner-main">
+            <span className="print-banner-label">Recommended</span>
+            <span className="print-banner-value">
+              {selectedPackage ?? "—"} · {serviceTier ?? "—"} Service
             </span>
-            <span className="print-hero-package">{posture.label}</span>
-            {(programConfig.programProfile.exposureRisks ?? []).length > 0 && (
-              <div className="print-pills print-hero-pills">
-                {(programConfig.programProfile.exposureRisks ?? []).map(
-                  (risk) => (
-                    <span key={risk} className="print-pill">
-                      {exposureRiskLabel(risk)}
-                    </span>
+          </div>
+          <div className="print-banner-stats">
+            {coverageBand && (
+              <div className="print-stat">
+                <span className="print-stat-num">{coverageBand}</span>
+                <span className="print-stat-label">Employees</span>
+              </div>
+            )}
+            <div className="print-stat">
+              <span className="print-stat-num">
+                {posture.label.split(" ")[0]}
+              </span>
+              <span className="print-stat-label">Profile</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Snapshot Grid ── */}
+        <div className="print-grid">
+          {/* Left Column */}
+          <div className="print-col">
+            <div className="print-group">
+              <div className="print-group-title">Coverage &amp; Service</div>
+              <div className="print-row">
+                <span className="print-label">EU Package</span>
+                <span className="print-val">
+                  {displayValue(selectedPackage)}
+                </span>
+              </div>
+              <div className="print-row">
+                <span className="print-label">Service Tier</span>
+                <span className="print-val">{displayValue(serviceTier)}</span>
+              </div>
+              <div className="print-row">
+                <span className="print-label">Coverage Band</span>
+                <span className="print-val">
+                  {coverageBand ? `${coverageBand} employees` : "—"}
+                </span>
+              </div>
+              {exposureSummary && (
+                <div className="print-row">
+                  <span className="print-label">Exposure</span>
+                  <span className="print-val">{exposureSummary}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="print-group">
+              <div className="print-group-title">Program Guidelines</div>
+              <div className="print-row">
+                <span className="print-label">Work Type</span>
+                <span className="print-val">{displayValue(workType)}</span>
+              </div>
+              <div className="print-row">
+                <span className="print-label">Location Model</span>
+                <span className="print-val">{displayValue(locationModel)}</span>
+              </div>
+              <div className="print-row">
+                <span className="print-label">Delivery</span>
+                <span className="print-val">{displayValue(deliveryModel)}</span>
+              </div>
+              <div className="print-row">
+                <span className="print-label">Approval</span>
+                <span className="print-val">{displayValue(approvalModel)}</span>
+              </div>
+              {programPosture && (
+                <div className="print-row">
+                  <span className="print-label">Budget</span>
+                  <span className="print-val">{programPosture}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div className="print-col">
+            <div className="print-group">
+              <div className="print-group-title">Profile — {posture.label}</div>
+              {(programConfig.programProfile.exposureRisks ?? []).length >
+                0 && (
+                <div className="print-pills">
+                  {(programConfig.programProfile.exposureRisks ?? []).map(
+                    (risk) => (
+                      <span key={risk} className="print-pill">
+                        {exposureRiskLabel(risk)}
+                      </span>
+                    ),
+                  )}
+                </div>
+              )}
+            </div>
+
+            {(programConfig.coatingRecommendations ?? []).length > 0 && (
+              <div className="print-group">
+                <div className="print-group-title">Recommended Coatings</div>
+                {(programConfig.coatingRecommendations ?? []).map(
+                  (coating: CoatingRecommendation) => (
+                    <div key={coating.id} className="print-row">
+                      <span className="print-label">{coating.label}</span>
+                      <span className="print-val-sub">
+                        {coating.description || coating.reason}
+                      </span>
+                    </div>
                   ),
                 )}
               </div>
             )}
-          </div>
-          <div className="print-hero-kpis">
-            <div className="print-kpi">
-              <span className="print-kpi-value">
-                {displayValue(selectedPackage)}
-              </span>
-              <span className="print-kpi-label">EU Package</span>
-            </div>
-            <div className="print-kpi">
-              <span className="print-kpi-value">
-                {displayValue(serviceTier)}
-              </span>
-              <span className="print-kpi-label">Service Tier</span>
-            </div>
-            {coverageBand && (
-              <div className="print-kpi">
-                <span className="print-kpi-value">{coverageBand}</span>
-                <span className="print-kpi-label">Team Size</span>
+
+            <div className="print-group">
+              <div className="print-group-title">
+                Locations
+                {locations.length > 0 ? ` (${locations.length})` : ""}
               </div>
-            )}
-            <div className="print-kpi">
-              <span className="print-kpi-value">{displayValue(workType)}</span>
-              <span className="print-kpi-label">Industry</span>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Two Card Row: Coverage + Guidelines ── */}
-        <div className="print-card-row">
-          <div className="print-card">
-            <div className="print-card-title">Coverage &amp; Service</div>
-            <table className="print-table">
-              <tbody>
-                <tr>
-                  <td className="print-td-label">EU Package</td>
-                  <td className="print-td-value">
-                    {displayValue(selectedPackage)}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="print-td-label">Service Tier</td>
-                  <td className="print-td-value">
-                    {displayValue(serviceTier)}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="print-td-label">Coverage Band</td>
-                  <td className="print-td-value">
-                    {coverageBand ? `${coverageBand} employees` : "—"}
-                  </td>
-                </tr>
-                {exposureSummary && (
-                  <tr>
-                    <td className="print-td-label">Exposure</td>
-                    <td className="print-td-value">{exposureSummary}</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="print-card">
-            <div className="print-card-title">Program Guidelines</div>
-            <table className="print-table">
-              <tbody>
-                <tr>
-                  <td className="print-td-label">Industry</td>
-                  <td className="print-td-value">{displayValue(workType)}</td>
-                </tr>
-                <tr>
-                  <td className="print-td-label">Location Model</td>
-                  <td className="print-td-value">
-                    {displayValue(locationModel)}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="print-td-label">Delivery</td>
-                  <td className="print-td-value">
-                    {displayValue(deliveryModel)}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="print-td-label">Approval</td>
-                  <td className="print-td-value">
-                    {displayValue(approvalModel)}
-                  </td>
-                </tr>
-                {programPosture && (
-                  <tr>
-                    <td className="print-td-label">Budget</td>
-                    <td className="print-td-value">{programPosture}</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* ── Two Card Row: Coatings + Locations/Contact ── */}
-        <div className="print-card-row">
-          {(programConfig.coatingRecommendations ?? []).length > 0 && (
-            <div className="print-card">
-              <div className="print-card-title">Recommended Coatings</div>
-              {(programConfig.coatingRecommendations ?? []).map(
-                (coating: CoatingRecommendation) => (
-                  <div key={coating.id} className="print-coating">
-                    <div className="print-coating-name">{coating.label}</div>
-                    <div className="print-coating-desc">
-                      {coating.description || coating.reason}
-                    </div>
+              {locations.length === 0 ? (
+                <div className="print-row-note">
+                  Details collected on first specialist call.
+                </div>
+              ) : (
+                locations.map((location, idx) => (
+                  <div key={`${location.label}_${idx}`} className="print-row">
+                    <span className="print-label">#{idx + 1}</span>
+                    <span className="print-val">
+                      {location.label || `Location ${idx + 1}`}
+                      {location.oneWayMiles > 0 &&
+                        ` · ${location.oneWayMiles} mi`}
+                    </span>
                   </div>
-                ),
+                ))
               )}
             </div>
-          )}
 
-          <div className="print-card">
-            <div className="print-card-title">
-              Locations{locations.length > 0 ? ` (${locations.length})` : ""}{" "}
-              &amp; Contact
-            </div>
-            {locations.length === 0 ? (
-              <div className="print-note">
-                Site details collected on first specialist call.
-              </div>
-            ) : (
-              locations.map((location, idx) => (
-                <div key={`${location.label}_${idx}`} className="print-loc-row">
-                  <span className="print-loc-num">#{idx + 1}</span>
-                  <span className="print-loc-name">
-                    {location.label || `Location ${idx + 1}`}
-                    {location.oneWayMiles > 0
-                      ? ` · ${location.oneWayMiles} mi`
-                      : ""}
-                  </span>
-                </div>
-              ))
-            )}
             {(companyName || contactName || email || phone) && (
-              <div className="print-contact-block">
-                <table className="print-table">
-                  <tbody>
-                    {companyName && (
-                      <tr>
-                        <td className="print-td-label">Company</td>
-                        <td className="print-td-value">{companyName}</td>
-                      </tr>
-                    )}
-                    {contactName && (
-                      <tr>
-                        <td className="print-td-label">Name</td>
-                        <td className="print-td-value">{contactName}</td>
-                      </tr>
-                    )}
-                    {email && (
-                      <tr>
-                        <td className="print-td-label">Email</td>
-                        <td className="print-td-value">{email}</td>
-                      </tr>
-                    )}
-                    {phone && (
-                      <tr>
-                        <td className="print-td-label">Phone</td>
-                        <td className="print-td-value">{phone}</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+              <div className="print-group">
+                <div className="print-group-title">Contact</div>
+                {companyName && (
+                  <div className="print-row">
+                    <span className="print-label">Company</span>
+                    <span className="print-val">{companyName}</span>
+                  </div>
+                )}
+                {contactName && (
+                  <div className="print-row">
+                    <span className="print-label">Name</span>
+                    <span className="print-val">{contactName}</span>
+                  </div>
+                )}
+                {email && (
+                  <div className="print-row">
+                    <span className="print-label">Email</span>
+                    <span className="print-val">{email}</span>
+                  </div>
+                )}
+                {phone && (
+                  <div className="print-row">
+                    <span className="print-label">Phone</span>
+                    <span className="print-val">{phone}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1584,12 +1563,10 @@ export function RecommendationSummaryPage({
 
         {/* ── Footer ── */}
         <div className="print-footer">
-          <p className="print-footer-disclaimer">
-            This document is a preliminary recommendation only and does not
-            constitute a final program agreement. An OSSO Program Specialist
-            will review this information with you and all details, including
-            coverage, coatings, and service options, are subject to change.
-          </p>
+          <span className="print-footer-brand">OSSO Safety Eyewear</span>
+          <span className="print-footer-note">
+            Starting point — your specialist will review and finalize.
+          </span>
         </div>
       </div>
     </section>

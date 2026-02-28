@@ -217,26 +217,26 @@ function budgetConstraint(
     if (isLargeTeam) {
       return {
         allowedEu: ["Comfort", "Complete"],
-        label: "Operations Focused",
+        label: "Operationally Steady",
       };
     }
     return {
       allowedEu: ["Compliance", "Comfort", "Complete"],
-      label: "Operations Focused",
+      label: "Operationally Steady",
     };
   }
 
   if (budgetPreference === "good_budget") {
     return {
       allowedEu: ["Comfort", "Complete", "Covered"],
-      label: "Ready to Grow",
+      label: "Growing the Program",
     };
   }
 
   // unlimited_budget
   return {
     allowedEu: ["Complete", "Covered"],
-    label: "Full Program Investment",
+    label: "Full Investment",
   };
 }
 

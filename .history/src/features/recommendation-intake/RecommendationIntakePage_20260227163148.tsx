@@ -62,11 +62,11 @@ const STEPS: WizardStep[] = [
   },
   {
     id: "work_type",
-    sectionLabel: "Industry",
+    sectionLabel: "Work Type",
     heroTitle: "What kind of work does your team do?",
     heroSubtitle:
       "This helps us match the right protection to your environment",
-    progressLabel: "Industry",
+    progressLabel: "Work Type",
   },
   {
     id: "coverage",

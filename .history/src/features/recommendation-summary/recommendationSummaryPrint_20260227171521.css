@@ -5,7 +5,7 @@
 @media print {
   @page {
     size: letter;
-    margin: 0.4in 0.5in;
+    margin: 0.55in 0.65in;
   }
 
   * {
@@ -104,11 +104,10 @@
   }
 
   .recommendation-summary-print .print-hero-package {
-    font-size: 18pt;
+    font-size: 20pt;
     font-weight: 700;
     color: #1e293b;
     letter-spacing: -0.01em;
-    white-space: nowrap;
   }
 
   .recommendation-summary-print .print-hero-pills {
@@ -117,35 +116,35 @@
 
   .recommendation-summary-print .print-hero-kpis {
     display: flex;
-    gap: 0.12in;
+    gap: 0.14in;
   }
 
   .recommendation-summary-print .print-kpi {
     text-align: center;
-    padding: 0.1in 0.16in;
+    padding: 0.12in 0.2in;
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 6px;
-    min-width: 0.85in;
+    min-width: 0.95in;
   }
 
   .recommendation-summary-print .print-kpi-value {
     display: block;
-    font-size: 10pt;
+    font-size: 10.5pt;
     font-weight: 700;
     color: #2971b5;
-    line-height: 1.2;
+    line-height: 1.25;
     white-space: nowrap;
   }
 
   .recommendation-summary-print .print-kpi-label {
     display: block;
-    font-size: 7pt;
+    font-size: 7.5pt;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: #94a3b8;
-    margin-top: 3pt;
+    margin-top: 4pt;
   }
 
   /* ── Card Row (two side-by-side) ── */
@@ -161,7 +160,7 @@
     background: transparent;
     border: none;
     border-radius: 0;
-    padding: 0 0.12in;
+    padding: 0;
   }
 
   .recommendation-summary-print .print-card-title {

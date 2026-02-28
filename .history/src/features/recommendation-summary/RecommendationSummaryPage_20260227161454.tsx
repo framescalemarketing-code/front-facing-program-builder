@@ -225,35 +225,35 @@ function postureCard(tier: ProgramComplexityTier) {
       accentColor: string;
     }
   > = {
-    structurally_sound: {
-      label: "Structurally Sound",
+    foundational: {
+      label: "Compliance First",
       badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
       explanation:
-        "Your program profile reflects a smaller team with a compliance-first mindset and limited exposure complexity. The recommendation is built around getting a clear, enforceable standard in place — defined eligibility, a simple ordering path, and the controls to start strong. Everything is sized so you can build on it as the program matures.",
+        "Right now the priority is getting a clear, enforceable safety eyewear standard in place. Your team may not have a formal program yet — or the one you have needs structure. This recommendation gives you defined eligibility, a simple ordering path, and the compliance controls to start strong. Everything here is sized so you can build on it as the program matures.",
       icon: "",
       accentColor: "#475569",
     },
-    operationally_strong: {
-      label: "Operationally Strong",
+    structured: {
+      label: "Operations Focused",
       badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
       explanation:
-        "Your program profile reflects a mid-tier operation focused on keeping things running smoothly. With an operations-focused budget direction, some exposure risks selected, and a team that's past the startup phase, the recommendation is tuned to reduce day-to-day friction — streamlined workflows, reliable employee access, and enough oversight to catch problems before they compound.",
+        "You've got a program — the challenge is keeping it running smoothly as your team grows. Ordering bottlenecks, missed reorders, and unclear eligibility are the friction points at this stage. This recommendation is tuned to keep daily operations moving: streamlined workflows, reliable employee access, and enough oversight to catch problems before they compound.",
       icon: "",
       accentColor: "#475569",
     },
-    system_scalable: {
-      label: "System Scalable",
+    multi_site_controlled: {
+      label: "Ready to Grow",
       badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
       explanation:
-        "Your program profile reflects a larger employee count, multiple sites, and growing capital investment. At this stage, manual coordination breaks down — standards drift between sites, exceptions pile up, and execution gets inconsistent. The recommendation is built for the growth phase: keeping your program aligned across locations and giving you the infrastructure to scale without losing control.",
+        "Multiple locations and a growing headcount mean your program can't rely on manual coordination anymore. Standards drift between sites, exceptions pile up, and execution gets inconsistent fast. This recommendation is built for the growth phase — keeping your program aligned across locations, limiting exception drift, and giving you the infrastructure to scale without losing control.",
       icon: "",
       accentColor: "#475569",
     },
-    enterprise_grade: {
-      label: "Enterprise Grade",
+    enterprise_scale: {
+      label: "Full Program Investment",
       badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
       explanation:
-        "Your program profile reflects top-tier selections, a large workforce across multiple sites, and high operational complexity. At your scale, governance, dedicated support, and cross-site consistency aren't optional — they're the baseline. The recommendation includes specialist partnership, leadership-level visibility, and processes built to hold up across regions, roles, and compliance environments.",
+        "At your scale, governance, dedicated support, and cross-site consistency aren't optional — they're the baseline. This recommendation reflects a full investment in your safety eyewear program: specialist partnership, leadership-level visibility, and processes built to hold up across multiple regions, roles, and compliance environments.",
       icon: "",
       accentColor: "#475569",
     },
@@ -327,6 +327,15 @@ function displayValue(value: string | null) {
   return value ?? "Not provided";
 }
 
+function PrintDataRow(props: { label: string; value: string | null }) {
+  return (
+    <tr>
+      <th scope="row">{props.label}</th>
+      <td>{displayValue(props.value)}</td>
+    </tr>
+  );
+}
+
 // ─── NEW: Interactive Program Summary Card (replaces SVG placeholder) ───────
 
 type SummaryCardSection =
@@ -357,7 +366,7 @@ function ProgramSummaryCard(props: {
     icon: string;
   }> = [
     { id: "snapshot", label: "Snapshot", icon: "📋" },
-    { id: "profile", label: "Profile", icon: "📊" },
+    { id: "posture", label: "Posture", icon: "�" },
     { id: "coverage", label: "Coverage", icon: "🛡️" },
     ...(props.hasCoatings
       ? [
@@ -537,9 +546,7 @@ export function RecommendationSummaryPage({
       : deriveProgramConfigFromDraft(draft ?? defaultDraft);
 
   const posture = postureCard(
-    programConfig.postureTier ??
-      programConfig.readinessTier ??
-      "structurally_sound",
+    programConfig.postureTier ?? programConfig.readinessTier ?? "foundational",
   );
   const companyName =
     nonEmpty(programConfig.company.companyName) ??
@@ -890,13 +897,13 @@ export function RecommendationSummaryPage({
                     </div>
                   )}
 
-                  {/* Profile tab: program profile explanation + input-based reasoning */}
+                  {/* Profile tab: program profile explanation + budget context */}
                   {activeCardSection === "profile" && (
                     <div className="p-0">
-                      {/* Profile header */}
+                      {/* Posture header */}
                       <div className="px-6 pt-6 pb-5 bg-gradient-to-br from-slate-50 via-white to-slate-50/80">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
-                          Your Program Profile
+                          Derived Program Posture
                         </p>
                         <div className="inline-flex rounded-full border border-[#244093]/20 bg-[#244093]/[0.06] px-4 py-1.5 text-sm font-bold uppercase tracking-wide text-[#244093] mb-3">
                           {posture.label}
@@ -906,130 +913,43 @@ export function RecommendationSummaryPage({
                         </p>
                       </div>
 
-                      {/* Why you received this profile — input-based reasoning */}
-                      <div className="px-6 py-5 border-t border-slate-100">
-                        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
-                          Why you received this profile
-                        </p>
-                        <div className="space-y-2.5">
+                      {/* Budget direction + key context */}
+                      <div className="px-6 py-4 border-t border-slate-100">
+                        <div className="grid grid-cols-2 gap-4">
                           {programPosture && (
-                            <div className="flex items-start gap-2.5">
-                              <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                →
+                            <div>
+                              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
+                                Budget Direction
                               </span>
-                              <p className="text-sm text-slate-600 leading-relaxed">
-                                <span className="font-medium text-slate-700">
-                                  Budget direction:
-                                </span>{" "}
+                              <span className="text-sm font-bold text-slate-800">
                                 {programPosture}
-                              </p>
+                              </span>
                             </div>
                           )}
                           {coverageBand && (
-                            <div className="flex items-start gap-2.5">
-                              <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                →
+                            <div>
+                              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
+                                Team Size
                               </span>
-                              <p className="text-sm text-slate-600 leading-relaxed">
-                                <span className="font-medium text-slate-700">
-                                  Team size:
-                                </span>{" "}
+                              <span className="text-sm font-bold text-slate-800">
                                 {coverageBand} employees
-                              </p>
-                            </div>
-                          )}
-                          {locationModel && (
-                            <div className="flex items-start gap-2.5">
-                              <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                →
                               </span>
-                              <p className="text-sm text-slate-600 leading-relaxed">
-                                <span className="font-medium text-slate-700">
-                                  Locations:
-                                </span>{" "}
-                                {locationModel}
-                              </p>
-                            </div>
-                          )}
-                          {exposureSummary && (
-                            <div className="flex items-start gap-2.5">
-                              <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                →
-                              </span>
-                              <p className="text-sm text-slate-600 leading-relaxed">
-                                <span className="font-medium text-slate-700">
-                                  Exposure risks:
-                                </span>{" "}
-                                {exposureSummary}
-                              </p>
-                            </div>
-                          )}
-                          {workType && (
-                            <div className="flex items-start gap-2.5">
-                              <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                →
-                              </span>
-                              <p className="text-sm text-slate-600 leading-relaxed">
-                                <span className="font-medium text-slate-700">
-                                  Industry:
-                                </span>{" "}
-                                {workType}
-                              </p>
-                            </div>
-                          )}
-                          {deliveryModel && (
-                            <div className="flex items-start gap-2.5">
-                              <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                →
-                              </span>
-                              <p className="text-sm text-slate-600 leading-relaxed">
-                                <span className="font-medium text-slate-700">
-                                  Delivery model:
-                                </span>{" "}
-                                {deliveryModel}
-                              </p>
-                            </div>
-                          )}
-                          {approvalModel && (
-                            <div className="flex items-start gap-2.5">
-                              <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                →
-                              </span>
-                              <p className="text-sm text-slate-600 leading-relaxed">
-                                <span className="font-medium text-slate-700">
-                                  Approval routing:
-                                </span>{" "}
-                                {approvalModel}
-                              </p>
-                            </div>
-                          )}
-                          {(programConfig.coatingRecommendations ?? []).length >
-                            0 && (
-                            <div className="flex items-start gap-2.5">
-                              <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                →
-                              </span>
-                              <p className="text-sm text-slate-600 leading-relaxed">
-                                <span className="font-medium text-slate-700">
-                                  Recommended coatings:
-                                </span>{" "}
-                                {(programConfig.coatingRecommendations ?? [])
-                                  .map((c: CoatingRecommendation) => c.label)
-                                  .join(", ")}
-                              </p>
                             </div>
                           )}
                         </div>
                       </div>
 
-                      {/* Footer note */}
+                      {/* Note */}
                       <div className="px-6 py-4 border-t border-slate-100 bg-gradient-to-r from-[#244093]/[0.03] to-[#2971b5]/[0.02]">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[#244093]/70 mb-1">
+                          How this is determined
+                        </p>
                         <p className="text-sm text-slate-600 leading-relaxed">
-                          Your profile is derived from the full picture — team
+                          Your posture is derived from the full picture — team
                           size, number of locations, exposure complexity,
-                          delivery structure, budget posture, and approval
-                          routing. It’s not a preference you pick; it reflects
-                          where your program actually sits today.
+                          delivery structure, and approval routing. It's not a
+                          preference you pick; it reflects where your program
+                          actually sits today.
                         </p>
                       </div>
                     </div>
@@ -1142,7 +1062,7 @@ export function RecommendationSummaryPage({
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                           <div>
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
-                              Industry
+                              Work Type
                             </span>
                             <span className="text-sm font-bold text-slate-800">
                               {workType ?? "Not set"}
@@ -1174,7 +1094,7 @@ export function RecommendationSummaryPage({
                           </div>
                           <div>
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
-                              Program Profile
+                              Program Posture
                             </span>
                             <span className="text-sm font-bold text-slate-800">
                               {programPosture ?? "Not set"}
@@ -1373,224 +1293,118 @@ export function RecommendationSummaryPage({
         </div>
       </div>
 
-      {/* Print-only version — single-page snapshot */}
+      {/* Print-only version (unchanged) */}
       <div className="print-only recommendation-summary-print">
-        {/* ── Header ── */}
-        <div className="print-header">
+        <header className="print-header">
           <img
             src="/brand/osso/osso-logo-horizontal.png"
-            alt="OSSO Safety Eyewear"
+            alt="OSSO logo"
             className="print-logo"
           />
-          <div className="print-header-right">
-            <div className="print-title">Program Recommendation</div>
-            <div className="print-meta">
-              {generatedOn}
-              {companyName && ` · ${companyName}`}
-            </div>
+          <div className="print-header-copy">
+            <h1>Program Recommendation Summary</h1>
+            <p>Generated on {generatedOn}</p>
+            <p>Company: {displayValue(companyName)}</p>
           </div>
-        </div>
+        </header>
 
-        {/* ── Hero Card ── */}
-        <div className="print-hero">
-          <div className="print-hero-left">
-            <span className="print-hero-eyebrow">
-              Recommended Configuration
-            </span>
-            <span className="print-hero-package">{posture.label}</span>
-            {(programConfig.programProfile.exposureRisks ?? []).length > 0 && (
-              <div className="print-pills print-hero-pills">
-                {(programConfig.programProfile.exposureRisks ?? []).map(
-                  (risk) => (
-                    <span key={risk} className="print-pill">
-                      {exposureRiskLabel(risk)}
-                    </span>
+        <section className="print-section">
+          <h2>Program snapshot</h2>
+          <p>{revealSummary}</p>
+          {snapshotContext ? (
+            <p className="print-note">{snapshotContext}</p>
+          ) : null}
+        </section>
+
+        <section className="print-section">
+          <h2>Program profile and rationale</h2>
+          <p>
+            <strong>{posture.label}.</strong> {posture.explanation}
+          </p>
+          <p className="print-note">{trustNote}</p>
+        </section>
+
+        <section className="print-section">
+          <h2>Coverage</h2>
+          <table>
+            <tbody>
+              <PrintDataRow label="EU Package" value={selectedPackage} />
+              <PrintDataRow label="Service Tier" value={serviceTier} />
+              <PrintDataRow label="Coverage Band" value={coverageBand} />
+              <PrintDataRow label="Exposure Profile" value={exposureSummary} />
+            </tbody>
+          </table>
+          {packageTierSummary ? (
+            <p className="print-note">{packageTierSummary}</p>
+          ) : null}
+        </section>
+
+        {(programConfig.coatingRecommendations ?? []).length > 0 && (
+          <section className="print-section">
+            <h2>Recommended coatings — Did you consider?</h2>
+            <p>Based on your industry and exposure profile:</p>
+            <table>
+              <tbody>
+                {(programConfig.coatingRecommendations ?? []).map(
+                  (coating: CoatingRecommendation) => (
+                    <tr key={coating.id}>
+                      <th scope="row">{coating.label}</th>
+                      <td>{coating.reason}</td>
+                    </tr>
                   ),
                 )}
-              </div>
-            )}
-          </div>
-          <div className="print-hero-kpis">
-            <div className="print-kpi">
-              <span className="print-kpi-value">
-                {displayValue(selectedPackage)}
-              </span>
-              <span className="print-kpi-label">EU Package</span>
-            </div>
-            <div className="print-kpi">
-              <span className="print-kpi-value">
-                {displayValue(serviceTier)}
-              </span>
-              <span className="print-kpi-label">Service Tier</span>
-            </div>
-            {coverageBand && (
-              <div className="print-kpi">
-                <span className="print-kpi-value">{coverageBand}</span>
-                <span className="print-kpi-label">Team Size</span>
-              </div>
-            )}
-            <div className="print-kpi">
-              <span className="print-kpi-value">{displayValue(workType)}</span>
-              <span className="print-kpi-label">Industry</span>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Two Card Row: Coverage + Guidelines ── */}
-        <div className="print-card-row">
-          <div className="print-card">
-            <div className="print-card-title">Coverage &amp; Service</div>
-            <table className="print-table">
-              <tbody>
-                <tr>
-                  <td className="print-td-label">EU Package</td>
-                  <td className="print-td-value">
-                    {displayValue(selectedPackage)}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="print-td-label">Service Tier</td>
-                  <td className="print-td-value">
-                    {displayValue(serviceTier)}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="print-td-label">Coverage Band</td>
-                  <td className="print-td-value">
-                    {coverageBand ? `${coverageBand} employees` : "—"}
-                  </td>
-                </tr>
-                {exposureSummary && (
-                  <tr>
-                    <td className="print-td-label">Exposure</td>
-                    <td className="print-td-value">{exposureSummary}</td>
-                  </tr>
-                )}
               </tbody>
             </table>
-          </div>
+          </section>
+        )}
 
-          <div className="print-card">
-            <div className="print-card-title">Program Guidelines</div>
-            <table className="print-table">
+        <section className="print-section">
+          <h2>Approvals and logistics</h2>
+          <table>
+            <tbody>
+              <PrintDataRow label="Work Type" value={workType} />
+              <PrintDataRow label="Location Model" value={locationModel} />
+              <PrintDataRow label="Program Profile" value={programPosture} />
+              <PrintDataRow label="Delivery Model" value={deliveryModel} />
+              <PrintDataRow label="Approval Model" value={approvalModel} />
+            </tbody>
+          </table>
+        </section>
+
+        <section className="print-section">
+          <h2>Locations</h2>
+          {locations.length === 0 ? (
+            <p>Not provided</p>
+          ) : (
+            <table>
               <tbody>
-                <tr>
-                  <td className="print-td-label">Industry</td>
-                  <td className="print-td-value">{displayValue(workType)}</td>
-                </tr>
-                <tr>
-                  <td className="print-td-label">Location Model</td>
-                  <td className="print-td-value">
-                    {displayValue(locationModel)}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="print-td-label">Delivery</td>
-                  <td className="print-td-value">
-                    {displayValue(deliveryModel)}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="print-td-label">Approval</td>
-                  <td className="print-td-value">
-                    {displayValue(approvalModel)}
-                  </td>
-                </tr>
-                {programPosture && (
-                  <tr>
-                    <td className="print-td-label">Budget</td>
-                    <td className="print-td-value">{programPosture}</td>
+                {locations.map((location, idx) => (
+                  <tr key={`${location.label}_${idx}`}>
+                    <th scope="row">Location {idx + 1}</th>
+                    <td>
+                      {location.oneWayMiles > 50
+                        ? "Potential travel surcharge"
+                        : "No travel surcharge flagged"}
+                    </td>
                   </tr>
-                )}
+                ))}
               </tbody>
             </table>
-          </div>
-        </div>
-
-        {/* ── Two Card Row: Coatings + Locations/Contact ── */}
-        <div className="print-card-row">
-          {(programConfig.coatingRecommendations ?? []).length > 0 && (
-            <div className="print-card">
-              <div className="print-card-title">Recommended Coatings</div>
-              {(programConfig.coatingRecommendations ?? []).map(
-                (coating: CoatingRecommendation) => (
-                  <div key={coating.id} className="print-coating">
-                    <div className="print-coating-name">{coating.label}</div>
-                    <div className="print-coating-desc">
-                      {coating.description || coating.reason}
-                    </div>
-                  </div>
-                ),
-              )}
-            </div>
           )}
+        </section>
 
-          <div className="print-card">
-            <div className="print-card-title">
-              Locations{locations.length > 0 ? ` (${locations.length})` : ""}{" "}
-              &amp; Contact
-            </div>
-            {locations.length === 0 ? (
-              <div className="print-note">
-                Site details collected on first specialist call.
-              </div>
-            ) : (
-              locations.map((location, idx) => (
-                <div key={`${location.label}_${idx}`} className="print-loc-row">
-                  <span className="print-loc-num">#{idx + 1}</span>
-                  <span className="print-loc-name">
-                    {location.label || `Location ${idx + 1}`}
-                    {location.oneWayMiles > 0
-                      ? ` · ${location.oneWayMiles} mi`
-                      : ""}
-                  </span>
-                </div>
-              ))
-            )}
-            {(companyName || contactName || email || phone) && (
-              <div className="print-contact-block">
-                <table className="print-table">
-                  <tbody>
-                    {companyName && (
-                      <tr>
-                        <td className="print-td-label">Company</td>
-                        <td className="print-td-value">{companyName}</td>
-                      </tr>
-                    )}
-                    {contactName && (
-                      <tr>
-                        <td className="print-td-label">Name</td>
-                        <td className="print-td-value">{contactName}</td>
-                      </tr>
-                    )}
-                    {email && (
-                      <tr>
-                        <td className="print-td-label">Email</td>
-                        <td className="print-td-value">{email}</td>
-                      </tr>
-                    )}
-                    {phone && (
-                      <tr>
-                        <td className="print-td-label">Phone</td>
-                        <td className="print-td-value">{phone}</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ── Footer ── */}
-        <div className="print-footer">
-          <p className="print-footer-disclaimer">
-            This document is a preliminary recommendation only and does not
-            constitute a final program agreement. An OSSO Program Specialist
-            will review this information with you and all details, including
-            coverage, coatings, and service options, are subject to change.
-          </p>
-        </div>
+        <section className="print-section">
+          <h2>Contact and profile</h2>
+          <table>
+            <tbody>
+              <PrintDataRow label="Company" value={companyName} />
+              <PrintDataRow label="Safety Contact" value={contactName} />
+              <PrintDataRow label="Role" value={contactRole} />
+              <PrintDataRow label="Email" value={email} />
+              <PrintDataRow label="Phone" value={phone} />
+            </tbody>
+          </table>
+        </section>
       </div>
     </section>
   );

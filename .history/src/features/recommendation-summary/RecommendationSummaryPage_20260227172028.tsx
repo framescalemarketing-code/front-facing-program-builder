@@ -1394,9 +1394,7 @@ export function RecommendationSummaryPage({
         {/* ── Hero Card ── */}
         <div className="print-hero">
           <div className="print-hero-left">
-            <span className="print-hero-eyebrow">
-              Recommended Configuration
-            </span>
+            <span className="print-hero-eyebrow">Recommended Configuration</span>
             <span className="print-hero-package">{posture.label}</span>
             {(programConfig.programProfile.exposureRisks ?? []).length > 0 && (
               <div className="print-pills print-hero-pills">

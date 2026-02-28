@@ -62,11 +62,11 @@ const STEPS: WizardStep[] = [
   },
   {
     id: "work_type",
-    sectionLabel: "Industry",
+    sectionLabel: "Work Type",
     heroTitle: "What kind of work does your team do?",
     heroSubtitle:
       "This helps us match the right protection to your environment",
-    progressLabel: "Industry",
+    progressLabel: "Work Type",
   },
   {
     id: "coverage",
@@ -2300,7 +2300,7 @@ function budgetPreferenceExplainer(value: ProgramBudgetPreference) {
       impact:
         "Program structure stays focused on clear standards, defined eligibility, and predictable compliance execution.",
       recommendation:
-        "Recommendation leans toward structurally sound package depth with tightly controlled complexity.",
+        "Recommendation leans toward foundational package depth with tightly controlled complexity.",
       bestFor:
         "Best for new programs or teams tightening a loose setup before scaling.",
     },
