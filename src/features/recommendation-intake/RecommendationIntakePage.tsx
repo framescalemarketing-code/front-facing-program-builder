@@ -9,7 +9,9 @@ import {
   secondaryButtonClass,
 } from "@/components/ui/buttonStyles";
 import { useProgramDraft } from "@/hooks/useProgramDraft";
+import { useAssessmentParams } from "@/hooks/useAssessmentParams";
 import { formatPhoneAsUs, isValidEmailFormat } from "@/lib/contactValidation";
+import { submitLeadToWP } from "@/lib/submitLead";
 import { PILLAR_DEFINITIONS, type PillarIconKey } from "@/lib/pillarAnchors";
 import {
   DEFAULT_RECOMMENDATION_INPUTS,
@@ -549,12 +551,14 @@ export function RecommendationIntakePage({
   onNavigate: NavigateFn;
 }) {
   const { draft, updateDraft } = useProgramDraft();
+  const assessment = useAssessmentParams();
 
   const [initialStepIndex] = useState(() => consumeInitialStepIndex());
   const [form, setForm] = useState<RecommendationInputs>(() => ({
     ...DEFAULT_RECOMMENDATION_INPUTS,
   }));
   const [stepIndex, setStepIndex] = useState(initialStepIndex);
+  const [assessmentApplied, setAssessmentApplied] = useState(false);
   const [hasSelectedWorkType, setHasSelectedWorkType] = useState(false);
   const [hasSelectedCoverageBand, setHasSelectedCoverageBand] = useState(false);
   const [framingDismissed, setFramingDismissed] = useState(false);
@@ -586,6 +590,29 @@ export function RecommendationIntakePage({
     delivery: null,
     coverage_type: null,
   });
+
+  // Pre-fill form from assessment URL params (runs once)
+  useEffect(() => {
+    if (assessmentApplied || !assessment.hasAssessmentContext) return;
+    setAssessmentApplied(true);
+
+    setForm((prev) => {
+      const next = { ...prev };
+      if (assessment.firstName && assessment.lastName) {
+        next.contactName = `${assessment.firstName} ${assessment.lastName}`.trim();
+      }
+      if (assessment.email) next.email = assessment.email;
+      if (assessment.company) next.companyName = assessment.company;
+      if (assessment.phone) next.phone = assessment.phone;
+      if (assessment.setupHints && assessment.setupHints.length > 0) {
+        next.currentSafetySetup = assessment.setupHints;
+      }
+      if (assessment.budgetHint) {
+        next.budgetPreference = assessment.budgetHint;
+      }
+      return next;
+    });
+  }, [assessment, assessmentApplied]);
 
   const step = STEPS[stepIndex];
   const progress = clamp01(stepIndex / (STEPS.length - 1));
@@ -794,7 +821,7 @@ export function RecommendationIntakePage({
   function onComplete() {
     setError("");
     try {
-      const { draftPatch } = buildProgramRecommendation(form);
+      const { draftPatch, programConfig } = buildProgramRecommendation(form);
       updateDraft((prev) => ({
         ...draftPatch,
         programConfig: {
@@ -802,6 +829,29 @@ export function RecommendationIntakePage({
           manualDraftSnapshot: prev,
         },
       }));
+
+      // Submit lead to WordPress via serverless proxy
+      const nameParts = form.contactName.trim().split(/\s+/);
+      const firstName = nameParts[0] ?? "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+      submitLeadToWP({
+        first_name: firstName,
+        last_name: lastName,
+        work_email: form.email,
+        company: form.companyName,
+        phone: form.phone || undefined,
+        assessment_total_score: assessment.score?.toString(),
+        assessment_maturity_level: assessment.maturity ?? undefined,
+        assessment_category_scores: assessment.categories
+          ? JSON.stringify(assessment.categories)
+          : undefined,
+        recommendation_service_tier: programConfig.recommendedStructure?.serviceTier,
+        recommendation_eu_package: draftPatch.program?.selectedEU ?? undefined,
+        recommendation_posture_tier: programConfig.readinessTier,
+      }).then((result) => {
+        if (!result.ok) console.warn("Lead submission failed:", result.error);
+      });
+
       onNavigate("recommendation_summary", "internal");
     } catch (e) {
       const message =
@@ -903,6 +953,16 @@ export function RecommendationIntakePage({
               })}
             </div>
           </div>
+
+          {assessment.hasAssessmentContext ? (
+            <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 px-5 py-4">
+              <p className="text-sm font-semibold text-blue-900">Assessment Results Loaded</p>
+              <p className="mt-1 text-sm text-blue-700">
+                Your <strong>{assessment.maturity}</strong> maturity assessment (score: {assessment.score}/24)
+                has been factored into this recommendation. Contact info and program setup hints have been pre-filled.
+              </p>
+            </div>
+          ) : null}
 
           {error ? (
             <div className="mt-5 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
