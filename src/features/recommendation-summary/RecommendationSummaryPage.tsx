@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState } from "react";
 import type { NavigateFn } from "@/app/routerTypes";
@@ -89,25 +89,33 @@ function packageTierExplainer(
   if (!euPackage || !serviceTier) return null;
   const map: Record<string, string> = {
     "Compliance|Essential":
-      "Your program starts with the right foundation — a clear standard your team can actually enforce, simple eligibility rules, and a service structure sized for where you are today. This keeps things manageable while you build the program out.",
+      "Your program starts with the right foundation � a clear standard your team can actually enforce, simple eligibility rules, and a service structure sized for where you are today. This keeps things manageable while you build the program out.",
     "Compliance|Access":
       "A structured compliance baseline with enough service cadence to keep the program current as headcount grows, shifts change, or new hires come on. It's built to stay consistent without heavy oversight.",
     "Comfort|Access":
-      "Better fit selection and stronger adoption support built into the standard. Employees get what they need to actually wear their eyewear — which is how the program earns its value day to day.",
+      "Better fit selection and stronger adoption support built into the standard. Employees get what they need to actually wear their eyewear � which is how the program earns its value day to day.",
     "Comfort|Premier":
-      "Full adoption-focused package with the service depth to run it consistently. The right fit for environments where wear compliance matters as much as technical protection — because a pair sitting in a locker isn't protecting anyone.",
+      "Full adoption-focused package with the service depth to run it consistently. The right fit for environments where wear compliance matters as much as technical protection � because a pair sitting in a locker isn't protecting anyone.",
     "Complete|Access":
       "Broader coverage options and prescription flexibility for mixed-role environments, paired with service cadence that keeps access consistent without heavy coordination overhead.",
     "Complete|Premier":
       "The most common recommendation for growing programs that need performance features, mixed prescriptions, and a service structure that doesn't require constant manual management. Built for teams that are ready to scale.",
-    "Complete|Enterprise":
-      "Enterprise service depth applied to a Complete package — for large or complex programs where operational support and broader coverage need to scale together without one outpacing the other.",
-    "Covered|Premier":
-      "Maximum configurability for organizations with multiple job functions, locations, or operating conditions — paired with Premier service so the complexity doesn't land on your team.",
-    "Covered|Enterprise":
-      "The full partnership model. Dedicated support, deeper governance, and a service structure built to stay consistent as your workforce, sites, and compliance requirements evolve. This is the most comprehensive combination we offer.",
   };
   return map[`${euPackage}|${serviceTier}`] ?? null;
+}
+
+function serviceTierPriceLabel(serviceTier: ServiceTier | null) {
+  if (serviceTier === "Essential") return "$49/End User";
+  if (serviceTier === "Access") return "$69/End User";
+  if (serviceTier === "Premier") return "$89/End User";
+  return null;
+}
+
+function euPackagePriceLabel(euPackage: EUPackage | null) {
+  if (euPackage === "Compliance") return "Up To $235";
+  if (euPackage === "Comfort") return "Up To $290";
+  if (euPackage === "Complete") return "Up To $435";
+  return null;
 }
 
 function trustNoteVariant(
@@ -122,7 +130,7 @@ function trustNoteVariant(
     location === "multi_same_region" || location === "multi_across_regions";
 
   if (band === "500_plus" && location === "multi_across_regions") {
-    return "At this size and spread, a self-serve recommendation is a great starting map — but we want to make sure it really fits. You'll be connected with a senior OSSO specialist who'll work through your site structure, compliance needs, and timeline before anything is confirmed.";
+    return "At this size and spread, a self-serve recommendation is a great starting map � but we want to make sure it really fits. You'll be connected with a senior OSSO specialist who'll work through your site structure, compliance needs, and timeline before anything is confirmed.";
   }
 
   if (
@@ -130,18 +138,18 @@ function trustNoteVariant(
     isMultiLocation &&
     (posture === "good_budget" || posture === "unlimited_budget")
   ) {
-    return "Programs at this scale get a dedicated specialist before anything is finalized. You'll be paired with someone who's run multi-site programs and knows where things tend to break down — so you don't have to figure that out alone.";
+    return "Programs at this scale get a dedicated specialist before anything is finalized. You'll be paired with someone who's run multi-site programs and knows where things tend to break down � so you don't have to figure that out alone.";
   }
 
   if (band === "1_30" && hasNoFormalProgram && posture === "super_strict") {
-    return "This gives you a solid starting point — not a finished program. A specialist will review your setup with you and make sure it fits before anything is built. For most programs at this stage, that conversation is about 20 minutes.";
+    return "This gives you a solid starting point � not a finished program. A specialist will review your setup with you and make sure it fits before anything is built. For most programs at this stage, that conversation is about 20 minutes.";
   }
 
   if (
     (band === "31_60" || band === "61_100" || band === "101_250") &&
     location === "single"
   ) {
-    return "This is a strong starting point for your conversation with a specialist — not a final commitment. They'll review it with you, adjust based on your site and timeline, and make sure it actually fits. Most programs this size are up and running within 60 days.";
+    return "This is a strong starting point for your conversation with a specialist � not a final commitment. They'll review it with you, adjust based on your site and timeline, and make sure it actually fits. Most programs this size are up and running within 60 days.";
   }
 
   if (band === "1_30" && location === "single" && exposureCount === 0) {
@@ -211,7 +219,7 @@ function postureCard(tier: ProgramComplexityTier) {
       label: "Structurally Sound",
       badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
       explanation:
-        "Your program profile reflects a smaller team with a compliance-first mindset and limited exposure complexity. The recommendation is built around getting a clear, enforceable standard in place — defined eligibility, a simple ordering path, and the controls to start strong. Everything is sized so you can build on it as the program matures.",
+        "Your program profile reflects a smaller team with a compliance-first mindset and limited exposure complexity. The recommendation is built around getting a clear, enforceable standard in place � defined eligibility, a simple ordering path, and the controls to start strong. Everything is sized so you can build on it as the program matures.",
       icon: "",
       accentColor: "#475569",
     },
@@ -219,7 +227,7 @@ function postureCard(tier: ProgramComplexityTier) {
       label: "Operationally Strong",
       badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
       explanation:
-        "Your program profile reflects a mid-tier operation focused on keeping things running smoothly. With an operations-focused budget direction, some exposure risks selected, and a team that's past the startup phase, the recommendation is tuned to reduce day-to-day friction — streamlined workflows, reliable employee access, and enough oversight to catch problems before they compound.",
+        "Your program profile reflects a mid-tier operation focused on keeping things running smoothly. With an operations-focused budget direction, some exposure risks selected, and a team that's past the startup phase, the recommendation is tuned to reduce day-to-day friction � streamlined workflows, reliable employee access, and enough oversight to catch problems before they compound.",
       icon: "",
       accentColor: "#475569",
     },
@@ -227,7 +235,7 @@ function postureCard(tier: ProgramComplexityTier) {
       label: "System Scalable",
       badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
       explanation:
-        "Your program profile reflects a larger employee count, multiple sites, and growing capital investment. At this stage, manual coordination breaks down — standards drift between sites, exceptions pile up, and execution gets inconsistent. The recommendation is built for the growth phase: keeping your program aligned across locations and giving you the infrastructure to scale without losing control.",
+        "Your program profile reflects a larger employee count, multiple sites, and growing capital investment. At this stage, manual coordination breaks down � standards drift between sites, exceptions pile up, and execution gets inconsistent. The recommendation is built for the growth phase: keeping your program aligned across locations and giving you the infrastructure to scale without losing control.",
       icon: "",
       accentColor: "#475569",
     },
@@ -235,7 +243,7 @@ function postureCard(tier: ProgramComplexityTier) {
       label: "Enterprise Grade",
       badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
       explanation:
-        "Your program profile reflects top-tier selections, a large workforce across multiple sites, and high operational complexity. At your scale, governance, dedicated support, and cross-site consistency aren't optional — they're the baseline. The recommendation includes specialist partnership, leadership-level visibility, and processes built to hold up across regions, roles, and compliance environments.",
+        "Your program profile reflects top-tier selections, a large workforce across multiple sites, and high operational complexity. At your scale, governance, dedicated support, and cross-site consistency aren't optional � they're the baseline. The recommendation includes specialist partnership, leadership-level visibility, and processes built to hold up across regions, roles, and compliance environments.",
       icon: "",
       accentColor: "#475569",
     },
@@ -287,7 +295,7 @@ function displayValue(value: string | null) {
   return value ?? "Not provided";
 }
 
-// ─── NEW: Interactive Program Summary Card (replaces SVG placeholder) ───────
+// --- NEW: Interactive Program Summary Card (replaces SVG placeholder) -------
 
 type SummaryCardSection =
   | "snapshot"
@@ -316,20 +324,20 @@ function ProgramSummaryCard(props: {
     label: string;
     icon: string;
   }> = [
-    { id: "snapshot", label: "Snapshot", icon: "📋" },
-    { id: "profile", label: "Profile", icon: "📊" },
-    { id: "coverage", label: "Coverage", icon: "🛡️" },
+    { id: "snapshot", label: "Snapshot", icon: "??" },
+    { id: "profile", label: "Profile", icon: "??" },
+    { id: "coverage", label: "Coverage", icon: "???" },
     ...(props.hasCoatings
       ? [
           {
             id: "coatings" as SummaryCardSection,
             label: "Coatings",
-            icon: "🔬",
+            icon: "??",
           },
         ]
       : []),
-    { id: "logistics", label: "Logistics", icon: "🔄" },
-    { id: "contact", label: "Contact", icon: "👤" },
+    { id: "logistics", label: "Logistics", icon: "??" },
+    { id: "contact", label: "Contact", icon: "??" },
   ];
 
   return (
@@ -383,7 +391,7 @@ function ProgramSummaryCard(props: {
             </div>
             <div className="shrink-0 rounded-lg px-3 py-2 text-center backdrop-blur-sm bg-white/15 border border-white/25 shadow-lg">
               <div className="text-lg font-bold text-white">
-                {props.selectedPackage ?? "—"}
+                {props.selectedPackage ?? "�"}
               </div>
               <div className="text-[10px] font-medium text-white/70 uppercase tracking-wide">
                 {props.serviceTier ?? "Service Tier"}
@@ -395,18 +403,18 @@ function ProgramSummaryCard(props: {
           <div className="flex flex-wrap gap-2 mt-4">
             {props.workType && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-medium text-white/90">
-                <span aria-hidden="true">🏭</span> {props.workType}
+                <span aria-hidden="true">??</span> {props.workType}
               </span>
             )}
             {props.coverageBand && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-medium text-white/90">
-                <span aria-hidden="true">👥</span> {props.coverageBand}{" "}
+                <span aria-hidden="true">??</span> {props.coverageBand}{" "}
                 employees
               </span>
             )}
             {props.locationModel && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-medium text-white/90">
-                <span aria-hidden="true">📍</span> {props.locationModel}
+                <span aria-hidden="true">??</span> {props.locationModel}
               </span>
             )}
           </div>
@@ -437,7 +445,7 @@ function ProgramSummaryCard(props: {
   );
 }
 
-// ─── Checklist Item ─────────────────────────────────────────────────────────
+// --- Checklist Item ---------------------------------------------------------
 
 function ChecklistItem({
   children,
@@ -479,7 +487,7 @@ function ChecklistItem({
   );
 }
 
-// ─── Main Page ───────────────────────────────────────────────────────────────
+// --- Main Page ---------------------------------------------------------------
 
 export function RecommendationSummaryPage({
   onNavigate,
@@ -526,6 +534,8 @@ export function RecommendationSummaryPage({
   const selectedPackage = nonEmpty(program.selectedEU) as EUPackage | null;
   const serviceTier = nonEmpty(program.selectedTier) as ServiceTier | null;
   const packageTierSummary = packageTierExplainer(selectedPackage, serviceTier);
+  const selectedPackagePrice = euPackagePriceLabel(selectedPackage);
+  const selectedServiceTierPrice = serviceTierPriceLabel(serviceTier);
   const trustNote = trustNoteVariant(
     programConfig.programProfile.coverageSizeBand,
     programConfig.programProfile.locationModel,
@@ -604,17 +614,17 @@ export function RecommendationSummaryPage({
   return (
     <section aria-labelledby="recommendation-preview-title">
       <div data-pdf-exclude="true">
-        {/* ── Clean Page Hero ── */}
+        {/* -- Clean Page Hero -- */}
         <header className="border-b border-gray-200/60 bg-white">
           <div
-            className="h-1 bg-gradient-to-r from-[#2971b5] via-[#5e97dd] to-[#2971b5]"
+            className="h-1 bg-linear-to-r from-[#2971b5] via-[#5e97dd] to-[#2971b5]"
             aria-hidden="true"
           />
           <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <div className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/60 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-600 mb-3">
-                  <span aria-hidden="true">✓</span>
+                  <span aria-hidden="true">?</span>
                   Recommendation Ready
                 </div>
                 <h1
@@ -622,12 +632,12 @@ export function RecommendationSummaryPage({
                   className="text-3xl font-bold tracking-tight text-gray-900"
                 >
                   {companyName
-                    ? `${companyName}'s Program Summary`
-                    : "Your Program Summary"}
+                    ? `${companyName}'s Program Recommendation Summary`
+                    : "Program Recommendation Summary"}
                 </h1>
                 <p className="mt-2 max-w-2xl text-gray-500 text-sm">
                   Built from your answers. An OSSO specialist will review this
-                  with you before anything moves forward — nothing is locked
+                  with you before anything moves forward � nothing is locked
                   until you're ready.
                 </p>
               </div>
@@ -647,7 +657,7 @@ export function RecommendationSummaryPage({
                 onClick={openRecommendationAtDirection}
                 className={secondaryButtonClass}
               >
-                ← Back to Recommendation
+                ? Back to Recommendation
               </button>
               <button
                 type="button"
@@ -659,9 +669,9 @@ export function RecommendationSummaryPage({
             </div>
 
             <div className="grid gap-6 lg:grid-cols-12">
-              {/* ── Main column ── */}
+              {/* -- Main column -- */}
               <div className="lg:col-span-8 space-y-6">
-                {/* Interactive Program Summary Card — replaces the SVG placeholder */}
+                {/* Interactive Program Summary Card � replaces the SVG placeholder */}
                 <ProgramSummaryCard
                   companyName={companyName}
                   workType={workType}
@@ -676,13 +686,13 @@ export function RecommendationSummaryPage({
                   onSectionChange={setActiveCardSection}
                 />
 
-                {/* Detailed Sections — driven by active tab */}
+                {/* Detailed Sections � driven by active tab */}
                 <article className="rounded-xl border border-slate-200/80 bg-white shadow-sm overflow-hidden">
                   {/* Snapshot: the full picture at a glance */}
                   {activeCardSection === "snapshot" && (
                     <div className="p-0">
-                      {/* Hero narrative — gradient background */}
-                      <div className="px-6 pt-6 pb-5 bg-gradient-to-br from-slate-50 via-white to-slate-50/80">
+                      {/* Hero narrative � gradient background */}
+                      <div className="px-6 pt-6 pb-5 bg-linear-to-br from-slate-50 via-white to-slate-50/80">
                         <p className="text-[15px] text-slate-700 leading-relaxed">
                           {revealSummary}
                         </p>
@@ -693,7 +703,7 @@ export function RecommendationSummaryPage({
                         )}
                       </div>
 
-                      {/* Key metrics — clean grid */}
+                      {/* Key metrics � clean grid */}
                       <div className="px-6 py-5 border-t border-slate-100">
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                           <div>
@@ -701,23 +711,33 @@ export function RecommendationSummaryPage({
                               EU Package
                             </span>
                             <span className="text-lg font-bold text-[#244093]">
-                              {selectedPackage ?? "—"}
+                              {selectedPackage ?? "�"}
                             </span>
+                            {selectedPackagePrice && (
+                              <span className="block text-xs font-semibold text-slate-500 mt-1">
+                                {selectedPackagePrice}
+                              </span>
+                            )}
                           </div>
                           <div>
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
                               Service Tier
                             </span>
                             <span className="text-lg font-bold text-[#244093]">
-                              {serviceTier ?? "—"}
+                              {serviceTier ?? "�"}
                             </span>
+                            {selectedServiceTierPrice && (
+                              <span className="block text-xs font-semibold text-slate-500 mt-1">
+                                {selectedServiceTierPrice}
+                              </span>
+                            )}
                           </div>
                           <div>
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
                               Coverage
                             </span>
                             <span className="text-sm font-bold text-slate-800">
-                              {coverageBand ? `${coverageBand} employees` : "—"}
+                              {coverageBand ? `${coverageBand} employees` : "�"}
                             </span>
                           </div>
                           <div>
@@ -781,10 +801,10 @@ export function RecommendationSummaryPage({
                                 </span>
                               )}
                               {contactName && companyName && (
-                                <span className="mx-1">·</span>
+                                <span className="mx-1">�</span>
                               )}
                               {companyName && <span>{companyName}</span>}
-                              {email && <span className="ml-1">· {email}</span>}
+                              {email && <span className="ml-1">� {email}</span>}
                             </span>
                           </div>
                         )}
@@ -809,7 +829,7 @@ export function RecommendationSummaryPage({
                                 (coating: CoatingRecommendation) => (
                                   <span
                                     key={coating.id}
-                                    className="inline-flex rounded-full bg-[#244093]/[0.06] border border-[#244093]/15 px-2.5 py-0.5 text-xs font-medium text-[#244093]"
+                                    className="inline-flex rounded-full bg-[#244093]/6 border border-[#244093]/15 px-2.5 py-0.5 text-xs font-medium text-[#244093]"
                                   >
                                     {coating.label}
                                   </span>
@@ -822,20 +842,20 @@ export function RecommendationSummaryPage({
                         {/* Travel flag */}
                         {locations.some((l) => l.oneWayMiles > 50) && (
                           <p className="text-xs font-medium text-slate-500">
-                            ⚠ Travel surcharge may apply to some locations
+                            ? Travel surcharge may apply to some locations
                           </p>
                         )}
                       </div>
 
-                      {/* Starting point note — professional footer */}
-                      <div className="px-6 py-5 border-t border-slate-100 bg-gradient-to-r from-[#244093]/[0.03] to-[#2971b5]/[0.02]">
+                      {/* Starting point note � professional footer */}
+                      <div className="px-6 py-5 border-t border-slate-100 bg-linear-to-r from-[#244093]/3 to-[#2971b5]/2">
                         <p className="text-xs font-semibold uppercase tracking-wide text-[#244093]/70 mb-1.5">
                           Your Recommended Starting Point
                         </p>
                         <p className="text-sm text-slate-600 leading-relaxed">
                           This configuration is built from your answers and
                           represents the strongest starting position for your
-                          organization. Programs evolve — your OSSO specialist
+                          organization. Programs evolve � your OSSO specialist
                           will help you refine coverage, adjust service levels,
                           and scale the program as your workforce and compliance
                           requirements change over time.
@@ -848,11 +868,11 @@ export function RecommendationSummaryPage({
                   {activeCardSection === "profile" && (
                     <div className="p-0">
                       {/* Profile header */}
-                      <div className="px-6 pt-6 pb-5 bg-gradient-to-br from-slate-50 via-white to-slate-50/80">
+                      <div className="px-6 pt-6 pb-5 bg-linear-to-br from-slate-50 via-white to-slate-50/80">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
                           Your Program Profile
                         </p>
-                        <div className="inline-flex rounded-full border border-[#244093]/20 bg-[#244093]/[0.06] px-4 py-1.5 text-sm font-bold uppercase tracking-wide text-[#244093] mb-3">
+                        <div className="inline-flex rounded-full border border-[#244093]/20 bg-[#244093]/6 px-4 py-1.5 text-sm font-bold uppercase tracking-wide text-[#244093] mb-3">
                           {posture.label}
                         </div>
                         <p className="text-[15px] text-slate-700 leading-relaxed">
@@ -860,7 +880,7 @@ export function RecommendationSummaryPage({
                         </p>
                       </div>
 
-                      {/* Why you received this profile — input-based reasoning */}
+                      {/* Why you received this profile � input-based reasoning */}
                       <div className="px-6 py-5 border-t border-slate-100">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
                           Why you received this profile
@@ -869,7 +889,7 @@ export function RecommendationSummaryPage({
                           {programPosture && (
                             <div className="flex items-start gap-2.5">
                               <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                →
+                                ?
                               </span>
                               <p className="text-sm text-slate-600 leading-relaxed">
                                 <span className="font-medium text-slate-700">
@@ -882,7 +902,7 @@ export function RecommendationSummaryPage({
                           {coverageBand && (
                             <div className="flex items-start gap-2.5">
                               <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                →
+                                ?
                               </span>
                               <p className="text-sm text-slate-600 leading-relaxed">
                                 <span className="font-medium text-slate-700">
@@ -895,7 +915,7 @@ export function RecommendationSummaryPage({
                           {locationModel && (
                             <div className="flex items-start gap-2.5">
                               <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                →
+                                ?
                               </span>
                               <p className="text-sm text-slate-600 leading-relaxed">
                                 <span className="font-medium text-slate-700">
@@ -908,7 +928,7 @@ export function RecommendationSummaryPage({
                           {exposureSummary && (
                             <div className="flex items-start gap-2.5">
                               <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                →
+                                ?
                               </span>
                               <p className="text-sm text-slate-600 leading-relaxed">
                                 <span className="font-medium text-slate-700">
@@ -921,7 +941,7 @@ export function RecommendationSummaryPage({
                           {workType && (
                             <div className="flex items-start gap-2.5">
                               <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                →
+                                ?
                               </span>
                               <p className="text-sm text-slate-600 leading-relaxed">
                                 <span className="font-medium text-slate-700">
@@ -934,7 +954,7 @@ export function RecommendationSummaryPage({
                           {deliveryModel && (
                             <div className="flex items-start gap-2.5">
                               <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                →
+                                ?
                               </span>
                               <p className="text-sm text-slate-600 leading-relaxed">
                                 <span className="font-medium text-slate-700">
@@ -947,7 +967,7 @@ export function RecommendationSummaryPage({
                           {approvalModel && (
                             <div className="flex items-start gap-2.5">
                               <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                →
+                                ?
                               </span>
                               <p className="text-sm text-slate-600 leading-relaxed">
                                 <span className="font-medium text-slate-700">
@@ -961,7 +981,7 @@ export function RecommendationSummaryPage({
                             0 && (
                             <div className="flex items-start gap-2.5">
                               <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                →
+                                ?
                               </span>
                               <p className="text-sm text-slate-600 leading-relaxed">
                                 <span className="font-medium text-slate-700">
@@ -977,12 +997,12 @@ export function RecommendationSummaryPage({
                       </div>
 
                       {/* Footer note */}
-                      <div className="px-6 py-4 border-t border-slate-100 bg-gradient-to-r from-[#244093]/[0.03] to-[#2971b5]/[0.02]">
+                      <div className="px-6 py-4 border-t border-slate-100 bg-linear-to-r from-[#244093]/3 to-[#2971b5]/2">
                         <p className="text-sm text-slate-600 leading-relaxed">
-                          Your profile is derived from the full picture — team
+                          Your profile is derived from the full picture � team
                           size, number of locations, exposure complexity,
                           delivery structure, budget posture, and approval
-                          routing. It’s not a preference you pick; it reflects
+                          routing. It�s not a preference you pick; it reflects
                           where your program actually sits today.
                         </p>
                       </div>
@@ -993,7 +1013,7 @@ export function RecommendationSummaryPage({
                   {activeCardSection === "coverage" && (
                     <div className="p-0">
                       {/* Coverage metrics */}
-                      <div className="px-6 pt-6 pb-5 bg-gradient-to-br from-slate-50 via-white to-slate-50/80">
+                      <div className="px-6 pt-6 pb-5 bg-linear-to-br from-slate-50 via-white to-slate-50/80">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
                           Coverage Configuration
                         </p>
@@ -1003,23 +1023,33 @@ export function RecommendationSummaryPage({
                               EU Package
                             </span>
                             <span className="text-lg font-bold text-[#244093]">
-                              {selectedPackage ?? "—"}
+                              {selectedPackage ?? "�"}
                             </span>
+                            {selectedPackagePrice && (
+                              <span className="block text-xs font-semibold text-slate-500 mt-1">
+                                {selectedPackagePrice}
+                              </span>
+                            )}
                           </div>
                           <div>
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
                               Service Tier
                             </span>
                             <span className="text-lg font-bold text-[#244093]">
-                              {serviceTier ?? "—"}
+                              {serviceTier ?? "�"}
                             </span>
+                            {selectedServiceTierPrice && (
+                              <span className="block text-xs font-semibold text-slate-500 mt-1">
+                                {selectedServiceTierPrice}
+                              </span>
+                            )}
                           </div>
                           <div>
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
                               Coverage Band
                             </span>
                             <span className="text-sm font-bold text-slate-800">
-                              {coverageBand ? `${coverageBand} employees` : "—"}
+                              {coverageBand ? `${coverageBand} employees` : "�"}
                             </span>
                           </div>
                         </div>
@@ -1047,7 +1077,7 @@ export function RecommendationSummaryPage({
                   {activeCardSection === "coatings" &&
                     (programConfig.coatingRecommendations ?? []).length > 0 && (
                       <div className="p-0">
-                        <div className="px-6 pt-6 pb-5 bg-gradient-to-br from-slate-50 via-white to-slate-50/80">
+                        <div className="px-6 pt-6 pb-5 bg-linear-to-br from-slate-50 via-white to-slate-50/80">
                           <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1">
                             Recommended Coatings
                           </p>
@@ -1061,7 +1091,7 @@ export function RecommendationSummaryPage({
                               (coating: CoatingRecommendation) => (
                                 <div
                                   key={coating.id}
-                                  className="group rounded-lg border border-slate-200 bg-gradient-to-br from-white to-slate-50/60 p-4 transition-all hover:border-[#2971b5]/25 hover:shadow-md"
+                                  className="group rounded-lg border border-slate-200 bg-linear-to-br from-white to-slate-50/60 p-4 transition-all hover:border-[#2971b5]/25 hover:shadow-md"
                                 >
                                   <h5 className="text-sm font-semibold text-slate-800 mb-1.5 group-hover:text-[#244093] transition-colors">
                                     {coating.label}
@@ -1071,7 +1101,7 @@ export function RecommendationSummaryPage({
                                   </p>
                                   <div className="flex items-start gap-1.5">
                                     <span className="text-[#2971b5]/60 text-xs mt-px shrink-0">
-                                      →
+                                      ?
                                     </span>
                                     <p className="text-xs text-[#2971b5] font-medium leading-relaxed">
                                       {coating.reason}
@@ -1089,7 +1119,7 @@ export function RecommendationSummaryPage({
                   {activeCardSection === "logistics" && (
                     <div className="p-0">
                       {/* Operations overview */}
-                      <div className="px-6 pt-6 pb-5 bg-gradient-to-br from-slate-50 via-white to-slate-50/80">
+                      <div className="px-6 pt-6 pb-5 bg-linear-to-br from-slate-50 via-white to-slate-50/80">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
                           Operations & Logistics
                         </p>
@@ -1168,7 +1198,7 @@ export function RecommendationSummaryPage({
                                 </div>
                                 {location.oneWayMiles > 50 && (
                                   <div className="text-xs font-medium text-slate-600 bg-slate-100 border border-slate-200 rounded px-2 py-1 mt-1">
-                                    ⚠ Potential travel surcharge
+                                    ? Potential travel surcharge
                                   </div>
                                 )}
                               </div>
@@ -1182,7 +1212,7 @@ export function RecommendationSummaryPage({
                   {/* Contact tab: contact info */}
                   {activeCardSection === "contact" && (
                     <div className="p-0">
-                      <div className="px-6 pt-6 pb-5 bg-gradient-to-br from-slate-50 via-white to-slate-50/80">
+                      <div className="px-6 pt-6 pb-5 bg-linear-to-br from-slate-50 via-white to-slate-50/80">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
                           Contact & Profile
                         </p>
@@ -1234,10 +1264,10 @@ export function RecommendationSummaryPage({
                 </article>
               </div>
 
-              {/* ── Sidebar ── */}
+              {/* -- Sidebar -- */}
               <aside className="space-y-5 lg:col-span-4">
                 {/* Submit Card */}
-                <article className="rounded-xl border border-primary/20 bg-gradient-to-b from-primary/[0.03] via-white to-white p-5 shadow-sm">
+                <article className="rounded-xl border border-primary/20 bg-linear-to-b from-primary/3 via-white to-white p-5 shadow-sm">
                   <h2 className="text-base font-bold text-foreground mb-1">
                     Like what you see?
                   </h2>
@@ -1251,7 +1281,7 @@ export function RecommendationSummaryPage({
                       onClick={navigateToCongratulations}
                       className={`${primaryButtonClass} w-full`}
                     >
-                      Submit to an OSSO Specialist →
+                      Submit to an OSSO Specialist ?
                     </button>
                     <button
                       type="button"
@@ -1271,7 +1301,7 @@ export function RecommendationSummaryPage({
                         onClick={navigateToCongratulations}
                         className={`${primaryButtonClass} w-full`}
                       >
-                        Continue →
+                        Continue ?
                       </button>
                     </div>
                   )}
@@ -1283,7 +1313,7 @@ export function RecommendationSummaryPage({
                     Things to gather before your call
                   </h2>
                   <p className="text-xs text-muted-foreground mb-4">
-                    No pressure on these — your specialist will help you work
+                    No pressure on these � your specialist will help you work
                     through anything you don't have handy yet.
                   </p>
                   <div className="space-y-3">
@@ -1294,7 +1324,7 @@ export function RecommendationSummaryPage({
                       Approval path and who owns exceptions
                     </ChecklistItem>
                     <ChecklistItem>
-                      Delivery preference — onsite, mail, or hybrid
+                      Delivery preference � onsite, mail, or hybrid
                     </ChecklistItem>
                     <ChecklistItem>
                       Primary contacts per site or department
@@ -1306,10 +1336,10 @@ export function RecommendationSummaryPage({
                 </article>
 
                 {/* Trust Note */}
-                <article className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white p-5 shadow-sm">
+                <article className="rounded-xl border border-slate-200/80 bg-linear-to-br from-slate-50 to-white p-5 shadow-sm">
                   <div className="flex items-start gap-3">
                     <span className="text-2xl shrink-0" aria-hidden="true">
-                      🤝
+                      ??
                     </span>
                     <div>
                       <h3 className="text-sm font-bold text-foreground mb-1">
@@ -1327,9 +1357,9 @@ export function RecommendationSummaryPage({
         </div>
       </div>
 
-      {/* Print-only version — single-page snapshot */}
+      {/* Print-only version � single-page snapshot */}
       <div className="print-only recommendation-summary-print">
-        {/* ── Header ── */}
+        {/* -- Header -- */}
         <div className="print-header">
           <img
             src="/brand/osso/osso-logo-horizontal.png"
@@ -1340,12 +1370,12 @@ export function RecommendationSummaryPage({
             <div className="print-title">Program Recommendation</div>
             <div className="print-meta">
               {generatedOn}
-              {companyName && ` · ${companyName}`}
+              {companyName && ` � ${companyName}`}
             </div>
           </div>
         </div>
 
-        {/* ── Hero Card ── */}
+        {/* -- Hero Card -- */}
         <div className="print-hero">
           <div className="print-hero-left">
             <span className="print-hero-eyebrow">
@@ -1367,7 +1397,7 @@ export function RecommendationSummaryPage({
           <div className="print-hero-kpis">
             <div className="print-kpi">
               <span className="print-kpi-value">
-                {displayValue(selectedPackage)} · {displayValue(serviceTier)}
+                {displayValue(selectedPackage)} � {displayValue(serviceTier)}
               </span>
               <span className="print-kpi-label">Package &amp; Tier</span>
             </div>
@@ -1384,7 +1414,7 @@ export function RecommendationSummaryPage({
           </div>
         </div>
 
-        {/* ── Two Card Row: Coverage + Guidelines ── */}
+        {/* -- Two Card Row: Coverage + Guidelines -- */}
         <div className="print-card-row">
           <div className="print-card">
             <div className="print-card-title">Coverage &amp; Service</div>
@@ -1405,7 +1435,7 @@ export function RecommendationSummaryPage({
                 <tr>
                   <td className="print-td-label">Coverage Band</td>
                   <td className="print-td-value">
-                    {coverageBand ? `${coverageBand} employees` : "—"}
+                    {coverageBand ? `${coverageBand} employees` : "�"}
                   </td>
                 </tr>
                 {exposureSummary && (
@@ -1455,7 +1485,7 @@ export function RecommendationSummaryPage({
           </div>
         </div>
 
-        {/* ── Two Card Row: Coatings + Locations/Contact ── */}
+        {/* -- Two Card Row: Coatings + Locations/Contact -- */}
         <div className="print-card-row">
           {(programConfig.coatingRecommendations ?? []).length > 0 && (
             <div className="print-card">
@@ -1489,7 +1519,7 @@ export function RecommendationSummaryPage({
                   <span className="print-loc-name">
                     {location.label || `Location ${idx + 1}`}
                     {location.oneWayMiles > 0
-                      ? ` · ${location.oneWayMiles} mi`
+                      ? ` � ${location.oneWayMiles} mi`
                       : ""}
                   </span>
                 </div>
@@ -1530,7 +1560,7 @@ export function RecommendationSummaryPage({
           </div>
         </div>
 
-        {/* ── Footer ── */}
+        {/* -- Footer -- */}
         <div className="print-footer">
           <p className="print-footer-disclaimer">
             This document is a preliminary recommendation only and does not

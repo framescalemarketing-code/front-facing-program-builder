@@ -1,5 +1,5 @@
-export type EUPackage = "Compliance" | "Comfort" | "Complete" | "Covered";
-export type ServiceTier = "Essential" | "Access" | "Premier" | "Enterprise";
+export type EUPackage = "Compliance" | "Comfort" | "Complete";
+export type ServiceTier = "Essential" | "Access" | "Premier";
 
 export type ProgramWorkType =
   | "manufacturing"
@@ -95,13 +95,12 @@ export type RecommendProgramResult = {
   coatingRecommendations: CoatingRecommendation[];
 };
 
-const EU_ORDER: EUPackage[] = ["Compliance", "Comfort", "Complete", "Covered"];
+const EU_ORDER: EUPackage[] = ["Compliance", "Comfort", "Complete"];
 
 const TIER_ORDER: ServiceTier[] = [
   "Essential",
   "Access",
   "Premier",
-  "Enterprise",
 ];
 
 const GROUP_A_INDUSTRIES = new Set<ProgramWorkType>([
@@ -121,6 +120,38 @@ const GROUP_A_BASE_EXPOSURES = new Set<ProgramExposureRisk>([
   "high_impact",
   "dust_debris",
 ]);
+
+const SERVICE_TIER_SIZE_TABLE: Array<{
+  maxEmployees: number;
+  tier: ServiceTier;
+  label: string;
+}> = [
+  { maxEmployees: 50, tier: "Essential", label: "0-50 employees" },
+  { maxEmployees: 200, tier: "Access", label: "51-200 employees" },
+  { maxEmployees: Number.POSITIVE_INFINITY, tier: "Access", label: "200+ employees" },
+];
+
+const INDUSTRY_EU_BASELINE: Record<ProgramWorkType, EUPackage> = {
+  manufacturing: "Comfort",
+  construction: "Comfort",
+  utilities: "Comfort",
+  warehouse: "Comfort",
+  healthcare: "Complete",
+  public_sector: "Compliance",
+  laboratory: "Complete",
+  other: "Compliance",
+};
+
+const HAZARD_WEIGHTS: Record<ProgramExposureRisk, number> = {
+  high_impact: 2,
+  dust_debris: 1,
+  chemical_splash: 2,
+  outdoor_glare: 1,
+  fog_humidity: 1,
+  indoor_outdoor_shift: 1,
+  screen_intensive: 1,
+  temperature_extremes: 1,
+};
 
 const ADD_ON_ORDER: RecommendationAddOn[] = [
   "Anti fog",
@@ -194,6 +225,146 @@ function hasOnsiteOrHybrid(setup: CurrentSafetySetup[]): boolean {
   );
 }
 
+function representativeEmployeesForBand(band: CoverageSizeBand): number {
+  const map: Record<CoverageSizeBand, number> = {
+    "1_30": 30,
+    "31_60": 60,
+    "61_100": 100,
+    "101_250": 250,
+    "251_500": 500,
+    "500_plus": 750,
+  };
+  return map[band];
+}
+
+function partnerNeedScore(args: {
+  employees: number;
+  locationModel: ProgramLocationModel;
+  exposureRisks: ProgramExposureRisk[];
+  currentSafetySetup: CurrentSafetySetup[];
+  workType: ProgramWorkType;
+}): number {
+  const uniqueRisks = Array.from(new Set(args.exposureRisks));
+  const hazardScore = uniqueRisks.reduce(
+    (sum, risk) => sum + (HAZARD_WEIGHTS[risk] ?? 0),
+    0,
+  );
+  const hasCriticalHazards =
+    uniqueRisks.includes("chemical_splash") ||
+    (uniqueRisks.includes("high_impact") &&
+      (uniqueRisks.includes("temperature_extremes") ||
+        uniqueRisks.includes("dust_debris")));
+
+  let score = 0;
+
+  if (args.locationModel === "multi_across_regions") score += 2;
+  else if (args.locationModel === "multi_same_region") score += 1;
+
+  if (hasOnsiteOrHybrid(args.currentSafetySetup)) score += 1;
+  if (args.currentSafetySetup.includes("no_formal_program")) score += 1;
+  if (args.employees > 200) score += 1;
+  if (hazardScore >= 4) score += 1;
+  if (hasCriticalHazards) score += 1;
+
+  if (
+    args.workType === "healthcare" ||
+    args.workType === "laboratory" ||
+    args.workType === "utilities"
+  ) {
+    score += 1;
+  }
+
+  return score;
+}
+
+function recommendServiceTierFromTable(args: {
+  coverageSizeBand: CoverageSizeBand;
+  locationModel: ProgramLocationModel;
+  exposureRisks: ProgramExposureRisk[];
+  currentSafetySetup: CurrentSafetySetup[];
+  workType: ProgramWorkType;
+  rationale: string[];
+}): ServiceTier {
+  const employees = representativeEmployeesForBand(args.coverageSizeBand);
+  const baseRow =
+    SERVICE_TIER_SIZE_TABLE.find((row) => employees <= row.maxEmployees) ??
+    SERVICE_TIER_SIZE_TABLE[SERVICE_TIER_SIZE_TABLE.length - 1];
+  let serviceTier = baseRow.tier;
+  args.rationale.push(
+    `Tier table: ${baseRow.label} -> ${serviceTier}.`,
+  );
+
+  const score = partnerNeedScore({
+    employees,
+    locationModel: args.locationModel,
+    exposureRisks: args.exposureRisks,
+    currentSafetySetup: args.currentSafetySetup,
+    workType: args.workType,
+  });
+
+  if (score >= 3 || (employees > 200 && score >= 2)) {
+    serviceTier = "Premier";
+    args.rationale.push(
+      "Tier escalation: Partner-takeover signals indicate Premier support.",
+    );
+  }
+
+  return serviceTier;
+}
+
+function recommendEuPackageFromIndustryAndHazards(args: {
+  workType: ProgramWorkType;
+  exposureRisks: ProgramExposureRisk[];
+  rationale: string[];
+}): EUPackage {
+  const uniqueRisks = Array.from(new Set(args.exposureRisks));
+  const hazardScore = uniqueRisks.reduce(
+    (sum, risk) => sum + (HAZARD_WEIGHTS[risk] ?? 0),
+    0,
+  );
+  const baseline = INDUSTRY_EU_BASELINE[args.workType];
+
+  const hasCriticalHazards =
+    uniqueRisks.includes("chemical_splash") ||
+    (uniqueRisks.includes("high_impact") &&
+      (uniqueRisks.includes("temperature_extremes") ||
+        uniqueRisks.includes("dust_debris")));
+
+  let euPackage: EUPackage;
+
+  if (hazardScore === 0) {
+    euPackage = baseline;
+    args.rationale.push(
+      `EU table: No hazards selected -> ${euPackage} baseline.`,
+    );
+  } else if (hazardScore <= 2 && !hasCriticalHazards) {
+    euPackage = baseline === "Complete" ? "Complete" : "Comfort";
+    args.rationale.push(
+      `EU table: Lower hazard score (${hazardScore}) -> ${euPackage}.`,
+    );
+  } else {
+    euPackage = "Complete";
+    args.rationale.push(
+      `EU table: Elevated hazard complexity (${hazardScore}) -> Complete.`,
+    );
+  }
+
+  if (hazardScore > 0) {
+    euPackage = escalateEu(euPackage, baseline);
+    if (euPackage !== baseline) {
+      args.rationale.push(`EU floor: Industry baseline retained at ${euPackage}.`);
+    } else {
+      args.rationale.push(`EU baseline: Industry (${args.workType}) -> ${baseline}.`);
+    }
+  } else {
+    args.rationale.push(
+      `EU baseline: Industry (${args.workType}) noted; no-hazard fallback applied.`,
+    );
+  }
+
+  return euPackage;
+}
+
 // ─── Budget constraint — affects EU package only ─────────────────────────────
 // Service tier is driven by locations and team size, not budget.
 // Budget influences the EU package level (coverage depth).
@@ -228,14 +399,14 @@ function budgetConstraint(
 
   if (budgetPreference === "good_budget") {
     return {
-      allowedEu: ["Comfort", "Complete", "Covered"],
+      allowedEu: ["Comfort", "Complete"],
       label: "Ready to Grow",
     };
   }
 
   // unlimited_budget
   return {
-    allowedEu: ["Complete", "Covered"],
+    allowedEu: ["Complete"],
     label: "Full Program Investment",
   };
 }
@@ -466,161 +637,27 @@ export function recommendProgram(
   const selectedAddOns = dedupeAddOns(rawInputs.selectedAddOns ?? []);
 
   const rationale: string[] = [];
-  const inGroupA = GROUP_A_INDUSTRIES.has(workType);
-  const inGroupB = GROUP_B_INDUSTRIES.has(workType);
-  const onlyGroupABaseExposures = exposureRisks.every((risk) =>
-    GROUP_A_BASE_EXPOSURES.has(risk),
-  );
-  const hasComplexExposures =
-    !onlyGroupABaseExposures && exposureRisks.length > 0;
   const isMultiLocation = locationModel !== "single";
-  const isNoFormalProgram = currentSafetySetup.includes("no_formal_program");
-  const usesOnsiteOrHybrid = hasOnsiteOrHybrid(currentSafetySetup);
 
   let euPackage: EUPackage;
   let serviceTier: ServiceTier;
 
-  // ──────────────────────────────────────────────────────────
-  // STEP 1: EU PACKAGE — driven primarily by team size
-  //
-  //   1-30   → Compliance / Comfort
-  //   31-100 → Comfort (approaching Complete)
-  //   101+   → Complete
-  //   500+   → Covered
-  //
-  // Industry and exposure modifiers escalate within this range.
-  // ──────────────────────────────────────────────────────────
+  // STEP 1: EU package uses industry + hazards only.
+  euPackage = recommendEuPackageFromIndustryAndHazards({
+    workType,
+    exposureRisks,
+    rationale,
+  });
 
-  if (coverageSizeBand === "500_plus") {
-    euPackage = "Covered";
-    rationale.push("EU: 500+ employees → Covered package.");
-  } else if (coverageSizeBand === "251_500" || coverageSizeBand === "101_250") {
-    euPackage = "Complete";
-    rationale.push(
-      `EU: ${coverageSizeBand === "251_500" ? "251-500" : "101-250"} employees → Complete package.`,
-    );
-  } else if (coverageSizeBand === "61_100") {
-    euPackage = "Comfort";
-    rationale.push(
-      "EU: 61-100 employees → Comfort package (approaching Complete).",
-    );
-  } else if (coverageSizeBand === "31_60") {
-    euPackage = "Comfort";
-    rationale.push("EU: 31-60 employees → Comfort package.");
-  } else {
-    euPackage = "Compliance";
-    rationale.push("EU: 1-30 employees → Compliance baseline.");
-  }
-
-  // Industry + exposure escalation
-  if (inGroupB) {
-    if (coverageSizeBand === "1_30") {
-      euPackage = escalateEu(euPackage, "Comfort");
-      rationale.push(
-        "Industry escalation: Group B (healthcare/lab/utilities/public sector) → Comfort minimum.",
-      );
-    } else if (coverageSizeBand === "61_100") {
-      euPackage = escalateEu(euPackage, "Complete");
-      rationale.push("Industry escalation: Group B 61-100 → Complete.");
-    }
-  } else if (inGroupA && hasComplexExposures) {
-    if (coverageSizeBand === "1_30") {
-      euPackage = escalateEu(euPackage, "Comfort");
-      rationale.push(
-        "Exposure escalation: Complex exposures in Group A small team → Comfort.",
-      );
-    } else if (coverageSizeBand === "61_100") {
-      euPackage = escalateEu(euPackage, "Complete");
-      rationale.push(
-        "Exposure escalation: Complex exposures in Group A 61-100 → Complete.",
-      );
-    }
-  } else if (!inGroupA && !inGroupB && hasComplexExposures) {
-    if (coverageSizeBand === "1_30") {
-      euPackage = escalateEu(euPackage, "Comfort");
-      rationale.push(
-        "Exposure escalation: Complex exposures in specialized environment → Comfort.",
-      );
-    }
-  }
-
-  // ──────────────────────────────────────────────────────────
-  // STEP 2: SERVICE TIER — driven by team size + locations
-  //
-  // Locations and setup are where service tier comes in:
-  //   - 60+ employees → Premier minimum
-  //   - Multi-site: NEVER Essential or Access
-  //   - Multi across regions → almost always Enterprise
-  // ──────────────────────────────────────────────────────────
-
-  if (coverageSizeBand === "500_plus") {
-    serviceTier = "Enterprise";
-    rationale.push("Tier: 500+ employees → Enterprise.");
-  } else if (
-    coverageSizeBand === "251_500" ||
-    coverageSizeBand === "101_250" ||
-    coverageSizeBand === "61_100"
-  ) {
-    serviceTier = "Premier";
-    rationale.push("Tier: 60+ employees → Premier minimum.");
-  } else if (coverageSizeBand === "31_60") {
-    serviceTier = "Access";
-    rationale.push("Tier: 31-60 employees → Access.");
-  } else {
-    serviceTier = "Access";
-    rationale.push("Tier: 1-30 employees → Access.");
-  }
-
-  // Location overrides — multi-site NEVER Essential or Access
-  if (isMultiLocation) {
-    serviceTier = escalateTier(serviceTier, "Premier");
-    rationale.push(
-      "Location override: Multi-site operations → at least Premier (never Essential/Access).",
-    );
-
-    // Multi across regions → almost always Enterprise
-    if (locationModel === "multi_across_regions") {
-      if (coverageSizeBand === "1_30") {
-        serviceTier = escalateTier(serviceTier, "Premier");
-        rationale.push("Location override: Cross-region small team → Premier.");
-      } else {
-        serviceTier = "Enterprise";
-        rationale.push(
-          "Location override: Cross-region operations → Enterprise.",
-        );
-      }
-    }
-
-    // Multi-site EU escalation
-    euPackage = escalateEu(euPackage, "Complete");
-    rationale.push("Location EU: Multi-site → at least Complete.");
-
-    // Group B cross-region gets Covered
-    if (inGroupB && locationModel === "multi_across_regions") {
-      euPackage = escalateEu(euPackage, "Covered");
-      rationale.push("Location EU: Group B cross-region → Covered.");
-    }
-  }
-
-  // Service model overrides (onsite/hybrid → at least Premier)
-  if (usesOnsiteOrHybrid) {
-    serviceTier = escalateTier(serviceTier, "Premier");
-    rationale.push("Service model: Onsite/Hybrid delivery → at least Premier.");
-  }
-
-  // No formal program special case — Essential ONLY for 1-30, single site
-  if (
-    isNoFormalProgram &&
-    coverageSizeBand === "1_30" &&
-    locationModel === "single" &&
-    !budgetPreference
-  ) {
-    serviceTier = "Essential";
-    euPackage = "Compliance";
-    rationale.push(
-      "Special case: No formal program + 1-30 + single site → Compliance + Essential.",
-    );
-  }
+  // STEP 2: Service tier uses company size with partner-level escalation.
+  serviceTier = recommendServiceTierFromTable({
+    coverageSizeBand,
+    locationModel,
+    exposureRisks,
+    currentSafetySetup,
+    workType,
+    rationale,
+  });
 
   // ──────────────────────────────────────────────────────────
   // STEP 3: Add-on inference
@@ -638,40 +675,38 @@ export function recommendProgram(
   }
 
   // ──────────────────────────────────────────────────────────
-  // STEP 4: Budget constraints — EU package only
+  // STEP 4: Budget posture is captured for handoff only.
   //
-  // Service tier is driven by locations and team size,
-  // not budget. Budget influences coverage depth (EU).
+  // Per recommendation rules, budget does not override
+  // industry + hazard package logic or size/partner tier logic.
   // ──────────────────────────────────────────────────────────
 
   if (budgetPreference) {
     const constraints = budgetConstraint(budgetPreference, coverageSizeBand);
-    const beforeEu = euPackage;
-    euPackage = clampToAllowed(euPackage, EU_ORDER, constraints.allowedEu);
-    if (beforeEu !== euPackage) {
-      rationale.push(`Budget clamp (${constraints.label}) → EU ${euPackage}.`);
-    }
+    rationale.push(
+      `Budget noted (${constraints.label}) for specialist review; recommendation unchanged.`,
+    );
   }
 
   // ──────────────────────────────────────────────────────────
   // STEP 5: Safety nets
   // ──────────────────────────────────────────────────────────
 
-  // Essential only valid for very small single-site teams
-  if (serviceTier === "Essential" && coverageSizeBand !== "1_30") {
+  // Ensure Essential only appears for bands that can represent <=50.
+  if (
+    serviceTier === "Essential" &&
+    !["1_30", "31_60"].includes(coverageSizeBand)
+  ) {
     serviceTier = "Access";
     rationale.push(
-      "Safety net: Essential only valid for 1-30 employees → Access.",
+      "Safety net: Essential only valid for smaller team-size bands -> Access.",
     );
   }
 
-  // Multi-site hard floor — budget can never override this
-  if (
-    isMultiLocation &&
-    (serviceTier === "Essential" || serviceTier === "Access")
-  ) {
-    serviceTier = "Premier";
-    rationale.push("Safety net: Multi-site must be Premier or higher.");
+  // Large multi-site operations should always have partner-level support.
+  if (isMultiLocation && coverageSizeBand !== "1_30") {
+    serviceTier = escalateTier(serviceTier, "Premier");
+    rationale.push("Safety net: Multi-site operations require Premier support.");
   }
 
   // ──────────────────────────────────────────────────────────

@@ -30,11 +30,11 @@ test("1) Manufacturing 1 to 30 with high impact and dust, no program, no service
     }),
   );
 
-  assert.equal(result.euPackage, "Compliance");
+  assert.equal(result.euPackage, "Complete");
   assert.equal(result.serviceTier, "Essential");
 });
 
-test("2) Manufacturing 61 to 100 with high impact and dust -> Comfort and Premier", () => {
+test("2) Manufacturing 61 to 100 with high impact and dust -> Complete and Access", () => {
   const result = recommendProgram(
     makeInputs({
       workType: "manufacturing",
@@ -43,8 +43,8 @@ test("2) Manufacturing 61 to 100 with high impact and dust -> Comfort and Premie
     }),
   );
 
-  assert.equal(result.euPackage, "Comfort");
-  assert.equal(result.serviceTier, "Premier");
+  assert.equal(result.euPackage, "Complete");
+  assert.equal(result.serviceTier, "Access");
 });
 
 test("3) Manufacturing 251 to 500 with high impact and dust -> Complete and Premier", () => {
@@ -71,7 +71,7 @@ test("4) Manufacturing with fog and screen intensive hazards infers Anti fog and
   assert.deepEqual(result.addOns, ["Anti fog", "Blue light"]);
 });
 
-test("5) Healthcare 31 to 60 with no add-ons, 1 location -> Comfort and Access", () => {
+test("5) Healthcare 31 to 60 with no add-ons, 1 location -> Complete and Access", () => {
   const result = recommendProgram(
     makeInputs({
       workType: "healthcare",
@@ -80,11 +80,11 @@ test("5) Healthcare 31 to 60 with no add-ons, 1 location -> Comfort and Access",
     }),
   );
 
-  assert.equal(result.euPackage, "Comfort");
+  assert.equal(result.euPackage, "Complete");
   assert.equal(result.serviceTier, "Access");
 });
 
-test("6) Healthcare 31-60 with selected add-on -> Comfort and Access (service tier is location/size driven)", () => {
+test("6) Healthcare 31-60 with selected add-on -> Complete and Access (service tier is location/size driven)", () => {
   const result = recommendProgram(
     makeInputs({
       workType: "healthcare",
@@ -93,7 +93,7 @@ test("6) Healthcare 31-60 with selected add-on -> Comfort and Access (service ti
     }),
   );
 
-  assert.equal(result.euPackage, "Comfort");
+  assert.equal(result.euPackage, "Complete");
   assert.equal(result.serviceTier, "Access");
 });
 
@@ -110,7 +110,7 @@ test("7) Healthcare with 2 locations in same region -> Complete and Premier", ()
   assert.equal(result.serviceTier, "Premier");
 });
 
-test("8) Healthcare with 2 locations across regions -> Covered and Enterprise", () => {
+test("8) Healthcare with 2 locations across regions -> Complete and Premier", () => {
   const result = recommendProgram(
     makeInputs({
       workType: "healthcare",
@@ -119,8 +119,8 @@ test("8) Healthcare with 2 locations across regions -> Covered and Enterprise", 
     }),
   );
 
-  assert.equal(result.euPackage, "Covered");
-  assert.equal(result.serviceTier, "Enterprise");
+  assert.equal(result.euPackage, "Complete");
+  assert.equal(result.serviceTier, "Premier");
 });
 
 test("9) Onsite Events with 101 to 500 employees -> Tier Premier", () => {
@@ -135,7 +135,7 @@ test("9) Onsite Events with 101 to 500 employees -> Tier Premier", () => {
   assert.equal(result.serviceTier, "Premier");
 });
 
-test("10) Compliance First budget clamps EU but service tier stays Enterprise for multi-region", () => {
+test("10) Compliance First budget is captured but does not override package/tier", () => {
   const result = recommendProgram(
     makeInputs({
       workType: "healthcare",
@@ -145,14 +145,12 @@ test("10) Compliance First budget clamps EU but service tier stays Enterprise fo
     }),
   );
 
-  assert.ok(
-    result.euPackage === "Compliance" || result.euPackage === "Comfort",
-  );
-  // Service tier is location/size driven — multi-region is always Enterprise
-  assert.equal(result.serviceTier, "Enterprise");
+  assert.equal(result.euPackage, "Complete");
+  // Service tier is location/size driven — multi-region stays at Premier
+  assert.equal(result.serviceTier, "Premier");
 });
 
-test("11) Full Investment budget upgrades EU to Complete, tier stays Access for small single-site team", () => {
+test("11) Full Investment budget is captured; small high-hazard team stays Essential", () => {
   const result = recommendProgram(
     makeInputs({
       workType: "manufacturing",
@@ -163,6 +161,6 @@ test("11) Full Investment budget upgrades EU to Complete, tier stays Access for 
   );
 
   assert.equal(result.euPackage, "Complete");
-  // Service tier is location/size driven — 1-30 single site stays Access
-  assert.equal(result.serviceTier, "Access");
+  // Service tier follows company-size table unless partner-takeover signals are high
+  assert.equal(result.serviceTier, "Essential");
 });
