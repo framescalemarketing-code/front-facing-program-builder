@@ -99,19 +99,6 @@ function packageTierExplainer(
       "Full-program coverage with the service structure to match. Built for teams that are done managing exceptions manually — this is how programs scale without losing consistency across roles, sites, or shifts.",
   };
   return map[`${euPackage}|${serviceTier}`] ?? null;
-} � a clear standard your team can actually enforce, simple eligibility rules, and a service structure sized for where you are today. This keeps things manageable while you build the program out.",
-    "Compliance|Access":
-      "A structured compliance baseline with enough service cadence to keep the program current as headcount grows, shifts change, or new hires come on. It's built to stay consistent without heavy oversight.",
-    "Comfort|Access":
-      "Better fit selection and stronger adoption support built into the standard. Employees get what they need to actually wear their eyewear � which is how the program earns its value day to day.",
-    "Comfort|Premier":
-      "Full adoption-focused package with the service depth to run it consistently. The right fit for environments where wear compliance matters as much as technical protection � because a pair sitting in a locker isn't protecting anyone.",
-    "Complete|Access":
-      "Broader coverage options and prescription flexibility for mixed-role environments, paired with service cadence that keeps access consistent without heavy coordination overhead.",
-    "Complete|Premier":
-      "The most common recommendation for growing programs that need performance features, mixed prescriptions, and a service structure that doesn't require constant manual management. Built for teams that are ready to scale.",
-  };
-  return map[`${euPackage}|${serviceTier}`] ?? null;
 }
 
 function serviceTierPriceLabel(serviceTier: ServiceTier | null) {
@@ -250,33 +237,6 @@ function postureCard(tier: ProgramComplexityTier) {
       badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
       explanation:
         "At your scale, governance, dedicated support, and cross-site consistency aren't optional — they're the baseline. Your recommendation includes specialist partnership, leadership-level visibility, and processes built to hold up across regions, roles, and compliance environments.",
-      icon: "",
-      accentColor: "#475569",
-    }, � defined eligibility, a simple ordering path, and the controls to start strong. Everything is sized so you can build on it as the program matures.",
-      icon: "",
-      accentColor: "#475569",
-    },
-    operationally_strong: {
-      label: "Operationally Strong",
-      badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
-      explanation:
-        "Your program profile reflects a mid-tier operation focused on keeping things running smoothly. With an operations-focused budget direction, some exposure risks selected, and a team that's past the startup phase, the recommendation is tuned to reduce day-to-day friction � streamlined workflows, reliable employee access, and enough oversight to catch problems before they compound.",
-      icon: "",
-      accentColor: "#475569",
-    },
-    system_scalable: {
-      label: "System Scalable",
-      badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
-      explanation:
-        "Your program profile reflects a larger employee count, multiple sites, and growing capital investment. At this stage, manual coordination breaks down � standards drift between sites, exceptions pile up, and execution gets inconsistent. The recommendation is built for the growth phase: keeping your program aligned across locations and giving you the infrastructure to scale without losing control.",
-      icon: "",
-      accentColor: "#475569",
-    },
-    enterprise_grade: {
-      label: "Enterprise Grade",
-      badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
-      explanation:
-        "Your program profile reflects top-tier selections, a large workforce across multiple sites, and high operational complexity. At your scale, governance, dedicated support, and cross-site consistency aren't optional � they're the baseline. The recommendation includes specialist partnership, leadership-level visibility, and processes built to hold up across regions, roles, and compliance environments.",
       icon: "",
       accentColor: "#475569",
     },
@@ -670,8 +630,6 @@ export function RecommendationSummaryPage({
                 </h1>
                 <p className="mt-2 max-w-2xl text-gray-500 text-sm">
                   Built from your answers — your specialist will walk through this with you before anything moves forward. Nothing is set until you are ready.
-                </p> � nothing is locked
-                  until you're ready.
                 </p>
               </div>
               <div className="text-xs text-gray-400 mt-3 sm:mt-0 shrink-0">
@@ -888,19 +846,6 @@ export function RecommendationSummaryPage({
                         <p className="text-sm text-slate-600 leading-relaxed">
                           This is built from your answers — not a generic template. Programs are meant to evolve. Your OSSO specialist will help you refine coverage, adjust service levels, and scale the program as your workforce and compliance needs change. The relationship doesn't end when the glasses are delivered.
                         </p>
-                      </div> � professional footer */}
-                      <div className="px-6 py-5 border-t border-slate-100 bg-linear-to-r from-[#244093]/3 to-[#2971b5]/2">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-[#244093]/70 mb-1.5">
-                          Your Recommended Starting Point
-                        </p>
-                        <p className="text-sm text-slate-600 leading-relaxed">
-                          This configuration is built from your answers and
-                          represents the strongest starting position for your
-                          organization. Programs evolve � your OSSO specialist
-                          will help you refine coverage, adjust service levels,
-                          and scale the program as your workforce and compliance
-                          requirements change over time.
-                        </p>
                       </div>
                     </div>
                   )}
@@ -1041,12 +986,6 @@ export function RecommendationSummaryPage({
                       <div className="px-6 py-4 border-t border-slate-100 bg-linear-to-r from-[#244093]/3 to-[#2971b5]/2">
                         <p className="text-sm text-slate-600 leading-relaxed">
                           Your profile is built from the full picture — team size, locations, exposure complexity, delivery structure, program posture, and approval routing. It reflects where your program actually sits today, not where you want it to be. Your specialist will help close the gap.
-                        </p>
-                      </div> � team
-                          size, number of locations, exposure complexity,
-                          delivery structure, budget posture, and approval
-                          routing. It�s not a preference you pick; it reflects
-                          where your program actually sits today.
                         </p>
                       </div>
                     </div>

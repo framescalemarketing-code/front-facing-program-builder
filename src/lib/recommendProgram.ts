@@ -91,30 +91,6 @@ export type RecommendProgramResult = {
 
 const EU_ORDER: EUPackage[] = ["Compliance", "Comfort", "Complete"];
 
-const TIER_ORDER: ServiceTier[] = [
-  "Essential",
-  "Access",
-  "Premier",
-];
-
-const GROUP_A_INDUSTRIES = new Set<ProgramWorkType>([
-  "manufacturing",
-  "construction",
-  "warehouse",
-]);
-
-const GROUP_B_INDUSTRIES = new Set<ProgramWorkType>([
-  "utilities",
-  "healthcare",
-  "public_sector",
-  "laboratory",
-]);
-
-const GROUP_A_BASE_EXPOSURES = new Set<ProgramExposureRisk>([
-  "high_impact",
-  "dust_debris",
-]);
-
 const SERVICE_TIER_SIZE_TABLE: Array<{
   maxEmployees: number;
   tier: ServiceTier;
@@ -173,50 +149,9 @@ function escalateEu(current: EUPackage, minimum: EUPackage): EUPackage {
     : minimum;
 }
 
-function escalateTier(current: ServiceTier, minimum: ServiceTier): ServiceTier {
-  return rankOf(TIER_ORDER, current) >= rankOf(TIER_ORDER, minimum)
-    ? current
-    : minimum;
-}
-
-function clampToAllowed<T extends string>(
-  current: T,
-  ordered: T[],
-  allowed: T[],
-): T {
-  if (allowed.includes(current)) return current;
-
-  if (allowed.length === 1) return allowed[0];
-
-  const currentRank = rankOf(ordered, current);
-  const allowedRanks = allowed
-    .map((value) => rankOf(ordered, value))
-    .filter((rank) => rank >= 0);
-
-  const nearestDown = [...allowedRanks]
-    .sort((a, b) => b - a)
-    .find((rank) => rank <= currentRank);
-  if (typeof nearestDown === "number") return ordered[nearestDown];
-
-  const nearestUp = [...allowedRanks]
-    .sort((a, b) => a - b)
-    .find((rank) => rank > currentRank);
-  if (typeof nearestUp === "number") return ordered[nearestUp];
-
-  return current;
-}
-
 function dedupeAddOns(addOns: RecommendationAddOn[]): RecommendationAddOn[] {
   const set = new Set(addOns);
   return ADD_ON_ORDER.filter((addOn) => set.has(addOn));
-}
-
-function hasOnsiteOrHybrid(setup: CurrentSafetySetup[]): boolean {
-  return (
-    setup.includes("onsite_events") ||
-    setup.includes("hybrid_delivery") ||
-    setup.includes("hybrid_model")
-  );
 }
 
 function representativeEmployeesForBand(band: CoverageSizeBand): number {
@@ -226,46 +161,6 @@ function representativeEmployeesForBand(band: CoverageSizeBand): number {
     "201_plus": 250,
   };
   return map[band];
-}
-
-function partnerNeedScore(args: {
-  employees: number;
-  locationModel: ProgramLocationModel;
-  exposureRisks: ProgramExposureRisk[];
-  currentSafetySetup: CurrentSafetySetup[];
-  workType: ProgramWorkType;
-}): number {
-  const uniqueRisks = Array.from(new Set(args.exposureRisks));
-  const hazardScore = uniqueRisks.reduce(
-    (sum, risk) => sum + (HAZARD_WEIGHTS[risk] ?? 0),
-    0,
-  );
-  const hasCriticalHazards =
-    uniqueRisks.includes("chemical_splash") ||
-    (uniqueRisks.includes("high_impact") &&
-      (uniqueRisks.includes("temperature_extremes") ||
-        uniqueRisks.includes("dust_debris")));
-
-  let score = 0;
-
-  if (args.locationModel === "multi_across_regions") score += 2;
-  else if (args.locationModel === "multi_same_region") score += 1;
-
-  if (hasOnsiteOrHybrid(args.currentSafetySetup)) score += 1;
-  if (args.currentSafetySetup.includes("no_formal_program")) score += 1;
-  if (args.employees > 200) score += 1;
-  if (hazardScore >= 4) score += 1;
-  if (hasCriticalHazards) score += 1;
-
-  if (
-    args.workType === "healthcare" ||
-    args.workType === "laboratory" ||
-    args.workType === "utilities"
-  ) {
-    score += 1;
-  }
-
-  return score;
 }
 
 function recommendServiceTierFromTable(args: {
@@ -623,7 +518,6 @@ export function recommendProgram(
   const selectedAddOns = dedupeAddOns(rawInputs.selectedAddOns ?? []);
 
   const rationale: string[] = [];
-  const isMultiLocation = locationModel !== "single";
 
   let euPackage: EUPackage;
   let serviceTier: ServiceTier;
