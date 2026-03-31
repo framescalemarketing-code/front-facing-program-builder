@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { NavigateFn } from "@/app/routerTypes";
@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/buttonStyles";
 import { useProgramDraft } from "@/hooks/useProgramDraft";
 import { useAssessmentParams } from "@/hooks/useAssessmentParams";
-import { formatPhoneAsUs, isValidEmailFormat } from "@/lib/contactValidation";
 import { submitLeadToWP } from "@/lib/submitLead";
 import { PILLAR_DEFINITIONS, type PillarIconKey } from "@/lib/pillarAnchors";
 import {
@@ -56,11 +55,11 @@ type GuidanceContent = {
 const STEPS: WizardStep[] = [
   {
     id: "company",
-    sectionLabel: "Contact",
-    heroTitle: "Let's start with you",
+    sectionLabel: "Start",
+    heroTitle: "Start your recommendation",
     heroSubtitle:
-      "We'll use this to personalize your recommendation and know who to follow up with",
-    progressLabel: "Contact",
+      "Answer seven quick questions about your team and setup. You'll add contact details on the recommendation page.",
+    progressLabel: "Start",
   },
   {
     id: "work_type",
@@ -255,7 +254,7 @@ const EXPOSURE_OPTIONS: Array<{
     value: "high_impact",
     label: "High Impact",
     helper:
-      "Machine-adjacent and tool-heavy work where impact-rated frames aren't optional — they're the baseline.",
+      "Machine-adjacent and tool-heavy work where impact-rated frames aren't optional ï¿½ they're the baseline.",
   },
   {
     value: "dust_debris",
@@ -273,7 +272,7 @@ const EXPOSURE_OPTIONS: Array<{
     value: "outdoor_glare",
     label: "Outdoor Glare",
     helper:
-      "Extended outdoor exposure where glare isn't just annoying — it reduces hazard awareness and pushes people to take off their eyewear.",
+      "Extended outdoor exposure where glare isn't just annoying ï¿½ it reduces hazard awareness and pushes people to take off their eyewear.",
   },
   {
     value: "fog_humidity",
@@ -285,7 +284,7 @@ const EXPOSURE_OPTIONS: Array<{
     value: "indoor_outdoor_shift",
     label: "Indoor and Outdoor Shift Changes",
     helper:
-      "Roles that move between inside and outside — dock to floor, office to field — where slow light adaptation creates a real safety gap.",
+      "Roles that move between inside and outside ï¿½ dock to floor, office to field ï¿½ where slow light adaptation creates a real safety gap.",
   },
   {
     value: "screen_intensive",
@@ -297,7 +296,7 @@ const EXPOSURE_OPTIONS: Array<{
     value: "temperature_extremes",
     label: "Temperature Extremes",
     helper:
-      "Foundry floors, cold storage, outdoor summers — temperature swings that stress lenses and make people want to ditch their eyewear.",
+      "Foundry floors, cold storage, outdoor summers ï¿½ temperature swings that stress lenses and make people want to ditch their eyewear.",
   },
 ];
 
@@ -551,7 +550,6 @@ export function RecommendationIntakePage({
   const [locationOptionId, setLocationOptionId] = useState<
     "single" | "multi_same_region" | "multi_across_regions"
   >("single");
-  const [showLocationDetails, setShowLocationDetails] = useState(false);
   const [activeExposureFocus, setActiveExposureFocus] =
     useState<ProgramExposureRisk | null>(null);
   const [activeSetupFocus, setActiveSetupFocus] =
@@ -772,7 +770,7 @@ export function RecommendationIntakePage({
       }
     }
     window.addEventListener("popstate", handlePopState);
-    // Seed initial state so back from step 1 → step 0 works
+    // Seed initial state so back from step 1 ? step 0 works
     if (
       !window.history.state?.wizardStep &&
       window.history.state?.wizardStep !== 0
@@ -784,18 +782,6 @@ export function RecommendationIntakePage({
   }, []);
 
   function goNext() {
-    if (step.id === "company") {
-      if (!form.contactName.trim() || !form.companyName.trim()) {
-        setError("Please add your full name and company before continuing.");
-        return;
-      }
-      if (!isValidEmailFormat(form.email)) {
-        setError(
-          "Your email is how we send your recommendation and connect you with a specialist — without it, we can't make this useful.",
-        );
-        return;
-      }
-    }
     goToStep(stepIndex + 1);
   }
 
@@ -868,7 +854,7 @@ export function RecommendationIntakePage({
 
       <div className="mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8 lg:pb-0">
         <SectionWrap>
-          {/* ── Progress bar + step nav ── */}
+          {/* -- Progress bar + step nav -- */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <button
               type="button"
@@ -967,10 +953,10 @@ export function RecommendationIntakePage({
                   />
                   <div className="p-5">
                     <p className="text-base font-bold text-foreground">
-                      Most programs aren't broken — they're just not built around the people running them.
+                      Most programs aren't broken ï¿½ they're just not built around the people running them.
                     </p>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      We'll walk through seven questions about your team, your environment, and how things run today. From there, we'll put together a <span className="font-semibold text-foreground">recommendation</span> built around your workers — and connect you with a specialist to review it together.
+                      We'll walk through seven questions about your team, your environment, and how things run today. From there, we'll put together a <span className="font-semibold text-foreground">recommendation</span> built around your workers ï¿½ and connect you with a specialist to review it together.
                     </p>
                   </div>
                 </div>
@@ -978,167 +964,19 @@ export function RecommendationIntakePage({
 
               {step.id === "company" ? (
                 <div className="rounded-lg border border-border bg-card p-5">
-                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                      A little about you
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                      Start
                     </p>
-                    <div className="mt-3 grid gap-4 sm:grid-cols-2">
-                      <label className="space-y-2">
-                        <div className="text-sm font-semibold text-foreground">
-                          Your Name
-                        </div>
-                        <input
-                          value={form.contactName}
-                          onChange={(e) =>
-                            setField("contactName", e.target.value)
-                          }
-                          className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
-                          placeholder="Full name"
-                          aria-label="Full name"
-                          required
-                        />
-                      </label>
-
-                      <label className="space-y-2">
-                        <div className="text-sm font-semibold text-foreground">
-                          Company
-                        </div>
-                        <input
-                          value={form.companyName}
-                          onChange={(e) =>
-                            setField("companyName", e.target.value)
-                          }
-                          className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
-                          placeholder="Company"
-                          aria-label="Company"
-                          required
-                        />
-                      </label>
-
-                      <label className="space-y-2 sm:col-span-2">
-                        <div className="text-sm font-medium text-muted-foreground">
-                          Your Role
-                        </div>
-                        <input
-                          value={form.contactRole}
-                          onChange={(e) =>
-                            setField("contactRole", e.target.value)
-                          }
-                          className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
-                          placeholder="Safety Manager, EHS Director, etc."
-                          aria-label="Your role"
-                        />
-                      </label>
-
-                      <label className="space-y-2 sm:col-span-2">
-                        <div className="text-sm font-semibold text-foreground">
-                          Email
-                        </div>
-                        <input
-                          type="email"
-                          value={form.email}
-                          onChange={(e) => setField("email", e.target.value)}
-                          className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
-                          placeholder="name@company.com"
-                          aria-label="Email"
-                          required
-                        />
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                    <label className="space-y-2">
-                      <div className="text-sm font-medium text-muted-foreground">
-                        Phone (optional)
-                      </div>
-                      <input
-                        type="tel"
-                        inputMode="tel"
-                        value={form.phone}
-                        onChange={(e) =>
-                          setField("phone", formatPhoneAsUs(e.target.value))
-                        }
-                        className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
-                        placeholder="123-456-7890"
-                        aria-label="Phone"
-                      />
-                    </label>
-
-                    <div className="sm:col-span-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowLocationDetails((prev) => !prev)}
-                        className="inline-flex items-center rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition hover:border-ring hover:bg-secondary/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
-                        aria-expanded={showLocationDetails}
-                        aria-controls="location-details-fields"
-                      >
-                        {showLocationDetails
-                          ? "Hide location details"
-                          : "Add location details"}
-                      </button>
-                    </div>
-
-                    {showLocationDetails ? (
-                      <div
-                        id="location-details-fields"
-                        className="grid gap-4 sm:col-span-2 sm:grid-cols-2"
-                      >
-                        <label className="space-y-2 sm:col-span-2">
-                          <div className="text-sm font-medium text-muted-foreground">
-                            Street
-                          </div>
-                          <input
-                            value={form.address1}
-                            onChange={(e) =>
-                              setField("address1", e.target.value)
-                            }
-                            className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
-                            placeholder="Street address"
-                            aria-label="Street"
-                          />
-                        </label>
-
-                        <label className="space-y-2">
-                          <div className="text-sm font-medium text-muted-foreground">
-                            City
-                          </div>
-                          <input
-                            value={form.city}
-                            onChange={(e) => setField("city", e.target.value)}
-                            className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
-                            placeholder="City"
-                            aria-label="City"
-                          />
-                        </label>
-
-                        <label className="space-y-2">
-                          <div className="text-sm font-medium text-muted-foreground">
-                            State
-                          </div>
-                          <input
-                            value={form.state}
-                            onChange={(e) => setField("state", e.target.value)}
-                            className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
-                            placeholder="State"
-                            aria-label="State"
-                          />
-                        </label>
-
-                        <label className="space-y-2">
-                          <div className="text-sm font-medium text-muted-foreground">
-                            ZIP
-                          </div>
-                          <input
-                            value={form.zip}
-                            onChange={(e) => setField("zip", e.target.value)}
-                            className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm text-foreground"
-                            placeholder="ZIP"
-                            aria-label="ZIP"
-                          />
-                        </label>
-                      </div>
-                    ) : null}
+                    <p className="mt-2 text-2xl font-black leading-tight text-foreground sm:text-3xl">
+                      Build your recommendation
+                    </p>
+                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                      This quick wizard captures how your team works, the risks
+                      they face, and how coverage should be structured. We will use
+                      your answers to generate a recommendation, then collect
+                      contact details on the recommendation page.
+                    </p>
                   </div>
                 </div>
               ) : null}
@@ -1484,14 +1322,14 @@ export function RecommendationIntakePage({
                   />
                 </div>
 
-                {/* ── Advisory guidance panel ── */}
+                {/* -- Advisory guidance panel -- */}
                 <div className="rounded-xl border border-border bg-card p-5">
                   <div className="text-sm font-semibold text-foreground">
                     Advisory Guidance
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
                     {step.id === "company" &&
-                      "Share contact details so your recommendation and follow-up are routed correctly."}
+                      "Start by defining your operational context so we can generate a recommendation worth reviewing."}
                     {step.id === "work_type" &&
                       "Choose the industry that best reflects your day-to-day work environment."}
                     {step.id === "coverage" &&
@@ -1626,12 +1464,12 @@ function buildGuidance(args: {
       selectedLabel: null,
       sections: guidanceSections(
         {
-          title: "Your contact information",
-          body: "We use your name and company to personalize your recommendation and make sure your specialist has the right person to follow up with. This is just standard contact info — nothing else is tied to it at this stage.",
+          title: "How this step helps",
+          body: "This intro step frames what you will decide across industry, team size, locations, hazards, setup, and budget priorities so your recommendation reflects how your team actually operates.",
         },
         {
-          title: "Why this matters",
-          body: "Having a clear point of contact from the start means your specialist can reach out directly, your recommendation is addressed properly, and there's no back-and-forth figuring out who to talk to.",
+          title: "What happens next",
+          body: "After you answer the seven guided sections, you will review your recommendation first and then add contact details on the recommendation page to unlock full tabs and final actions.",
         },
       ),
     };
@@ -1679,9 +1517,9 @@ function buildGuidance(args: {
     > = {
       "1_50": {
         reality:
-          "At this headcount, coverage is usually coordinated directly between one program owner and frontline supervisors. The Essential tier is sized for exactly this — one clear process, minimal overhead, and a program that holds without someone managing it manually.",
+          "At this headcount, coverage is usually coordinated directly between one program owner and frontline supervisors. The Essential tier is sized for exactly this ï¿½ one clear process, minimal overhead, and a program that holds without someone managing it manually.",
         coordination:
-          "Coordination typically sits with one safety lead handling eligibility, replacements, and employee questions at the same time. Keeping it simple here isn't a limitation — it's what makes it run.",
+          "Coordination typically sits with one safety lead handling eligibility, replacements, and employee questions at the same time. Keeping it simple here isn't a limitation ï¿½ it's what makes it run.",
         nextBand:
           "Crossing into the next size band usually introduces recurring onboarding volume, more replacement activity, and a greater need for repeatable service support.",
       },
@@ -1780,7 +1618,7 @@ function buildGuidance(args: {
           },
           {
             title: "Why accuracy here matters",
-            body: "Exposure accuracy drives wear behavior and replacement frequency. An incomplete profile produces a generic recommendation — the kind that gets overridden the first time conditions don't match the standard.",
+            body: "Exposure accuracy drives wear behavior and replacement frequency. An incomplete profile produces a generic recommendation ï¿½ the kind that gets overridden the first time conditions don't match the standard.",
           },
         ),
       };
@@ -1965,9 +1803,9 @@ function workTypeExplainer(workType: ProgramWorkType) {
   const map: Record<ProgramWorkType, { needs: string; pattern: string }> = {
     manufacturing: {
       needs:
-        "Recommendations prioritize impact-rated durability, all-shift comfort, and fast remake support — because when a lens scratches out on second shift, the replacement can't wait until Monday.",
+        "Recommendations prioritize impact-rated durability, all-shift comfort, and fast remake support ï¿½ because when a lens scratches out on second shift, the replacement can't wait until Monday.",
       pattern:
-        "Programs that hold up in manufacturing build replacement pathways before they're needed — shift-based staffing turns eligibility over fast, and reactive programs always fall behind.",
+        "Programs that hold up in manufacturing build replacement pathways before they're needed ï¿½ shift-based staffing turns eligibility over fast, and reactive programs always fall behind.",
     },
     construction: {
       needs:
@@ -1983,7 +1821,7 @@ function workTypeExplainer(workType: ProgramWorkType) {
     },
     warehouse: {
       needs:
-        "Warehouse recommendations focus on impact-ready daily wear, scratch resilience, and predictable reorder access — because high-turnover environments need replacement to be automatic, not an exception process.",
+        "Warehouse recommendations focus on impact-ready daily wear, scratch resilience, and predictable reorder access ï¿½ because high-turnover environments need replacement to be automatic, not an exception process.",
       pattern:
         "Programs perform best when onboarding and replacement are triggered from workforce rosters, not ad hoc requests after a problem appears.",
     },
@@ -2003,7 +1841,7 @@ function workTypeExplainer(workType: ProgramWorkType) {
       needs:
         "Laboratory recommendations prioritize sealed or splash-oriented designs, anti-fog performance, and strict option control tied to protocol-driven tasks.",
       pattern:
-        "Lab programs work when approved eyewear options are mapped to procedure classes — selections driven by protocol, not supervisor preference, and not workarounds when the standard option doesn't arrive on time.",
+        "Lab programs work when approved eyewear options are mapped to procedure classes ï¿½ selections driven by protocol, not supervisor preference, and not workarounds when the standard option doesn't arrive on time.",
     },
     other: {
       needs:
@@ -2040,7 +1878,7 @@ function exposureExplainer(risk: ProgramExposureRisk) {
       implications:
         "Prioritize high-durability frames, dependable side protection, and fit consistency that holds during active motion.",
       compliance:
-        "Programs should define approved frame classes and replacement triggers up front — reactive replacement after a damage event is where compliance gaps usually start.",
+        "Programs should define approved frame classes and replacement triggers up front ï¿½ reactive replacement after a damage event is where compliance gaps usually start.",
     },
     dust_debris: {
       meaning:
@@ -2064,7 +1902,7 @@ function exposureExplainer(risk: ProgramExposureRisk) {
       implications:
         "Glare-management options support safer visibility, stronger comfort, and higher day-to-day wear consistency.",
       compliance:
-        "Define whether glare-management options are role-based or open — undefined eligibility here tends to become the most-requested exception category.",
+        "Define whether glare-management options are role-based or open ï¿½ undefined eligibility here tends to become the most-requested exception category.",
     },
     fog_humidity: {
       meaning:
@@ -2084,7 +1922,7 @@ function exposureExplainer(risk: ProgramExposureRisk) {
     },
     screen_intensive: {
       meaning:
-        "Extended screen time builds visual fatigue across the shift — and fatigued employees are more likely to remove their eyewear or stop wearing it altogether.",
+        "Extended screen time builds visual fatigue across the shift ï¿½ and fatigued employees are more likely to remove their eyewear or stop wearing it altogether.",
       implications:
         "Anti-reflective and blue-light-support options can improve clarity, comfort, and sustained program adoption.",
       compliance:
@@ -2203,7 +2041,7 @@ function setupExplainer(item: CurrentSafetySetup) {
       compliance:
         "This adds control over policy adherence and reduces unapproved ordering paths.",
       admin:
-        "Queue ownership and turnaround targets matter a lot here — undefined approval chains are where fulfillment quietly becomes unpredictable.",
+        "Queue ownership and turnaround targets matter a lot here ï¿½ undefined approval chains are where fulfillment quietly becomes unpredictable.",
     },
     manager_approval_required: {
       structure:
@@ -2211,7 +2049,7 @@ function setupExplainer(item: CurrentSafetySetup) {
       compliance:
         "This adds control over policy adherence and reduces unapproved ordering paths.",
       admin:
-        "Queue ownership and turnaround targets matter a lot here — undefined approval chains are where fulfillment quietly becomes unpredictable.",
+        "Queue ownership and turnaround targets matter a lot here ï¿½ undefined approval chains are where fulfillment quietly becomes unpredictable.",
     },
     centralized_safety_approval: {
       structure:
@@ -2241,7 +2079,7 @@ function setupExplainer(item: CurrentSafetySetup) {
       structure:
         "Orders are placed online and fulfilled directly, expanding access without requiring onsite event cadence.",
       compliance:
-        "Compliance depends on eligibility guardrails staying tight — without them, self-ordering environments drift toward catalog choices that fall outside policy.",
+        "Compliance depends on eligibility guardrails staying tight ï¿½ without them, self-ordering environments drift toward catalog choices that fall outside policy.",
       admin:
         "Scheduling overhead drops, while fit guidance, support handling, and return management typically increase.",
     },

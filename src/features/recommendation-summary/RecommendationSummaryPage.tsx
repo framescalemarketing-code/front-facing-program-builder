@@ -818,139 +818,6 @@ export function RecommendationSummaryPage({
                   onSectionChange={setActiveCardSection}
                 />
 
-                <article className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
-                  <h2 className="text-base font-bold text-slate-900">
-                    Your Information
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-600">
-                    Complete your contact and location details below.
-                  </p>
-
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Company name
-                      <input
-                        value={intake.companyName}
-                        onChange={(event) =>
-                          handleIntakeFieldChange("companyName", event.target.value)
-                        }
-                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
-                      />
-                    </label>
-                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Contact name
-                      <input
-                        value={intake.fullName}
-                        onChange={(event) =>
-                          handleIntakeFieldChange("fullName", event.target.value)
-                        }
-                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
-                      />
-                    </label>
-                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Role
-                      <input
-                        value={intake.role}
-                        onChange={(event) =>
-                          handleIntakeFieldChange("role", event.target.value)
-                        }
-                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
-                      />
-                    </label>
-                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Email
-                      <input
-                        value={intake.email}
-                        onChange={(event) =>
-                          handleIntakeFieldChange("email", event.target.value)
-                        }
-                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
-                      />
-                    </label>
-                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Phone
-                      <input
-                        value={intake.phone}
-                        onChange={(event) =>
-                          handleIntakeFieldChange("phone", event.target.value)
-                        }
-                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
-                      />
-                    </label>
-                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Company address
-                      <input
-                        type="text"
-                        value={intake.locationLabel}
-                        onChange={(event) =>
-                          handleIntakeFieldChange("locationLabel", event.target.value)
-                        }
-                        placeholder="e.g., 123 Main St, Building A"
-                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
-                      />
-                    </label>
-                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      City
-                      <input
-                        value={intake.locationCity}
-                        onChange={(event) =>
-                          handleIntakeFieldChange("locationCity", event.target.value)
-                        }
-                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
-                      />
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        State
-                        <input
-                          type="text"
-                          list="us-states-list"
-                          value={intake.locationState}
-                          onChange={(event) =>
-                            handleIntakeFieldChange("locationState", event.target.value)
-                          }
-                          placeholder="e.g., CA"
-                          maxLength={2}
-                          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800 uppercase"
-                        />
-                      </label>
-                      <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Zip
-                        <input
-                          type="text"
-                          value={intake.locationZip}
-                          onChange={(event) =>
-                            handleIntakeFieldChange("locationZip", event.target.value)
-                          }
-                          placeholder="e.g., 90210"
-                          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
-                        />
-                      </label>
-                    </div>
-                    {/* Hidden datalist for state autocomplete */}
-                    <datalist id="us-states-list">
-                      {["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
-                        "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
-                        "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
-                        "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
-                        "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"].map((state) => (
-                        <option key={state} value={state} />
-                      ))}
-                    </datalist>
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={saveIntakeAndUnlock}
-                      disabled={!isIntakeComplete}
-                      className={primaryButtonClass}
-                    >
-                      Save Intake and Unlock Tabs
-                    </button>
-                  </div>
-                </article>
-
                 {/* Detailed Sections driven by active tab */}
                 <article className="rounded-xl border border-slate-200/80 bg-white shadow-sm overflow-hidden">
                   {/* Snapshot: the full picture at a glance */}
@@ -1558,6 +1425,139 @@ export function RecommendationSummaryPage({
                     </div>
                   )}
 
+                </article>
+
+                <article className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+                  <h2 className="text-base font-bold text-slate-900">
+                    Your Information
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Complete your contact and location details below.
+                  </p>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Company name
+                      <input
+                        value={intake.companyName}
+                        onChange={(event) =>
+                          handleIntakeFieldChange("companyName", event.target.value)
+                        }
+                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Contact name
+                      <input
+                        value={intake.fullName}
+                        onChange={(event) =>
+                          handleIntakeFieldChange("fullName", event.target.value)
+                        }
+                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Role
+                      <input
+                        value={intake.role}
+                        onChange={(event) =>
+                          handleIntakeFieldChange("role", event.target.value)
+                        }
+                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Email
+                      <input
+                        value={intake.email}
+                        onChange={(event) =>
+                          handleIntakeFieldChange("email", event.target.value)
+                        }
+                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Phone
+                      <input
+                        value={intake.phone}
+                        onChange={(event) =>
+                          handleIntakeFieldChange("phone", event.target.value)
+                        }
+                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Company address
+                      <input
+                        type="text"
+                        value={intake.locationLabel}
+                        onChange={(event) =>
+                          handleIntakeFieldChange("locationLabel", event.target.value)
+                        }
+                        placeholder="e.g., 123 Main St, Building A"
+                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      City
+                      <input
+                        value={intake.locationCity}
+                        onChange={(event) =>
+                          handleIntakeFieldChange("locationCity", event.target.value)
+                        }
+                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                      />
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        State
+                        <input
+                          type="text"
+                          list="us-states-list"
+                          value={intake.locationState}
+                          onChange={(event) =>
+                            handleIntakeFieldChange("locationState", event.target.value)
+                          }
+                          placeholder="e.g., CA"
+                          maxLength={2}
+                          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800 uppercase"
+                        />
+                      </label>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Zip
+                        <input
+                          type="text"
+                          value={intake.locationZip}
+                          onChange={(event) =>
+                            handleIntakeFieldChange("locationZip", event.target.value)
+                          }
+                          placeholder="e.g., 90210"
+                          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                        />
+                      </label>
+                    </div>
+                    {/* Hidden datalist for state autocomplete */}
+                    <datalist id="us-states-list">
+                      {["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
+                        "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
+                        "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+                        "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
+                        "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"].map((state) => (
+                        <option key={state} value={state} />
+                      ))}
+                    </datalist>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={saveIntakeAndUnlock}
+                      disabled={!isIntakeComplete}
+                      className={primaryButtonClass}
+                    >
+                      Save intake and unlock tabs
+                    </button>
+                  </div>
                 </article>
               </div>
 
