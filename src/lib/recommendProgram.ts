@@ -1,5 +1,5 @@
-export type EUPackage = "Compliance" | "Comfort" | "Complete";
-export type ServiceTier = "Essential" | "Access" | "Premier";
+export type EUPackage = "Compliance" | "Comfort" | "Complete" | "Covered";
+export type ServiceTier = "Essential" | "Access" | "Premier" | "Partnered";
 
 export type ProgramWorkType =
   | "manufacturing"
@@ -11,7 +11,7 @@ export type ProgramWorkType =
   | "laboratory"
   | "other";
 
-export type CoverageSizeBand = "1_50" | "51_200" | "201_plus";
+export type CoverageSizeBand = "1_50" | "51_100" | "101_200" | "201_plus";
 
 export type ProgramLocationModel =
   | "single"
@@ -37,6 +37,7 @@ export type ProgramBudgetPreference =
 export type CurrentSafetySetup =
   | "no_formal_program"
   | "reimbursement"
+  | "covered_through_vision_insurance"
   | "vendor_optometry_partnership"
   | "voucher"
   | "employer_fully_covered"
@@ -83,13 +84,18 @@ export type RecommendProgramResult = {
   serviceTier: ServiceTier;
   addOns: RecommendationAddOn[];
   rationale: string[];
+  upgradeOptions: {
+    euPackage?: "Covered";
+    serviceTier?: "Partnered";
+    rationale: string[];
+  } | null;
   recommendedEuPackage: EUPackage;
   recommendedServiceTier: ServiceTier;
   recommendedAddOns: RecommendationAddOn[];
   coatingRecommendations: CoatingRecommendation[];
 };
 
-const EU_ORDER: EUPackage[] = ["Compliance", "Comfort", "Complete"];
+const EU_ORDER: EUPackage[] = ["Compliance", "Comfort", "Complete", "Covered"];
 
 const SERVICE_TIER_SIZE_TABLE: Array<{
   maxEmployees: number;
@@ -97,7 +103,8 @@ const SERVICE_TIER_SIZE_TABLE: Array<{
   label: string;
 }> = [
   { maxEmployees: 50, tier: "Essential", label: "1–50 employees" },
-  { maxEmployees: 200, tier: "Access", label: "51–200 employees" },
+  { maxEmployees: 100, tier: "Access", label: "51–100 employees" },
+  { maxEmployees: 200, tier: "Access", label: "101–200 employees" },
   { maxEmployees: Number.POSITIVE_INFINITY, tier: "Access", label: "201+ employees" },
 ];
 
@@ -157,10 +164,60 @@ function dedupeAddOns(addOns: RecommendationAddOn[]): RecommendationAddOn[] {
 function representativeEmployeesForBand(band: CoverageSizeBand): number {
   const map: Record<CoverageSizeBand, number> = {
     "1_50": 30,
-    "51_200": 100,
-    "201_plus": 250,
+    "51_100": 75,
+    "101_200": 150,
+    "201_plus": 260,
   };
   return map[band];
+}
+
+function setupStructureScore(setup: CurrentSafetySetup[]): {
+  minimalSignals: number;
+  structuredSignals: number;
+  partnershipSignals: number;
+} {
+  const minimal = new Set<CurrentSafetySetup>([
+    "no_formal_program",
+    "voucher",
+    "reimbursement",
+    "covered_through_vision_insurance",
+    "employee_self_order",
+    "mail_fulfillment",
+    "otg_non_prescription_eyewear",
+    "non_prescription_safety_eyewear",
+  ]);
+  const structured = new Set<CurrentSafetySetup>([
+    "approval_required",
+    "manager_approval_required",
+    "centralized_safety_approval",
+    "onsite_events",
+    "hybrid_model",
+    "hybrid_delivery",
+    "prescription_safety_eyewear",
+    "vendor_optometry_partnership",
+    "regional_service_centers",
+    "hybrid_eyewear",
+  ]);
+  const partnership = new Set<CurrentSafetySetup>([
+    "centralized_safety_approval",
+    "onsite_events",
+    "hybrid_model",
+    "hybrid_delivery",
+    "prescription_safety_eyewear",
+    "vendor_optometry_partnership",
+  ]);
+
+  let minimalSignals = 0;
+  let structuredSignals = 0;
+  let partnershipSignals = 0;
+
+  for (const item of setup) {
+    if (minimal.has(item)) minimalSignals += 1;
+    if (structured.has(item)) structuredSignals += 1;
+    if (partnership.has(item)) partnershipSignals += 1;
+  }
+
+  return { minimalSignals, structuredSignals, partnershipSignals };
 }
 
 function recommendServiceTierFromTable(args: {
@@ -179,17 +236,46 @@ function recommendServiceTierFromTable(args: {
   let serviceTier = baseRow.tier;
   args.rationale.push(`Tier table: ${baseRow.label} -> ${serviceTier}.`);
 
-  // Premier is only recommended for 201+ employees AND a high-investment posture.
-  // "Ready to Grow" and "Full Program Investment" signal the org wants OSSO to own the
-  // program management. Other postures stay at Access regardless of size.
+  const isMultiLocation =
+    args.locationModel === "multi_same_region" ||
+    args.locationModel === "multi_across_regions";
+  if (isMultiLocation && serviceTier === "Essential") {
+    serviceTier = "Access";
+    args.rationale.push("Tier baseline: Multi-location programs start at Access.");
+  }
+
+  const setupScore = setupStructureScore(args.currentSafetySetup);
+  const hasStrongPartnershipSignals =
+    setupScore.structuredSignals >= 3 && setupScore.partnershipSignals >= 2;
+
   if (
-    args.coverageSizeBand === "201_plus" &&
+    args.budgetPreference === "super_strict" &&
+    args.coverageSizeBand === "1_50" &&
+    !isMultiLocation
+  ) {
+    serviceTier = "Essential";
+    args.rationale.push("Budget goals: Compliance First keeps single-site small teams in Essential.");
+  }
+
+  if (
+    args.budgetPreference === "low_budget" &&
+    args.coverageSizeBand === "1_50" &&
+    !isMultiLocation &&
+    setupScore.minimalSignals >= setupScore.structuredSignals
+  ) {
+    serviceTier = "Essential";
+    args.rationale.push("Budget goals: Operations Focused with minimal setup leans Essential.");
+  }
+
+  if (
+    hasStrongPartnershipSignals &&
     (args.budgetPreference === "good_budget" ||
-      args.budgetPreference === "unlimited_budget")
+      args.budgetPreference === "unlimited_budget") &&
+    (isMultiLocation || args.coverageSizeBand === "201_plus")
   ) {
     serviceTier = "Premier";
     args.rationale.push(
-      "Escalation: 201+ employees with Ready to Grow or Full Program Investment posture -> Premier.",
+      "Tier escalation: structured partnership signals and scale indicate Premier support needs.",
     );
   }
 
@@ -199,6 +285,7 @@ function recommendServiceTierFromTable(args: {
 function recommendEuPackageFromIndustryAndHazards(args: {
   workType: ProgramWorkType;
   exposureRisks: ProgramExposureRisk[];
+  budgetPreference?: ProgramBudgetPreference;
   rationale: string[];
 }): EUPackage {
   const uniqueRisks = Array.from(new Set(args.exposureRisks));
@@ -207,44 +294,61 @@ function recommendEuPackageFromIndustryAndHazards(args: {
     0,
   );
   const baseline = INDUSTRY_EU_BASELINE[args.workType];
+  const industryScoreMap: Record<ProgramWorkType, number> = {
+    public_sector: 0,
+    other: 0,
+    warehouse: 1,
+    utilities: 1,
+    manufacturing: 2,
+    construction: 2,
+    healthcare: 2,
+    laboratory: 2,
+  };
+  const budgetScoreMap: Record<ProgramBudgetPreference, number> = {
+    super_strict: 0,
+    low_budget: 1,
+    good_budget: 2,
+    unlimited_budget: 3,
+  };
+  const industryScore = industryScoreMap[args.workType];
+  const budgetScore = args.budgetPreference
+    ? budgetScoreMap[args.budgetPreference]
+    : 1;
 
-  const hasCriticalHazards =
-    uniqueRisks.includes("chemical_splash") ||
-    (uniqueRisks.includes("high_impact") &&
-      (uniqueRisks.includes("temperature_extremes") ||
-        uniqueRisks.includes("dust_debris")));
+  const hasSevereHazards = uniqueRisks.includes("chemical_splash");
+  const hasCompoundHazards =
+    uniqueRisks.includes("high_impact") &&
+    (uniqueRisks.includes("temperature_extremes") ||
+      uniqueRisks.includes("dust_debris"));
 
-  let euPackage: EUPackage;
+  let euPackage: EUPackage = "Comfort";
 
-  if (hazardScore === 0) {
-    euPackage = baseline;
+  if (hazardScore <= 1 && budgetScore <= 1 && industryScore <= 1 && !hasSevereHazards) {
+    euPackage = "Compliance";
     args.rationale.push(
-      `EU table: No hazards selected -> ${euPackage} baseline.`,
+      `EU package: minimal hazards (${hazardScore}), lower budget goals, and lower-complexity industry -> Compliance.`,
     );
-  } else if (hazardScore <= 2 && !hasCriticalHazards) {
-    euPackage = baseline === "Complete" ? "Complete" : "Comfort";
-    args.rationale.push(
-      `EU table: Lower hazard score (${hazardScore}) -> ${euPackage}.`,
-    );
-  } else {
+  } else if (
+    (hazardScore >= 4 && budgetScore >= 2) ||
+    (hasSevereHazards && budgetScore >= 2) ||
+    (hasCompoundHazards && budgetScore >= 3) ||
+    (industryScore >= 2 && hazardScore >= 3 && budgetScore >= 3)
+  ) {
     euPackage = "Complete";
     args.rationale.push(
-      `EU table: Elevated hazard complexity (${hazardScore}) -> Complete.`,
+      `EU package: hazard and budget profile supports Complete (hazard ${hazardScore}, budget score ${budgetScore}).`,
+    );
+  } else {
+    euPackage = "Comfort";
+    args.rationale.push(
+      `EU package: moderate risk and budget profile -> Comfort (hazard ${hazardScore}, budget score ${budgetScore}).`,
     );
   }
 
-  if (hazardScore > 0) {
-    euPackage = escalateEu(euPackage, baseline);
-    if (euPackage !== baseline) {
-      args.rationale.push(`EU floor: Industry baseline retained at ${euPackage}.`);
-    } else {
-      args.rationale.push(`EU baseline: Industry (${args.workType}) -> ${baseline}.`);
-    }
-  } else {
-    args.rationale.push(
-      `EU baseline: Industry (${args.workType}) noted; no-hazard fallback applied.`,
-    );
-  }
+  euPackage = escalateEu(euPackage, baseline === "Complete" ? "Comfort" : baseline);
+  args.rationale.push(
+    `EU baseline input: industry ${args.workType} starts at ${baseline}; final package ${euPackage}.`,
+  );
 
   return euPackage;
 }
@@ -292,6 +396,72 @@ function budgetConstraint(
   };
 }
 
+function determineUpgradeOptions(args: {
+  euPackage: EUPackage;
+  serviceTier: ServiceTier;
+  coverageSizeBand: CoverageSizeBand;
+  locationModel: ProgramLocationModel;
+  exposureRisks: ProgramExposureRisk[];
+  currentSafetySetup: CurrentSafetySetup[];
+  budgetPreference?: ProgramBudgetPreference;
+}): RecommendProgramResult["upgradeOptions"] {
+  const rationale: string[] = [];
+  const uniqueRisks = Array.from(new Set(args.exposureRisks));
+  const hazardScore = uniqueRisks.reduce(
+    (sum, risk) => sum + (HAZARD_WEIGHTS[risk] ?? 0),
+    0,
+  );
+  const hasChemicalAndImpact =
+    uniqueRisks.includes("chemical_splash") &&
+    uniqueRisks.includes("high_impact");
+  const isScaledProgram =
+    args.coverageSizeBand === "201_plus" ||
+    args.locationModel === "multi_across_regions";
+  const setupScore = setupStructureScore(args.currentSafetySetup);
+  const budgetSupportsUpgrade =
+    args.budgetPreference === "good_budget" ||
+    args.budgetPreference === "unlimited_budget";
+
+  let euPackage: "Covered" | undefined;
+  let serviceTier: "Partnered" | undefined;
+
+  if (
+    args.euPackage === "Complete" &&
+    isScaledProgram &&
+    budgetSupportsUpgrade &&
+    (hazardScore >= 5 || hasChemicalAndImpact)
+  ) {
+    euPackage = "Covered";
+    rationale.push(
+      "Covered is available when Complete-level coverage is already in place and risk + scale signals show need for deeper governance.",
+    );
+  }
+
+  if (
+    args.serviceTier === "Premier" &&
+    args.locationModel === "multi_across_regions" &&
+    args.coverageSizeBand === "201_plus" &&
+    setupScore.partnershipSignals >= 3 &&
+    setupScore.structuredSignals >= 3 &&
+    budgetSupportsUpgrade
+  ) {
+    serviceTier = "Partnered";
+    rationale.push(
+      "Partnered is available for enterprise-scale, multi-region programs with mature approval and delivery structure.",
+    );
+  }
+
+  if (!euPackage && !serviceTier) {
+    return null;
+  }
+
+  return {
+    euPackage,
+    serviceTier,
+    rationale,
+  };
+}
+
 // ─── Coating Recommendation Engine ───────────────────────────────────────────
 
 const ALL_COATINGS: Omit<CoatingRecommendation, "reason">[] = [
@@ -336,8 +506,15 @@ export function recommendCoatings(inputs: {
   exposureRisks: ProgramExposureRisk[];
   locationModel: ProgramLocationModel;
   coverageSizeBand: CoverageSizeBand;
+  currentSafetySetup: CurrentSafetySetup[];
 }): CoatingRecommendation[] {
-  const { workType, exposureRisks } = inputs;
+  const {
+    workType,
+    exposureRisks,
+    locationModel,
+    coverageSizeBand,
+    currentSafetySetup,
+  } = inputs;
   const results = new Map<string, CoatingRecommendation>();
 
   function addCoating(id: string, reason: string) {
@@ -450,20 +627,12 @@ export function recommendCoatings(inputs: {
       );
       break;
     case "healthcare":
-      addCoating(
-        "anti_reflective_anti_fog",
-        "Clinical environments with masks and bright lighting benefit from both treatments.",
-      );
-      addCoating(
-        "blue_light_anti_reflective",
-        "Screen-heavy clinical workflows benefit from blue light protection.",
-      );
+      addCoating("anti_reflective", "Clinical settings benefit from reduced glare and clearer visibility.");
+      addCoating("anti_fog", "Clinical environments with frequent mask use benefit from anti-fog support.");
+      addCoating("blue_light_filter", "Screen-heavy clinical workflows benefit from blue light support.");
       break;
     case "laboratory":
-      addCoating(
-        "anti_reflective_anti_fog",
-        "Lab environments with ventilation and bright lighting benefit from dual treatment.",
-      );
+      addCoating("anti_fog", "Lab environments with ventilation and humidity changes benefit from anti-fog support.");
       addCoating(
         "anti_reflective",
         "Improves visual clarity for precision lab work.",
@@ -485,7 +654,7 @@ export function recommendCoatings(inputs: {
       break;
     case "public_sector":
       addCoating(
-        "blue_light_anti_reflective",
+        "blue_light_filter",
         "Public sector roles often involve extended screen work.",
       );
       addCoating(
@@ -501,6 +670,31 @@ export function recommendCoatings(inputs: {
       break;
   }
 
+  const largeTeam = coverageSizeBand === "101_200" || coverageSizeBand === "201_plus";
+  const distributedProgram =
+    locationModel === "multi_same_region" || locationModel === "multi_across_regions";
+  const hasSelfServiceOrdering =
+    currentSafetySetup.includes("employee_self_order") ||
+    currentSafetySetup.includes("mail_fulfillment");
+  const hasStructuredFitting =
+    currentSafetySetup.includes("onsite_events") ||
+    currentSafetySetup.includes("hybrid_delivery") ||
+    currentSafetySetup.includes("hybrid_model");
+
+  if (largeTeam && hasSelfServiceOrdering) {
+    addCoating(
+      "extra_scratch_coating",
+      "Higher-order volume programs with self-service ordering usually benefit from added lens durability.",
+    );
+  }
+
+  if (distributedProgram && hasStructuredFitting) {
+    addCoating(
+      "anti_reflective",
+      "Multi-location programs with mixed fitting pathways benefit from consistent visual clarity options.",
+    );
+  }
+
   return Array.from(results.values());
 }
 
@@ -510,7 +704,7 @@ export function recommendProgram(
   rawInputs: RecommendProgramInputs,
 ): RecommendProgramResult {
   const workType = rawInputs.workType ?? "manufacturing";
-  const coverageSizeBand = rawInputs.coverageSizeBand ?? "51_200";
+  const coverageSizeBand = rawInputs.coverageSizeBand ?? "51_100";
   const locationModel = rawInputs.locationModel ?? "single";
   const exposureRisks = rawInputs.exposureRisks ?? [];
   const currentSafetySetup = rawInputs.currentSafetySetup ?? [];
@@ -526,10 +720,11 @@ export function recommendProgram(
   euPackage = recommendEuPackageFromIndustryAndHazards({
     workType,
     exposureRisks,
+    budgetPreference,
     rationale,
   });
 
-  // STEP 2: Service tier uses company size + budget posture.
+  // STEP 2: Service tier uses team size + locations + setup + budget goals.
   serviceTier = recommendServiceTierFromTable({
     coverageSizeBand,
     locationModel,
@@ -556,17 +751,10 @@ export function recommendProgram(
   }
 
   // ──────────────────────────────────────────────────────────
-  // STEP 4: Budget posture is captured for handoff only.
-  //
-  // Per recommendation rules, budget does not override
-  // industry + hazard package logic or size/partner tier logic.
-  // ──────────────────────────────────────────────────────────
-
+  // STEP 4: Budget goals are part of package/tier selection and also documented.
   if (budgetPreference) {
     const constraints = budgetConstraint(budgetPreference, coverageSizeBand);
-    rationale.push(
-      `Budget noted (${constraints.label}) for specialist review; recommendation unchanged.`,
-    );
+    rationale.push(`Budget goals applied: ${constraints.label}.`);
   }
 
   // ──────────────────────────────────────────────────────────
@@ -581,11 +769,16 @@ export function recommendProgram(
     );
   }
 
-  // Premier is never recommended without the 201+ band, regardless of other signals.
-  if (serviceTier === "Premier" && coverageSizeBand !== "201_plus") {
+  // Premier should remain rare and require either large single-site scale
+  // or a qualified multi-location structure.
+  if (
+    serviceTier === "Premier" &&
+    coverageSizeBand !== "201_plus" &&
+    locationModel === "single"
+  ) {
     serviceTier = "Access";
     rationale.push(
-      "Safety net: Premier requires 201+ employees -> Access.",
+      "Safety net: Premier requires either 201+ single-site scale or qualified multi-location complexity -> Access.",
     );
   }
 
@@ -598,13 +791,31 @@ export function recommendProgram(
     exposureRisks,
     locationModel,
     coverageSizeBand,
+    currentSafetySetup,
   });
+
+  const upgradeOptions = determineUpgradeOptions({
+    euPackage,
+    serviceTier,
+    coverageSizeBand,
+    locationModel,
+    exposureRisks,
+    currentSafetySetup,
+    budgetPreference,
+  });
+
+  if (upgradeOptions?.euPackage || upgradeOptions?.serviceTier) {
+    rationale.push(
+      "Upgrade path available: Covered package and/or Partnered service may be reviewed with your specialist if enterprise governance needs are confirmed.",
+    );
+  }
 
   return {
     euPackage,
     serviceTier,
     addOns,
     rationale,
+    upgradeOptions,
     recommendedEuPackage: euPackage,
     recommendedServiceTier: serviceTier,
     recommendedAddOns: addOns,

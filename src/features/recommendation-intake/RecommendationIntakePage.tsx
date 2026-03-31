@@ -74,14 +74,16 @@ const STEPS: WizardStep[] = [
     id: "coverage",
     sectionLabel: "Team Size",
     heroTitle: "How big is the team we're covering?",
-    heroSubtitle: "Your team size determines which service tier fits — Essential, Access, or Premier",
+    heroSubtitle:
+      "This helps us determine the service type that can best support your team size.",
     progressLabel: "Team Size",
   },
   {
     id: "locations",
     sectionLabel: "Locations",
     heroTitle: "Where is your team located?",
-    heroSubtitle: "Multi-site programs are structured per location — each site runs as its own cost center",
+    heroSubtitle:
+      "Location structure helps us plan how service is coordinated across one site or many sites.",
     progressLabel: "Locations",
   },
   {
@@ -97,16 +99,16 @@ const STEPS: WizardStep[] = [
     sectionLabel: "Setup",
     heroTitle: "How are things set up today?",
     heroSubtitle:
-      "We'll build around what's already working — not start from scratch",
+      "Your current setup shows how employees access eyewear and how approvals and delivery are managed.",
     progressLabel: "Setup",
   },
   {
     id: "budget",
-    sectionLabel: "Program Posture",
-    heroTitle: "Where does your program stand right now?",
+    sectionLabel: "Budget Goals",
+    heroTitle: "What are your budget goals?",
     heroSubtitle:
-      "No wrong answer here — we just want to meet you where you are",
-    progressLabel: "Posture",
+      "Your budget goals help us balance coverage depth, service structure, and long-term program support.",
+    progressLabel: "Budget Goals",
   },
 ];
 
@@ -138,49 +140,49 @@ const WORK_TYPE_OPTIONS: Array<{
     value: "manufacturing",
     label: "Manufacturing & Production",
     helper:
-      "Production floors and assembly lines where durable daily eyewear and quick remake access keep your team protected without slowing things down.",
+      "Production floors, assembly lines, and fabrication environments where eyewear is used around machinery, repetitive motion, and role-based task variation.",
   },
   {
     value: "construction",
     label: "Construction & Field Work",
     helper:
-      "Active job sites with impact hazards, debris, and changing conditions — your program needs to flex around crews without adding headaches.",
+      "Active job sites and field assignments where impact hazards, debris, weather, and changing site conditions shape daily eyewear requirements.",
   },
   {
     value: "utilities",
     label: "Utilities & Field Services",
     helper:
-      "Field teams spread across territory where conditions vary and compliance documentation has to keep up with the work.",
+      "Field service and utility teams working across routes, facilities, and service areas where conditions and support needs vary by assignment.",
   },
   {
     value: "warehouse",
     label: "Warehouse & Distribution",
     helper:
-      "Fast-moving distribution environments where reliable daily wear and easy reordering prevent gaps without extra admin work.",
+      "Distribution, fulfillment, and warehouse environments with constant movement, shared workflows, and recurring replacement needs.",
   },
   {
     value: "healthcare",
     label: "Healthcare & Clinical",
     helper:
-      "Clinical settings where optical clarity, durability through cleaning cycles, and splash protection make the difference between eyewear that gets worn and eyewear that doesn't.",
+      "Clinical and healthcare settings where splash exposure, cleaning protocols, shift work, and visual clarity all influence eyewear use.",
   },
   {
     value: "public_sector",
     label: "Public Sector & Municipal",
     helper:
-      "Multi-department environments where procurement standards and eligibility rules need to stay consistent across the board.",
+      "Municipal, public works, and government-led programs where procurement rules, department standards, and eligibility policies must stay aligned.",
   },
   {
     value: "laboratory",
     label: "Laboratory & Research",
     helper:
-      "Lab and research settings where splash protection and anti-fog reliability aren't nice-to-haves — they're required by the work itself.",
+      "Laboratory and research environments where controlled procedures, splash exposure, humidity changes, and precise visual tasks shape eyewear requirements.",
   },
   {
     value: "other",
     label: "Specialized / Mixed Environment",
     helper:
-      "If your operation doesn't fit neatly into one category, that's totally fine — we build custom structures for edge cases all the time.",
+      "Operations that combine multiple work environments, role types, or exposure conditions that do not fit a single category cleanly.",
   },
 ];
 
@@ -193,24 +195,30 @@ const COVERAGE_BANDS: Array<{
     value: "1_50",
     label: "1 to 50",
     helper:
-      "One point of contact, simple eligibility, and a program that runs without a lot of overhead. The Essential tier is built for this range.",
+      "Teams in this range usually operate with a single point of coordination and a straightforward service model for onboarding, replacements, and approvals.",
   },
   {
-    value: "51_200",
-    label: "51 to 200",
+    value: "51_100",
+    label: "51 to 100",
     helper:
-      "Your team is past the point where informal coordination works. A repeatable process and reliable service cadence starts to really pay off here. The Access tier is built for this range.",
+      "This range typically needs a repeatable process for new hires, order support, and replacement tracking across teams and supervisors.",
+  },
+  {
+    value: "101_200",
+    label: "101 to 200",
+    helper:
+      "Programs at this size usually require stronger routing for approvals, consistent fulfillment support, and clear ownership of exceptions.",
   },
   {
     value: "201_plus",
     label: "200+",
     helper:
-      "Coordination is ongoing work at this scale. Onboarding, reorders, and exceptions are all happening at the same time — and your program needs to run without your safety team managing every moving piece. Premier may be recommended depending on your program posture.",
+      "At this scale, onboarding, reorders, and exceptions run in parallel across managers and sites, so service consistency and governance become central to program performance.",
   },
 ];
 
 const LOCATION_MODELS: Array<{
-  id: "single" | "multi_same_region" | "multi_across_regions" | "multi_complex";
+  id: "single" | "multi_same_region" | "multi_across_regions";
   value: ProgramLocationModel;
   label: string;
   helper: string;
@@ -220,28 +228,21 @@ const LOCATION_MODELS: Array<{
     value: "single",
     label: "Single Location",
     helper:
-      "One site, one point of contact — the simplest structure to set up and the easiest to grow from later.",
+      "A single-location program runs through one site with one local operating rhythm, one approval chain, and one fulfillment pattern for employees.",
   },
   {
     id: "multi_same_region",
     value: "multi_same_region",
     label: "Multiple Locations Same Region",
     helper:
-      "A few sites close enough to share service windows and playbooks — coordination stays manageable when everyone's in the same area.",
+      "Locations in the same region usually share similar scheduling windows and shipping patterns, while still needing site-level ownership and reporting for each location.",
   },
   {
     id: "multi_across_regions",
     value: "multi_across_regions",
     label: "Multiple Locations Across Regions",
     helper:
-      "Sites spread across regions need stronger governance to stay consistent — we'll help you keep everything aligned.",
-  },
-  {
-    id: "multi_complex",
-    value: "multi_across_regions",
-    label: "Multiple Locations, International or Complex",
-    helper:
-      "Complex or international footprints where centralized policy meets local execution — we'll make sure consistency holds regardless of geography.",
+      "Locations spread across regions require consistent standards with regional execution plans, so approvals, delivery timing, and support can stay aligned across all sites.",
   },
 ];
 
@@ -321,19 +322,25 @@ const CURRENT_SETUP_SECTIONS: Array<{
         value: "no_formal_program",
         label: "No Formal Program",
         helper:
-          "Purchases happen as-needed with no standard process — the safety manager ends up fielding questions one by one.",
+          "Safety eyewear is handled case by case without a standardized ordering, approval, or funding process.",
       },
       {
         value: "voucher",
         label: "Voucher / Reimbursement",
         helper:
-          "There's a policy in place, but it only works when employees follow the steps correctly every time.",
+          "Employees access eyewear through a defined voucher or reimbursement path with documented eligibility and policy requirements.",
+      },
+      {
+        value: "covered_through_vision_insurance",
+        label: "Covered Through Vision Insurance",
+        helper:
+          "Safety eyewear is handled through the existing vision insurance structure, including plan rules, covered items, and member workflows.",
       },
       {
         value: "vendor_optometry_partnership",
         label: "Vendor / Optometry Partnership",
         helper:
-          "Eyewear runs through an existing vision benefit or optometry partner — coverage exists but may not be set up for safety compliance.",
+          "Eyewear is coordinated through an established vendor or optometry partner, with existing operational processes for fitting, ordering, and fulfillment.",
       },
     ],
   },
@@ -346,7 +353,7 @@ const CURRENT_SETUP_SECTIONS: Array<{
         value: "approval_required",
         label: "Approval Required",
         helper:
-          "Orders wait for a manager or safety reviewer before going through — adds control, but can slow things down.",
+          "Orders move through a manager or safety review step before they are released for fulfillment.",
       },
     ],
   },
@@ -359,25 +366,25 @@ const CURRENT_SETUP_SECTIONS: Array<{
         value: "employee_self_order",
         label: "Employee Self-Order",
         helper:
-          "Employees order on their own through approved channels — fastest access, but needs strong guardrails to stay on-policy.",
+          "Employees place orders through an approved ordering channel using the rules and selections defined for the program.",
       },
       {
         value: "onsite_events",
         label: "Onsite Events",
         helper:
-          "Scheduled onsite visits where employees are fitted and ordered in person — better accuracy and stronger adoption.",
+          "Scheduled workplace fitting and ordering events where employees are served in person during planned service windows.",
       },
       {
         value: "mail_fulfillment",
         label: "Online Ordering",
         helper:
-          "Employees order online and receive directly — no site scheduling needed, but clear instructions and remake support are important.",
+          "Employees order through an online process and receive eyewear through direct shipment rather than on-site service events.",
       },
       {
         value: "hybrid_delivery",
         label: "Hybrid",
         helper:
-          "Onsite events for priority groups, online for everyone else — more to coordinate, but matches how your team actually works.",
+          "The program uses more than one delivery path, such as onsite events for some groups and online ordering for others.",
       },
     ],
   },
@@ -390,25 +397,25 @@ const CURRENT_SETUP_SECTIONS: Array<{
         value: "prescription_safety_eyewear",
         label: "Prescription Safety Eyewear",
         helper:
-          "Custom safety eyewear for workers who need vision correction — the highest-adoption option because the glasses actually work for them.",
+          "Prescription-rated safety eyewear for employees who need vision correction as part of their required protective eyewear.",
       },
       {
         value: "otg_non_prescription_eyewear",
         label: "Bulk Over the Glasses (OTG)",
         helper:
-          "OTG frames worn over personal glasses — fast to deploy, but comfort and compliance tend to drop if the fit isn't dialed in.",
+          "Over-the-glasses safety eyewear provided for employees who wear their own prescription glasses underneath a protective frame.",
       },
       {
         value: "non_prescription_safety_eyewear",
         label: "Non Prescription Safety Eyewear",
         helper:
-          "Standard safety frames for workers without vision correction needs — simple to manage, cost-effective, and easy to reorder.",
+          "Standard non-prescription safety eyewear provided to employees who do not require prescription correction for work tasks.",
       },
       {
         value: "hybrid_eyewear",
         label: "Hybrid Model",
         helper:
-          "Different pathways by role — prescription for some, non-prescription or OTG for others. More accurate coverage, a bit more to manage.",
+          "A mixed coverage structure where different employee groups are assigned prescription, non-prescription, or OTG pathways based on role needs.",
       },
     ],
   },
@@ -417,39 +424,36 @@ const CURRENT_SETUP_SECTIONS: Array<{
 const BUDGET_OPTIONS: Array<{
   value: ProgramBudgetPreference;
   label: string;
-  bestFor: string;
   helper: string;
   impact: string;
 }> = [
   {
     value: "super_strict",
     label: "Compliance First",
-    bestFor: "New programs or tightening standards",
     helper:
-      "Clear rules, defined eligibility, and predictable approvals — a solid foundation to build on.",
-    impact: "Strong control with fewer exceptions.",
+      "Your primary budget objective is to establish compliance-ready standards first, with tightly defined eligibility, products, and approval boundaries.",
+    impact: "Budget is directed first toward approved standards, role alignment, and controlled policy execution.",
   },
   {
     value: "low_budget",
     label: "Operations Focused",
-    bestFor: "Stable programs improving consistency",
     helper:
-      "Keep what's already working and add reliability without extra admin.",
-    impact: "Smoother day-to-day execution.",
+      "Your budget goal is to maintain dependable day-to-day service while managing cost boundaries and avoiding unnecessary complexity.",
+    impact: "Budget is directed toward dependable ordering, fulfillment, and replacement workflows within tighter spend limits.",
   },
   {
     value: "good_budget",
     label: "Ready to Grow",
-    bestFor: "Teams investing in adoption and fit",
-    helper: "Better experience across shifts with fewer workarounds needed.",
-    impact: "Higher wear rates and more consistent support.",
+    helper:
+      "Your budget goal is to support broader program maturity, including stronger adoption support and more structured service operations.",
+    impact: "Budget can support stronger service structure, wider coverage depth, and more consistent operating support.",
   },
   {
     value: "unlimited_budget",
     label: "Full Program Investment",
-    bestFor: "Complex operations scaling across sites",
-    helper: "Deep support and governance built to grow with you.",
-    impact: "The most resilient structure for the long term.",
+    helper:
+      "Your budget goal is to fund high-structure program support for complex operations that need governance, consistency, and long-term resilience.",
+    impact: "Budget can support enterprise-level coordination, governance, and long-term program infrastructure.",
   },
 ];
 
@@ -532,7 +536,7 @@ export function RecommendationIntakePage({
 }: {
   onNavigate: NavigateFn;
 }) {
-  const { draft, updateDraft } = useProgramDraft();
+  const { updateDraft } = useProgramDraft();
   const assessment = useAssessmentParams();
 
   const [initialStepIndex] = useState(() => consumeInitialStepIndex());
@@ -545,7 +549,7 @@ export function RecommendationIntakePage({
   const [hasSelectedCoverageBand, setHasSelectedCoverageBand] = useState(false);
   const [framingDismissed, setFramingDismissed] = useState(false);
   const [locationOptionId, setLocationOptionId] = useState<
-    "single" | "multi_same_region" | "multi_across_regions" | "multi_complex"
+    "single" | "multi_same_region" | "multi_across_regions"
   >("single");
   const [showLocationDetails, setShowLocationDetails] = useState(false);
   const [activeExposureFocus, setActiveExposureFocus] =
@@ -636,8 +640,7 @@ export function RecommendationIntakePage({
     id:
       | "single"
       | "multi_same_region"
-      | "multi_across_regions"
-      | "multi_complex",
+      | "multi_across_regions",
     value: ProgramLocationModel,
   ) {
     setLocationOptionId(id);
@@ -1433,14 +1436,8 @@ export function RecommendationIntakePage({
                         <div className="pr-10 text-sm font-semibold text-foreground">
                           {opt.label}
                         </div>
-                        <div className="mt-2 pr-10 text-xs font-medium text-foreground">
-                          Best for: {opt.bestFor}
-                        </div>
                         <div className="mt-1 pr-10 text-xs text-muted-foreground">
-                          {opt.helper}
-                        </div>
-                        <div className="mt-2 pr-10 text-xs text-foreground/80">
-                          {opt.impact}
+                          {opt.helper} {opt.impact}
                         </div>
                       </button>
                     );
@@ -1497,9 +1494,20 @@ export function RecommendationIntakePage({
                     Advisory Guidance
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    {step.id === "budget"
-                      ? "This helps us tailor the depth and structure of your recommendation."
-                      : "We'll update this as you go — pick an option to see more detail."}
+                    {step.id === "company" &&
+                      "Share contact details so your recommendation and follow-up are routed correctly."}
+                    {step.id === "work_type" &&
+                      "Choose the industry that best reflects your day-to-day work environment."}
+                    {step.id === "coverage" &&
+                      "Team size helps determine the service type that can support your workforce."}
+                    {step.id === "locations" &&
+                      "Location structure helps define coordination, fulfillment, and support workflows."}
+                    {step.id === "exposures" &&
+                      "Hazard selections shape the protection profile and coating recommendations."}
+                    {step.id === "current_setup" &&
+                      "Current setup details help identify how your program runs today."}
+                    {step.id === "budget" &&
+                      "Budget goals help determine how much structure, coverage depth, and ongoing support should be reflected in your recommendation."}
                   </div>
                   {guidance.selectedLabel ? (
                     <div className="mt-3">
@@ -1579,12 +1587,6 @@ export function RecommendationIntakePage({
             </div>
           </div>
 
-          {draft.programConfig?.active ? (
-            <div className="mt-8 rounded-md border border-border bg-card p-4 text-xs text-muted-foreground">
-              Your recommendation is saved for this session. You can come back
-              and regenerate it anytime.
-            </div>
-          ) : null}
         </SectionWrap>
       </div>
     </section>
@@ -1615,8 +1617,7 @@ function buildGuidance(args: {
   locationOptionId:
     | "single"
     | "multi_same_region"
-    | "multi_across_regions"
-    | "multi_complex";
+    | "multi_across_regions";
   activeExposureFocus: ProgramExposureRisk | null;
   activeSetupFocus: CurrentSafetySetup | null;
   activeSetupSection: CurrentSetupSectionId;
@@ -1646,7 +1647,7 @@ function buildGuidance(args: {
         selectedLabel: null,
         sections: guidanceSections({
           title: "What this step is deciding",
-          body: "The selection you make here shapes the structure, features, and service depth of your recommendation. There's no wrong answer. The more accurate you are, the more useful the output.",
+          body: "Select the industry that most closely matches where your employees perform their daily work. This helps determine the protection profile and operational support model used in your recommendation.",
         }),
       };
     }
@@ -1669,11 +1670,11 @@ function buildGuidance(args: {
         selectedLabel: null,
         sections: guidanceSections({
           title: "What this step covers",
-          body: "Your team size maps directly to the service tier we recommend — Essential for up to 50, Access for 51 to 200, and Premier for 200+ when your program posture calls for it. Pick the range that's closest.",
+          body: "This helps us determine the service type that can best handle your current team size and program coordination needs.",
         }),
       };
     }
-    const band = form.coverageSizeBand ?? "51_200";
+    const band = form.coverageSizeBand ?? "51_100";
     const selected =
       COVERAGE_BANDS.find((option) => option.value === band)?.label ?? null;
     const map: Record<
@@ -1686,26 +1687,34 @@ function buildGuidance(args: {
         coordination:
           "Coordination typically sits with one safety lead handling eligibility, replacements, and employee questions at the same time. Keeping it simple here isn't a limitation — it's what makes it run.",
         nextBand:
-          "Crossing into 51 to 200 introduces recurring onboarding volume and competing replacement cycles. That's where Access service cadence starts to pay off.",
+          "Crossing into the next size band usually introduces recurring onboarding volume, more replacement activity, and a greater need for repeatable service support.",
       },
-      "51_200": {
+      "51_100": {
         reality:
-          "In this range, shift overlap and onboarding cycles start competing with replacement needs in the same week. A repeatable process and consistent service cadence is what keeps things from piling up.",
+          "At this size, teams usually need a clearly defined process for onboarding, replacements, and ongoing policy support.",
         coordination:
-          "Friction usually concentrates on the person maintaining eligibility lists and handling replacement requests — the point where informal coordination breaks and a structured program proves its value.",
+          "Coordination load usually sits with one or two owners managing eligibility, approvals, and employee requests in parallel.",
         nextBand:
-          "Crossing 200+ means exceptions, reorders, and onboarding are all happening in parallel across managers and sites. That's when Premier becomes worth considering — especially if you want OSSO to manage the program rather than your team.",
+          "As programs move into larger bands, support requirements usually expand to include stronger workflow governance and service consistency.",
+      },
+      "101_200": {
+        reality:
+          "Programs in this range often need structured support for multiple supervisors, recurring onboarding, and frequent replacement activity.",
+        coordination:
+          "Coordination pressure usually appears in approval turnaround, exception handling, and keeping fulfillment timelines predictable.",
+        nextBand:
+          "Moving above 200 employees typically adds higher service orchestration needs, especially when locations and workflows vary.",
       },
       "201_plus": {
         reality:
-          "At 200+, program coordination is continuous work — onboarding, reorders, and exceptions are all running at the same time across multiple managers. Programs that depend on manual coordination at this scale break down.",
+          "At this scale, onboarding, reorders, and exception management are continuous and usually require strong governance and service coordination.",
         coordination:
-          "Coordination pressure concentrates wherever cross-site standards are governed and policy conflicts between local operating practices are resolved.",
+          "Coordination pressure is highest where cross-site standards, approval ownership, and policy consistency are maintained.",
         nextBand:
-          "Premier is designed for this scale — if your posture is Ready to Grow or Full Program Investment, your recommendation will reflect that. OSSO manages the complexity so your team doesn't have to.",
+          "At this size, recommendations are shaped by both program structure and budget goals so service depth matches operational complexity.",
       },
     };
-    const copy = map[band] ?? map["51_200"];
+    const copy = map[band] ?? map["51_100"];
     return {
       selectedLabel: selected,
       sections: guidanceSections(
@@ -1727,32 +1736,26 @@ function buildGuidance(args: {
       LOCATION_MODELS.find((option) => option.id === args.locationOptionId)
         ?.label ?? null;
     const map: Record<
-      "single" | "multi_same_region" | "multi_across_regions" | "multi_complex",
+      "single" | "multi_same_region" | "multi_across_regions",
       { easier: string; change: string }
     > = {
       single: {
         easier:
-          "A single-site model keeps operations simple: one approval path, one delivery cadence, one exception contact, and no need for cross-region scheduling logic.",
+          "A single-site model allows one consistent operating workflow for approvals, ordering, and support.",
         change:
-          "When you add a second site, you introduce routing decisions, a second cadence to manage, and usually a review of whether approval ownership should split.",
+          "When additional sites are added, service routing and ownership usually expand beyond one local process.",
       },
       multi_same_region: {
         easier:
-          "Same-region sites share travel windows and service playbooks, which makes coordination manageable. Each location is structured as its own program entity and cost center — your billing and reporting stays clean and site-specific.",
+          "Same-region sites typically share similar scheduling and support windows while still requiring location-level accountability.",
         change:
-          "If sites spread beyond the region, timezone and carrier variability force a redesign of scheduling windows and handoff rules. The per-location structure stays the same.",
+          "As sites spread further apart, coordination plans usually need expanded fulfillment timing and communication workflows.",
       },
       multi_across_regions: {
         easier:
-          "Across-region programs localize scheduling by region while keeping one governance standard for approvals and reporting. Each site is its own cost center — programs scale without losing site-level visibility.",
+          "Across-region programs usually require regional execution planning under one consistent governance and reporting framework.",
         change:
-          "International expansion adds compliance documentation requirements and routing complexity. Your specialist will work through those with you on the first call.",
-      },
-      multi_complex: {
-        easier:
-          "Complex or international footprints run with tiered governance — central policy control with local execution tuned to legal and operational constraints. Each location is treated as its own program entity.",
-        change:
-          "If complexity increases through acquisitions or new countries, program ownership and fulfillment routing need specialist redesign. We've done this before — it starts with that first specialist call.",
+          "As location count and regional diversity increase, recommendations usually require stronger consistency controls and support ownership.",
       },
     };
     const copy = map[args.locationOptionId];
@@ -1795,7 +1798,7 @@ function buildGuidance(args: {
           body: copy.meaning,
         },
         {
-          title: "How OSSO applies this to the recommendation",
+          title: "How this affects the recommendation",
           body: copy.implications,
         },
         { title: "Where accuracy protects consistency", body: copy.compliance },
@@ -1809,16 +1812,16 @@ function buildGuidance(args: {
         selectedLabel: null,
         sections: guidanceSections(
           {
-            title: "Tell us where your program stands today",
-            body: "This is about your current operational reality, not your ideal state. The posture you select helps us match the right package depth and service structure to where you actually are. Be honest here - the recommendation is only useful if it is built on where you are starting from.",
+            title: "What this step covers",
+            body: "Select the budget goal that best reflects how your organization plans to prioritize compliance, operations, and program support.",
           },
           {
             title: "How this fits into your recommendation",
-            body: "Your posture sets the level of structure, service depth, and governance support that makes sense for where you are right now.",
+            body: "Budget goals help determine coverage depth, service structure, and where additional support should be prioritized.",
           },
           {
-            title: "What changes at each posture",
-            body: "These four options change product depth, service cadence, and support structure. Compliance First produces a leaner, more controlled recommendation. Full Program Investment is built for complexity and long-term resilience. Pick the one that reflects where you are today — your specialist will fine-tune from there.",
+            title: "How to choose",
+            body: "Choose the option that matches current planning priorities so your recommendation reflects realistic budget expectations and operational needs.",
           },
         ),
       };
@@ -1833,7 +1836,7 @@ function buildGuidance(args: {
           title: "How this affects the recommendation",
           body: copy.recommendation,
         },
-        { title: "Who this path is best for", body: copy.bestFor },
+        { title: "Typical planning priority", body: copy.bestFor },
       ),
     };
   }
@@ -1847,11 +1850,11 @@ function buildGuidance(args: {
       sections: guidanceSections(
         {
           title: "What this step covers",
-          body: "Steps 1 through 5 described your environment — who, how many, where, and what hazards. This step defines how your program actually runs day to day: how employees access eyewear, how orders get approved, and whether things hold together without someone managing it all manually.",
+          body: "The previous stages described your team, locations, and exposures. This step defines how the program currently operates for access, approvals, and delivery.",
         },
         {
-          title: "Why your specialist pays close attention here",
-          body: "These choices determine service cadence, admin load, and how well the structure holds up as your team grows. Getting these right is what separates a program that runs smoothly from one that creates more work than it solves.",
+          title: "Please pay close attention here",
+          body: "These selections show how work is actually routed today. Accurate setup details help us recommend service structure, ownership, and support workflows that align with your operating model.",
         },
       ),
     };
@@ -2112,6 +2115,7 @@ function setupLabel(item: CurrentSafetySetup) {
   const map: Record<CurrentSafetySetup, string> = {
     no_formal_program: "No Formal Program",
     reimbursement: "Vendor / Optometry Partnership",
+    covered_through_vision_insurance: "Covered Through Vision Insurance",
     vendor_optometry_partnership: "Vendor / Optometry Partnership",
     voucher: "Voucher / Reimbursement",
     employer_fully_covered: "Employer Fully Covered",
@@ -2153,6 +2157,14 @@ function setupExplainer(item: CurrentSafetySetup) {
         "Compliance improves when partner catalogs and eligibility rules are aligned to approved safety standards.",
       admin:
         "Switching from an existing partner is a real operational step. Your specialist will walk through what that transition looks like and what stays the same.",
+    },
+    covered_through_vision_insurance: {
+      structure:
+        "Safety eyewear is managed inside the existing vision insurance framework, including plan eligibility and covered item rules.",
+      compliance:
+        "Compliance consistency depends on how well insurance plan options align with approved safety standards and role requirements.",
+      admin:
+        "Administration usually centers on plan verification, eligibility interpretation, and handling exceptions when requested items fall outside covered options.",
     },
     vendor_optometry_partnership: {
       structure:
@@ -2220,11 +2232,11 @@ function setupExplainer(item: CurrentSafetySetup) {
     },
     onsite_events: {
       structure:
-        "Employees get fitted and ordered in a controlled, supervised setting — the highest-accuracy delivery model because OSSO is there.",
+        "Employees are fitted and ordered during scheduled onsite service sessions managed at the worksite.",
       compliance:
-        "Supervised selection and fitting improve compliance, accuracy, and policy alignment at order time.",
+        "Selection and fitting happen in a controlled event setting with direct alignment to approved program options.",
       admin:
-        "Scheduling effort increases upfront, but downstream order corrections and support tickets are reduced.",
+        "Administration centers on event planning, attendance coordination, and site readiness for each service window.",
     },
     regional_service_centers: {
       structure:
@@ -2311,35 +2323,35 @@ function budgetPreferenceExplainer(value: ProgramBudgetPreference) {
   > = {
     super_strict: {
       impact:
-        "Program structure stays focused on clear standards, defined eligibility, and predictable compliance execution.",
+        "Compliance-ready execution is prioritized first, with budget directed to clearly defined standards and controlled policy pathways.",
       recommendation:
-        "Recommendation leans toward structurally sound package depth with tightly controlled complexity.",
+        "Recommendations favor foundational coverage and service structure that keep standards consistent and auditable.",
       bestFor:
-        "Best for new programs or teams tightening a loose setup before scaling.",
+        "Best when compliance consistency is the primary budget objective.",
     },
     low_budget: {
       impact:
-        "Program design emphasizes reliable day-to-day operations without unnecessary process overhead.",
+        "Cost-managed operations are prioritized, with budget focused on dependable day-to-day execution.",
       recommendation:
-        "Recommendation balances consistency and service support so execution stays steady across normal demand.",
+        "Recommendations focus on stable service coverage with practical support depth for current operational demands.",
       bestFor:
-        "Best for established programs managing consistent coverage and predictable workflows.",
+        "Best when controlled spend and operational consistency are the primary budget goals.",
     },
     good_budget: {
       impact:
-        "Program can support stronger adoption, better employee experience, and cleaner consistency across teams — the gap between what's issued and what's worn starts closing here.",
+        "Balanced investment supports broader adoption, stronger consistency, and improved service maturity across teams.",
       recommendation:
-        "Recommendation steps up depth to reduce exceptions and improve consistency as operations expand.",
+        "Recommendations can include deeper support structure where workflow consistency and adoption improvements are needed.",
       bestFor:
-        "Best for teams that are actively growing and ready to invest in stronger consistency.",
+        "Best when growth and long-term program reliability are budget priorities.",
     },
     unlimited_budget: {
       impact:
-        "Program can prioritize full support depth, enterprise scalability, and long-term operational resilience.",
+        "Budget can prioritize high-structure support, cross-site governance, and long-term scalability.",
       recommendation:
-        "Recommendation can move to maximum package and service depth where complexity and scale justify it.",
+        "Recommendations can support partnership-level service depth when operational signals indicate true complexity.",
       bestFor:
-        "Best for large or highly complex programs optimizing for full performance and support.",
+        "Best when long-term partnership and enterprise-level consistency are central budget objectives.",
     },
   };
   return map[value];

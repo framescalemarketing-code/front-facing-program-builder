@@ -37,6 +37,7 @@ export type ProgramBudgetPreference =
 export type CurrentSafetySetup =
   | "no_formal_program"
   | "reimbursement"
+  | "covered_through_vision_insurance"
   | "vendor_optometry_partnership"
   | "voucher"
   | "employer_fully_covered"
@@ -80,7 +81,7 @@ export type ProgramConfig = {
 
   programProfile: {
     workType?: ProgramWorkType;
-    coverageSizeBand?: "1_50" | "51_200" | "201_plus";
+    coverageSizeBand?: "1_50" | "51_100" | "101_200" | "201_plus";
     locationModel?: ProgramLocationModel;
     exposureRisks?: ProgramExposureRisk[];
     currentSafetySetup?: CurrentSafetySetup[];
@@ -103,6 +104,11 @@ export type ProgramConfig = {
   };
 
   planningNotes?: string;
+  upgradeOptions?: {
+    euPackage?: "Covered";
+    serviceTier?: "Partnered";
+    rationale: string[];
+  };
 
   postureTier: ProgramComplexityTier;
   readinessTier?: ProgramComplexityTier;

@@ -48,11 +48,11 @@ export function RecommendationCongratulationsPage({
     nonEmpty(defaultDraft.program.contact.email);
   const contactName = nonEmpty(draft?.program.contact.fullName);
 
-  const subject = "OSSO Program Recommendation. Follow Up";
+  const subject = "Program Recommendation Follow Up";
   const body = [
-    "Hello OSSO team,",
+    "Hello Program specialist team,",
     "",
-    "I completed the OSSO program recommendation and would like to connect on next steps.",
+    "I completed the program recommendation and would like to connect on next steps.",
     companyName ? `Company: ${companyName}` : null,
     contactEmail ? `Contact email: ${contactEmail}` : null,
     "",
@@ -92,7 +92,7 @@ export function RecommendationCongratulationsPage({
                   : "Your recommendation is in."}
               </h1>
               <p className="mt-3 max-w-md text-base leading-relaxed text-gray-500">
-                A dedicated OSSO specialist will review your details and reach out to walk through next steps together. Nothing moves until you're ready — and we mean that.
+                A Program specialist will review your details and respond within 48 hours to walk through next steps, confirm your inputs, and review your checklist items with you.
               </p>
             </div>
 
@@ -127,8 +127,8 @@ export function RecommendationCongratulationsPage({
                 <div className="space-y-6 p-5">
                   <StepBadge
                     number="1"
-                    label="We review your recommendation — usually within one business day"
-                    description="Your OSSO specialist will go through everything before reaching out. When they call, they already know your setup — you won't have to explain it twice."
+                    label="We receive and review your recommendation"
+                    description="Your Program specialist reviews the information you submitted, including your team profile, setup details, and recommendation outputs."
                   />
 
                   <div
@@ -145,13 +145,13 @@ export function RecommendationCongratulationsPage({
 
                   <StepBadge
                     number="2"
-                    label="We walk through it together — honestly, no pressure"
-                    description="You and your specialist will review the recommendation, adjust anything that doesn't fit, and make sure the structure actually works for your team before anything is confirmed."
+                    label="We respond within 48 hours"
+                    description="You will hear back within 48 hours to review the recommendation, confirm the details, and identify any items that still need clarification."
                   />
                   <StepBadge
                     number="3"
-                    label="A rollout plan built around your team and timeline"
-                    description="Once you're aligned, we build a plan around your site, your schedule, and how your workers actually operate — not a template we drop on you and hope for the best."
+                    label="We finalize the next-step checklist together"
+                    description="Have your checklist items ready or answered so your Program specialist can confirm the program structure, site needs, and rollout considerations with you."
                   />
                 </div>
               </article>

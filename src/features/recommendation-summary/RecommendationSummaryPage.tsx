@@ -8,6 +8,7 @@ import {
   secondaryButtonClass,
 } from "@/components/ui/buttonStyles";
 import { useProgramDraft } from "@/hooks/useProgramDraft";
+import { isValidEmailFormat, formatPhoneAsUs } from "@/lib/contactValidation";
 import {
   defaultDraft,
   type EUPackage,
@@ -16,7 +17,6 @@ import {
 import {
   deriveProgramConfigFromDraft,
   type ProgramBudgetPreference,
-  type ProgramComplexityTier,
   type ProgramConfig,
   type ProgramExposureRisk,
   type ProgramLocationModel,
@@ -53,7 +53,8 @@ function workTypeLabel(value: string | undefined) {
 function coverageBandLabel(value: string | undefined) {
   const map: Record<string, string> = {
     "1_50": "1 to 50",
-    "51_200": "51 to 200",
+    "51_100": "51 to 100",
+    "101_200": "101 to 200",
     "201_plus": "200+",
   };
   return map[value ?? ""] ?? null;
@@ -86,70 +87,82 @@ function packageTierExplainer(
   if (!euPackage || !serviceTier) return null;
   const map: Record<string, string> = {
     "Compliance|Essential":
-      "Your program starts with a clear, enforceable standard — defined eligibility, straightforward ordering, and a service structure sized for where you are today. When the rules are simple and consistent, people follow them. This gives your team a real foundation to build on.",
+      "This recommendation sets a clear compliance-ready standard with a service structure sized for a smaller, more direct operating model. It focuses on consistent eligibility, straightforward ordering, and a manageable support path for a single program owner or a small team.",
     "Compliance|Access":
-      "A structured compliance baseline with enough service cadence to stay current as headcount shifts and new hires come on. No heavy oversight required — just a repeatable process that holds up when things get busy.",
+      "This recommendation keeps a compliance-focused package in place while adding more support structure for ongoing onboarding, replacements, and policy consistency as the program becomes more active.",
     "Comfort|Access":
-      "Better fit, real selection, and the kind of service that keeps people wearing what they are given. When workers feel heard in the process, they wear their eyewear — that is how a program goes from policy to protection.",
+      "This recommendation adds a broader package and a stronger day-to-day service structure for teams that need more fit flexibility, repeatable support, and a steadier operating rhythm across the workforce.",
     "Comfort|Premier":
-      "Adoption-focused coverage with the service depth to back it up. Built for environments where a pair sitting in a locker is a compliance failure, not just a loss — because protection only works when people wear it.",
+      "This recommendation pairs a broader package with higher-touch service support for programs showing stronger coordination needs, more structured delivery, and a deeper partnership model.",
     "Complete|Access":
-      "Broader coverage and prescription flexibility for mixed-role environments, with a service cadence that keeps access consistent without putting coordination burden back on your safety team.",
+      "This recommendation supports more complex role coverage and higher product needs while keeping service operations structured enough to manage approvals, replacements, and fulfillment reliably.",
     "Complete|Premier":
-      "Full-program coverage with the service structure to match. Built for teams that are done managing exceptions manually — this is how programs scale without losing consistency across roles, sites, or shifts.",
+      "This recommendation is structured for programs that need both deeper package coverage and a true partnership-level service model across teams, locations, and more formal operating workflows.",
+    "Covered|Partnered":
+      "This represents enterprise-level coverage governance and full partnership operations, and is only considered when your specialist confirms advanced multi-region and policy-governance requirements.",
   };
   return map[`${euPackage}|${serviceTier}`] ?? null;
 }
 
-function serviceTierPriceLabel(serviceTier: ServiceTier | null) {
-  if (serviceTier === "Essential") return "$49/End User";
-  if (serviceTier === "Access") return "$69/End User";
-  if (serviceTier === "Premier") return "$89/End User";
-  return null;
+function packageTierFitDetails(
+  euPackage: EUPackage | null,
+  serviceTier: ServiceTier | null,
+) {
+  if (!euPackage || !serviceTier) {
+    return {
+      title: "How this fit is determined",
+      body: "This recommendation combines package depth and service structure based on your team size, locations, hazards, setup, and budget goals.",
+    };
+  }
+
+  const map: Record<string, { title: string; body: string }> = {
+    "Compliance|Essential": {
+      title: "Who this combination is for",
+      body: "This fit is for smaller or early-stage programs that need clear compliance standards with a straightforward service model. It keeps requirements clear while supporting predictable day-to-day execution.",
+    },
+    "Compliance|Access": {
+      title: "Who this combination is for",
+      body: "This fit is for teams that still prioritize a compliance-first package but need stronger ongoing service support as onboarding, replacements, and coordination demands increase.",
+    },
+    "Comfort|Access": {
+      title: "Who this combination is for",
+      body: "This fit is for teams that need broader package flexibility and a structured service model to support recurring operations across supervisors, shifts, or growing headcount.",
+    },
+    "Comfort|Premier": {
+      title: "Who this combination is for",
+      body: "This fit is for programs with stronger coordination demands that need higher-touch support while still using the Comfort package depth for daily operational requirements.",
+    },
+    "Complete|Access": {
+      title: "Who this combination is for",
+      body: "This fit is for teams with higher coverage complexity that need deeper package support while managing service through a structured, repeatable Access model.",
+    },
+    "Complete|Premier": {
+      title: "Who this combination is for",
+      body: "This fit is for programs with both high package complexity and partnership-level service needs across locations, workflows, and ongoing governance requirements.",
+    },
+    "Covered|Partnered": {
+      title: "Who this combination is for",
+      body: "This fit is reserved for mature enterprise programs with high policy rigor, multi-region oversight, and sustained specialist-led governance across locations.",
+    },
+  };
+
+  return map[`${euPackage}|${serviceTier}`] ?? {
+    title: "How this fit is determined",
+    body: "This recommendation combines package depth and service structure based on your team size, locations, hazards, setup, and budget goals.",
+  };
 }
 
-function euPackagePriceLabel(euPackage: EUPackage | null) {
-  if (euPackage === "Compliance") return "Up To $235";
-  if (euPackage === "Comfort") return "Up To $290";
-  if (euPackage === "Complete") return "Up To $435";
-  return null;
-}
+// NOTE: Upgrade paths moved out of snapshot view. Function removed but kept here for reference if needed in future.
+// The upgrade paths explanations are no longer displayed in the quick snapshot view.
 
 function trustNoteVariant(
-  band: CoverageSizeBand | undefined,
-  location: ProgramLocationModel | undefined,
-  posture?: ProgramBudgetPreference,
-  setup: ProgramConfig["programProfile"]["currentSafetySetup"] = [],
-  exposureCount = 0,
+  _band: CoverageSizeBand | undefined,
+  _location: ProgramLocationModel | undefined,
+  _posture?: ProgramBudgetPreference,
+  _setup: ProgramConfig["programProfile"]["currentSafetySetup"] = [],
+  _exposureCount = 0,
 ): string {
-  const hasNoFormalProgram = (setup ?? []).includes("no_formal_program");
-  const isMultiLocation =
-    location === "multi_same_region" || location === "multi_across_regions";
-
-  if (band === "201_plus" && isMultiLocation) {
-    return "At this size and spread, a self-serve recommendation is a strong starting map — but we want to make sure it actually fits your operation. You'll be connected with a senior OSSO specialist who'll work through your site structure, compliance needs, and per-location program design before anything moves forward.";
-  }
-
-  if (
-    band === "201_plus" &&
-    (posture === "good_budget" || posture === "unlimited_budget")
-  ) {
-    return "Programs at this scale with a growth or investment posture get a dedicated specialist before anything is finalized. You'll be paired with someone who has run these programs and knows where things tend to break down — so you don't have to figure that out on your own.";
-  }
-
-  if (band === "1_50" && hasNoFormalProgram && posture === "super_strict") {
-    return "This gives you a solid starting point — not a finished program. A specialist will review your setup with you and make sure it fits before anything is built. For most programs at this stage, that conversation is about 20 minutes.";
-  }
-
-  if (band === "51_200" && location === "single") {
-    return "This is a strong starting point for your conversation with a specialist — not a final commitment. They will review it with you, adjust based on your site and timeline, and make sure it actually fits. Most programs this size are up and running within 60 days.";
-  }
-
-  if (band === "1_50" && location === "single" && exposureCount === 0) {
-    return "For programs under 50 employees, your specialist will confirm the structure fits before anything moves forward.";
-  }
-
-  return "This recommendation is your starting point. Your OSSO specialist will go through it with you and make sure everything fits before anything is finalized — nothing moves until you are ready.";
+  return "After you submit, our team receives your recommendation and assigns it to a Program specialist. You will receive a response within 48 hours to review your inputs, confirm details, and finalize next steps. Please have the checklist items ready or answered before that conversation.";
 }
 
 function deliveryModelLabel(value: string | undefined) {
@@ -197,70 +210,98 @@ function summarizeExposureRisks(risks: ProgramExposureRisk[] | undefined) {
   return `${firstTwo}, and related risk controls`;
 }
 
-function postureCard(tier: ProgramComplexityTier) {
-  const map: Record<
-    ProgramComplexityTier,
-    {
-      label: string;
-      badgeClass: string;
-      explanation: string;
-      icon: string;
-      accentColor: string;
-    }
-  > = {
-    structurally_sound: {
-      label: "Structurally Sound",
-      badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
-      explanation:
-        "Your program is built around getting a clear, enforceable standard in place — defined eligibility, a simple ordering path, and the controls to start strong. Smaller teams don't need complexity. They need a process that actually runs without constant oversight. This is that foundation.",
-      icon: "",
-      accentColor: "#475569",
-    },
-    operationally_strong: {
-      label: "Operationally Strong",
-      badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
-      explanation:
-        "Your program is tuned to reduce day-to-day friction — streamlined workflows, reliable access for workers, and enough structure to catch problems before they compound. When programs are operationally strong, safety teams spend less time managing and more time running.",
-      icon: "",
-      accentColor: "#475569",
-    },
-    system_scalable: {
-      label: "System Scalable",
-      badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
-      explanation:
-        "At this phase, manual coordination is where programs break — standards drift between sites, exceptions pile up, and execution gets inconsistent. Your recommendation is built for scale: keeping your program aligned across locations and giving you the infrastructure to grow without losing control of it.",
-      icon: "",
-      accentColor: "#475569",
-    },
-    enterprise_grade: {
-      label: "Enterprise Grade",
-      badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
-      explanation:
-        "At your scale, governance, dedicated support, and cross-site consistency aren't optional — they're the baseline. Your recommendation includes specialist partnership, leadership-level visibility, and processes built to hold up across regions, roles, and compliance environments.",
-      icon: "",
-      accentColor: "#475569",
-    },
-  };
-  return map[tier];
-}
-
-function generatedRecommendationSummary(args: {
+function packageFitBySelection(args: {
+  selectedPackage: EUPackage | null;
   workType: string | null;
   coverageBand: string | null;
+  locationModel: string | null;
   exposureSummary: string | null;
-  packageName: string | null;
-  serviceTier: string | null;
+  deliveryModel: string | null;
+  approvalModel: string | null;
+  budgetGoals: string | null;
+  coatings: CoatingRecommendation[];
 }) {
-  const workType = args.workType ?? "workforce profile";
-  const coverageBand = args.coverageBand
-    ? `${args.coverageBand} employees`
-    : "your current team size";
-  const exposureSummary =
-    args.exposureSummary ?? "your current exposure profile";
-  const packageName = args.packageName ?? "the recommended package";
-  const serviceTier = args.serviceTier ?? "the recommended service tier";
+  const packageLabel = args.selectedPackage ?? "Recommended package";
+  return [
+    {
+      title: "Package depth",
+      body: `${packageLabel} fits because it aligns coverage depth to your selected risk profile and daily operating demands instead of forcing unnecessary package complexity.`,
+    },
+    {
+      title: "Industry",
+      body: `Industry selected: ${args.workType ?? "Not provided"}. This influences baseline coverage requirements and the expected durability/clarity needs of the eyewear program.`,
+    },
+    {
+      title: "Team size",
+      body: `Team size selected: ${args.coverageBand ?? "Not provided"}. This affects whether coverage should remain tightly standardized or support broader role variation at scale.`,
+    },
+    {
+      title: "Locations",
+      body: `Location model selected: ${args.locationModel ?? "Not provided"}. Multi-site structures increase governance demands and can require stronger consistency controls across sites.`,
+    },
+    {
+      title: "Exposure risks",
+      body: `Exposure risks selected: ${args.exposureSummary ?? "Not provided"}. These selections directly drive protection depth and influence why this package level is a good fit.`,
+    },
+    {
+      title: "Setup and logistics",
+      body: `Current delivery and approval model: ${args.deliveryModel ?? "Not provided"} and ${args.approvalModel ?? "Not provided"}. These indicate how easily this package can be executed in real operations.`,
+    },
+    {
+      title: "Budget goals",
+      body: `Budget goals selected: ${args.budgetGoals ?? "Not provided"}. This keeps package depth aligned to your current planning priorities while protecting consistency.`,
+    },
+    {
+      title: "Recommended coatings",
+      body:
+        args.coatings.length > 0
+          ? `Coatings selected from your inputs: ${args.coatings.map((item) => item.label).join(", ")}. These support the package by improving durability, clarity, and wear consistency.`
+          : "No coatings were selected from your inputs, which indicates baseline lens treatment needs are currently sufficient.",
+    },
+  ];
+}
 
-  return `Based on your ${workType.toLowerCase()}, ${coverageBand}, and ${exposureSummary} — we're recommending ${packageName} with ${serviceTier} service. This combination is built so workers actually wear their eyewear, your safety team isn't managing it manually, and the program holds up over time.`;
+function serviceFitBySelection(args: {
+  serviceTier: ServiceTier | null;
+  coverageBand: string | null;
+  locationModel: string | null;
+  workType: string | null;
+  exposureSummary: string | null;
+  deliveryModel: string | null;
+  approvalModel: string | null;
+  budgetGoals: string | null;
+}) {
+  const serviceLabel = args.serviceTier ?? "Recommended service tier";
+  return [
+    {
+      title: "Service model",
+      body: `${serviceLabel} fits because it matches your operating complexity and support volume based on all selected inputs, not only one factor.`,
+    },
+    {
+      title: "Team coordination",
+      body: `Team size selected: ${args.coverageBand ?? "Not provided"}. This determines expected onboarding, reorder, and exception volume that the service tier must support.`,
+    },
+    {
+      title: "Location coordination",
+      body: `Location model selected: ${args.locationModel ?? "Not provided"}. The more distributed the program, the more structured service routing is required.`,
+    },
+    {
+      title: "Industry operations",
+      body: `Industry selected: ${args.workType ?? "Not provided"}. This impacts how service must support day-to-day workforce execution in your environment.`,
+    },
+    {
+      title: "Risk support",
+      body: `Exposure risks selected: ${args.exposureSummary ?? "Not provided"}. Risk complexity influences how tightly service support should be managed and reviewed.`,
+    },
+    {
+      title: "Execution workflow",
+      body: `Delivery and approval selected: ${args.deliveryModel ?? "Not provided"} and ${args.approvalModel ?? "Not provided"}. These are core service design inputs for response speed and control.`,
+    },
+    {
+      title: "Budget alignment",
+      body: `Budget goals selected: ${args.budgetGoals ?? "Not provided"}. Service depth is matched to your current budget direction while protecting operational reliability.`,
+    },
+  ];
 }
 
 function ExposurePills(props: { risks: ProgramExposureRisk[] | undefined }) {
@@ -295,8 +336,7 @@ type SummaryCardSection =
   | "profile"
   | "coverage"
   | "coatings"
-  | "logistics"
-  | "contact";
+  | "logistics";
 
 function ProgramSummaryCard(props: {
   companyName: string | null;
@@ -306,6 +346,7 @@ function ProgramSummaryCard(props: {
   selectedPackage: EUPackage | null;
   serviceTier: ServiceTier | null;
   hasCoatings: boolean;
+  unlocked: boolean;
   activeSection: SummaryCardSection;
   onSectionChange: (section: SummaryCardSection) => void;
 }) {
@@ -317,20 +358,19 @@ function ProgramSummaryCard(props: {
     label: string;
     icon: string;
   }> = [
-    { id: "snapshot", label: "Snapshot", icon: "??" },
-    { id: "profile", label: "Profile", icon: "??" },
-    { id: "coverage", label: "Coverage", icon: "???" },
+    { id: "snapshot", label: "Snapshot", icon: "◈" },
+    { id: "profile", label: "Profile", icon: "◎" },
+    { id: "coverage", label: "Coverage", icon: "▣" },
     ...(props.hasCoatings
       ? [
           {
             id: "coatings" as SummaryCardSection,
             label: "Coatings",
-            icon: "??",
+            icon: "✦",
           },
         ]
       : []),
-    { id: "logistics", label: "Logistics", icon: "??" },
-    { id: "contact", label: "Contact", icon: "??" },
+    { id: "logistics", label: "Logistics", icon: "⌂" },
   ];
 
   return (
@@ -384,7 +424,7 @@ function ProgramSummaryCard(props: {
             </div>
             <div className="shrink-0 rounded-lg px-3 py-2 text-center backdrop-blur-sm bg-white/15 border border-white/25 shadow-lg">
               <div className="text-lg font-bold text-white">
-                {props.selectedPackage ?? "�"}
+                {props.selectedPackage ?? "-"}
               </div>
               <div className="text-[10px] font-medium text-white/70 uppercase tracking-wide">
                 {props.serviceTier ?? "Service Tier"}
@@ -396,18 +436,18 @@ function ProgramSummaryCard(props: {
           <div className="flex flex-wrap gap-2 mt-4">
             {props.workType && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-medium text-white/90">
-                <span aria-hidden="true">??</span> {props.workType}
+                <span aria-hidden="true">▤</span> {props.workType}
               </span>
             )}
             {props.coverageBand && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-medium text-white/90">
-                <span aria-hidden="true">??</span> {props.coverageBand}{" "}
+                <span aria-hidden="true">◷</span> {props.coverageBand}{" "}
                 employees
               </span>
             )}
             {props.locationModel && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-medium text-white/90">
-                <span aria-hidden="true">??</span> {props.locationModel}
+                <span aria-hidden="true">⌂</span> {props.locationModel}
               </span>
             )}
           </div>
@@ -417,11 +457,17 @@ function ProgramSummaryCard(props: {
       {/* Tabbed Navigation */}
       <div className="border-b border-slate-200 bg-slate-50/60">
         <div className="flex overflow-x-auto no-scrollbar">
-          {sections.map((section) => (
+          {sections.map((section) => {
+            const isLocked = !props.unlocked && section.id !== "snapshot";
+            return (
             <button
               key={section.id}
               type="button"
-              onClick={() => setActiveSection(section.id)}
+              onClick={() => {
+                if (isLocked) return;
+                setActiveSection(section.id);
+              }}
+              disabled={isLocked}
               className={`shrink-0 flex items-center gap-1.5 px-4 py-3 text-xs font-semibold uppercase tracking-wide transition-all border-b-2 ${
                 activeSection === section.id
                   ? "border-primary text-primary bg-white shadow-sm"
@@ -430,8 +476,10 @@ function ProgramSummaryCard(props: {
             >
               <span aria-hidden="true">{section.icon}</span>
               {section.label}
+              {isLocked ? " [Locked]" : ""}
             </button>
-          ))}
+          );
+          })}
         </div>
       </div>
     </div>
@@ -487,7 +535,7 @@ export function RecommendationSummaryPage({
 }: {
   onNavigate: NavigateFn;
 }) {
-  const { draft } = useProgramDraft();
+  const { draft, updateDraft } = useProgramDraft();
   const program = draft?.program ?? defaultDraft.program;
   const activeConfig = draft?.programConfig?.active;
   const programConfig: ProgramConfig =
@@ -497,16 +545,10 @@ export function RecommendationSummaryPage({
       ? (activeConfig as ProgramConfig)
       : deriveProgramConfigFromDraft(draft ?? defaultDraft);
 
-  const posture = postureCard(
-    programConfig.postureTier ??
-      programConfig.readinessTier ??
-      "structurally_sound",
-  );
   const companyName =
     nonEmpty(programConfig.company.companyName) ??
     nonEmpty(draft?.program.contact.companyName);
   const contactName = nonEmpty(programConfig.company.contactName);
-  const contactRole = nonEmpty(programConfig.company.role);
   const email = nonEmpty(programConfig.company.email);
   const phone = nonEmpty(programConfig.company.phone);
   const workType = workTypeLabel(programConfig.programProfile.workType);
@@ -527,8 +569,8 @@ export function RecommendationSummaryPage({
   const selectedPackage = nonEmpty(program.selectedEU) as EUPackage | null;
   const serviceTier = nonEmpty(program.selectedTier) as ServiceTier | null;
   const packageTierSummary = packageTierExplainer(selectedPackage, serviceTier);
-  const selectedPackagePrice = euPackagePriceLabel(selectedPackage);
-  const selectedServiceTierPrice = serviceTierPriceLabel(serviceTier);
+  const packageTierFit = packageTierFitDetails(selectedPackage, serviceTier);
+  // const upgradePath = upgradePathDetails(programConfig.upgradeOptions);  // Upgrade paths moved out of snapshot view
   const trustNote = trustNoteVariant(
     programConfig.programProfile.coverageSizeBand,
     programConfig.programProfile.locationModel,
@@ -537,18 +579,58 @@ export function RecommendationSummaryPage({
     programConfig.programProfile.exposureRisks?.length ?? 0,
   );
 
-  const revealSummary = generatedRecommendationSummary({
-    workType,
-    coverageBand,
-    exposureSummary,
-    packageName: selectedPackage,
-    serviceTier,
-  });
   const locations = program.locations ?? [];
+  const firstLocation = locations[0];
   const afterPrintRestoreRef = useRef<Window["onafterprint"]>(null);
-  const [showPrintContinue, setShowPrintContinue] = useState(false);
+  const [intake, setIntake] = useState({
+    companyName: draft?.program.contact.companyName ?? "",
+    fullName: draft?.program.contact.fullName ?? "",
+    role: draft?.program.contact.role ?? "",
+    email: draft?.program.contact.email ?? "",
+    phone: draft?.program.contact.phone ?? "",
+    locationLabel: firstLocation?.label ?? "",
+    locationCity: firstLocation?.city ?? "",
+    locationState: firstLocation?.state ?? "",
+    locationZip: firstLocation?.zipCode ?? "",
+  });
   const [activeCardSection, setActiveCardSection] =
     useState<SummaryCardSection>("snapshot");
+
+  const hasContactInfo =
+    intake.companyName.trim().length > 0 &&
+    intake.fullName.trim().length > 0 &&
+    intake.email.trim().length > 0 &&
+    isValidEmailFormat(intake.email.trim()) &&
+    intake.phone.trim().length > 0;
+  const hasLocationInfo =
+    intake.locationLabel.trim().length > 0 &&
+    intake.locationCity.trim().length > 0 &&
+    intake.locationState.trim().length > 0 &&
+    intake.locationZip.trim().length > 0;
+  const isIntakeComplete = hasContactInfo && hasLocationInfo;
+
+  const coverageSections = packageFitBySelection({
+    selectedPackage,
+    workType,
+    coverageBand,
+    locationModel,
+    exposureSummary,
+    deliveryModel,
+    approvalModel,
+    budgetGoals: programPosture,
+    coatings: programConfig.coatingRecommendations ?? [],
+  });
+  const serviceSections = serviceFitBySelection({
+    serviceTier,
+    coverageBand,
+    locationModel,
+    workType,
+    exposureSummary,
+    deliveryModel,
+    approvalModel,
+    budgetGoals: programPosture,
+  });
+
   const generatedOn = new Date().toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
@@ -563,6 +645,12 @@ export function RecommendationSummaryPage({
       afterPrintRestoreRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    if (!isIntakeComplete && activeCardSection !== "snapshot") {
+      setActiveCardSection("snapshot");
+    }
+  }, [activeCardSection, isIntakeComplete]);
 
   function navigateToCongratulations() {
     onNavigate("recommendation_congratulations", "internal");
@@ -591,17 +679,69 @@ export function RecommendationSummaryPage({
   function handlePrintOrSavePdf() {
     if (typeof window === "undefined") return;
 
-    setShowPrintContinue(false);
-
     afterPrintRestoreRef.current = window.onafterprint;
     window.onafterprint = () => {
       const restore = afterPrintRestoreRef.current;
       afterPrintRestoreRef.current = null;
       window.onafterprint = restore;
-      setShowPrintContinue(true);
+      navigateToCongratulations();
     };
 
     window.print();
+  }
+
+  function formatPhoneNumber(input: string): string {
+    // Use the existing phone formatter from contactValidation
+    return formatPhoneAsUs(input);
+  }
+
+  function handleIntakeFieldChange(
+    key: keyof typeof intake,
+    value: string,
+  ) {
+    // Apply phone formatting if this is the phone field
+    const finalValue = key === "phone" ? formatPhoneNumber(value) : value;
+    setIntake((prev) => ({ ...prev, [key]: finalValue }));
+  }
+
+  function saveIntakeAndUnlock() {
+    if (!isIntakeComplete) return;
+    const nextLocations = [...locations];
+    const baseLocation =
+      nextLocations[0] ??
+      defaultDraft.program.locations[0] ?? {
+        label: "Location 1",
+        streetAddress: "",
+        city: "",
+        state: "",
+        zipCode: "",
+        additionalOnsiteVisits: 0,
+        oneWayMiles: 0,
+        oneWayMinutes: 0,
+        autoDistance: true,
+        status: "idle" as const,
+        statusMessage: "",
+      };
+    nextLocations[0] = {
+      ...baseLocation,
+      label: intake.locationLabel.trim(),
+      city: intake.locationCity.trim(),
+      state: intake.locationState.trim(),
+      zipCode: intake.locationZip.trim(),
+    };
+
+    updateDraft({
+      program: {
+        contact: {
+          companyName: intake.companyName.trim(),
+          fullName: intake.fullName.trim(),
+          role: intake.role.trim(),
+          email: intake.email.trim(),
+          phone: intake.phone.trim(),
+        },
+        locations: nextLocations,
+      },
+    });
   }
 
   return (
@@ -617,19 +757,19 @@ export function RecommendationSummaryPage({
             <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <div className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/60 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-600 mb-3">
-                  <span aria-hidden="true">?</span>
+                  <span aria-hidden="true">OK</span>
                   Recommendation Ready
                 </div>
                 <h1
                   id="recommendation-preview-title"
-                  className="text-3xl font-bold tracking-tight text-gray-900"
+                  className="text-4xl font-extrabold tracking-tight text-gray-900"
                 >
                   {companyName
                     ? `${companyName}'s Program Recommendation Summary`
                     : "Program Recommendation Summary"}
                 </h1>
                 <p className="mt-2 max-w-2xl text-gray-500 text-sm">
-                  Built from your answers — your specialist will walk through this with you before anything moves forward. Nothing is set until you are ready.
+                  This is a recommendation, not a commitment. Review the snapshot first, then unlock the full recommendation experience by completing the intake below.
                 </p>
               </div>
               <div className="text-xs text-gray-400 mt-3 sm:mt-0 shrink-0">
@@ -648,7 +788,7 @@ export function RecommendationSummaryPage({
                 onClick={openRecommendationAtDirection}
                 className={secondaryButtonClass}
               >
-                ? Back to Recommendation
+                Back to Recommendation
               </button>
               <button
                 type="button"
@@ -662,7 +802,7 @@ export function RecommendationSummaryPage({
             <div className="grid gap-6 lg:grid-cols-12">
               {/* -- Main column -- */}
               <div className="lg:col-span-8 space-y-6">
-                {/* Interactive Program Summary Card � replaces the SVG placeholder */}
+                {/* Interactive Program Summary Card replacing the SVG placeholder */}
                 <ProgramSummaryCard
                   companyName={companyName}
                   workType={workType}
@@ -673,70 +813,183 @@ export function RecommendationSummaryPage({
                   hasCoatings={
                     (programConfig.coatingRecommendations ?? []).length > 0
                   }
+                  unlocked={isIntakeComplete}
                   activeSection={activeCardSection}
                   onSectionChange={setActiveCardSection}
                 />
 
-                {/* Detailed Sections � driven by active tab */}
+                <article className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+                  <h2 className="text-base font-bold text-slate-900">
+                    Your Information
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Complete your contact and location details below.
+                  </p>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Company name
+                      <input
+                        value={intake.companyName}
+                        onChange={(event) =>
+                          handleIntakeFieldChange("companyName", event.target.value)
+                        }
+                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Contact name
+                      <input
+                        value={intake.fullName}
+                        onChange={(event) =>
+                          handleIntakeFieldChange("fullName", event.target.value)
+                        }
+                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Role
+                      <input
+                        value={intake.role}
+                        onChange={(event) =>
+                          handleIntakeFieldChange("role", event.target.value)
+                        }
+                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Email
+                      <input
+                        value={intake.email}
+                        onChange={(event) =>
+                          handleIntakeFieldChange("email", event.target.value)
+                        }
+                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Phone
+                      <input
+                        value={intake.phone}
+                        onChange={(event) =>
+                          handleIntakeFieldChange("phone", event.target.value)
+                        }
+                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Company address
+                      <input
+                        type="text"
+                        value={intake.locationLabel}
+                        onChange={(event) =>
+                          handleIntakeFieldChange("locationLabel", event.target.value)
+                        }
+                        placeholder="e.g., 123 Main St, Building A"
+                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      City
+                      <input
+                        value={intake.locationCity}
+                        onChange={(event) =>
+                          handleIntakeFieldChange("locationCity", event.target.value)
+                        }
+                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                      />
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        State
+                        <input
+                          type="text"
+                          list="us-states-list"
+                          value={intake.locationState}
+                          onChange={(event) =>
+                            handleIntakeFieldChange("locationState", event.target.value)
+                          }
+                          placeholder="e.g., CA"
+                          maxLength={2}
+                          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800 uppercase"
+                        />
+                      </label>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Zip
+                        <input
+                          type="text"
+                          value={intake.locationZip}
+                          onChange={(event) =>
+                            handleIntakeFieldChange("locationZip", event.target.value)
+                          }
+                          placeholder="e.g., 90210"
+                          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                        />
+                      </label>
+                    </div>
+                    {/* Hidden datalist for state autocomplete */}
+                    <datalist id="us-states-list">
+                      {["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
+                        "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
+                        "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+                        "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
+                        "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"].map((state) => (
+                        <option key={state} value={state} />
+                      ))}
+                    </datalist>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={saveIntakeAndUnlock}
+                      disabled={!isIntakeComplete}
+                      className={primaryButtonClass}
+                    >
+                      Save Intake and Unlock Tabs
+                    </button>
+                  </div>
+                </article>
+
+                {/* Detailed Sections driven by active tab */}
                 <article className="rounded-xl border border-slate-200/80 bg-white shadow-sm overflow-hidden">
                   {/* Snapshot: the full picture at a glance */}
                   {activeCardSection === "snapshot" && (
                     <div className="p-0">
-                      {/* Hero narrative � gradient background */}
-                      <div className="px-6 pt-6 pb-5 bg-linear-to-br from-slate-50 via-white to-slate-50/80">
-                        <p className="text-[15px] text-slate-700 leading-relaxed">
-                          {revealSummary}
-                        </p>
-                        {packageTierSummary && (
-                          <p className="text-sm text-slate-500 leading-relaxed mt-3 pl-4 border-l-2 border-[#2971b5]/30 italic">
-                            {packageTierSummary}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Key metrics � clean grid */}
-                      <div className="px-6 py-5 border-t border-slate-100">
+                      <div className="px-6 py-6 border-t border-slate-100">
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                           <div>
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
                               EU Package
                             </span>
                             <span className="text-lg font-bold text-[#244093]">
-                              {selectedPackage ?? "�"}
+                              {selectedPackage ?? "-"}
                             </span>
-                            {selectedPackagePrice && (
-                              <span className="block text-xs font-semibold text-slate-500 mt-1">
-                                {selectedPackagePrice}
-                              </span>
-                            )}
                           </div>
                           <div>
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
                               Service Tier
                             </span>
                             <span className="text-lg font-bold text-[#244093]">
-                              {serviceTier ?? "�"}
+                              {serviceTier ?? "-"}
                             </span>
-                            {selectedServiceTierPrice && (
-                              <span className="block text-xs font-semibold text-slate-500 mt-1">
-                                {selectedServiceTierPrice}
-                              </span>
-                            )}
                           </div>
                           <div>
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
                               Coverage
                             </span>
                             <span className="text-sm font-bold text-slate-800">
-                              {coverageBand ? `${coverageBand} employees` : "�"}
+                              {coverageBand ? `${coverageBand} employees` : "-"}
                             </span>
                           </div>
                           <div>
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
-                              Profile
+                              Fit Overview
                             </span>
                             <span className="text-sm font-bold text-slate-800">
-                              {posture.label}
+                              {selectedPackage && serviceTier
+                                ? `${selectedPackage} + ${serviceTier}`
+                                : "Package and tier pending"}
                             </span>
                           </div>
                         </div>
@@ -792,10 +1045,10 @@ export function RecommendationSummaryPage({
                                 </span>
                               )}
                               {contactName && companyName && (
-                                <span className="mx-1">�</span>
+                                <span className="mx-1">|</span>
                               )}
                               {companyName && <span>{companyName}</span>}
-                              {email && <span className="ml-1">� {email}</span>}
+                              {email && <span className="ml-1">| {email}</span>}
                             </span>
                           </div>
                         )}
@@ -833,53 +1086,45 @@ export function RecommendationSummaryPage({
                         {/* Travel flag */}
                         {locations.some((l) => l.oneWayMiles > 50) && (
                           <p className="text-xs font-medium text-slate-500">
-                            ? Travel surcharge may apply to some locations
+                            ⚠ Travel surcharge may apply to some locations
                           </p>
                         )}
-                      </div>
-
-                      {/* Starting point note — professional footer */}
-                      <div className="px-6 py-5 border-t border-slate-100 bg-linear-to-r from-[#244093]/3 to-[#2971b5]/2">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-[#244093]/70 mb-1.5">
-                          Your Starting Point
-                        </p>
-                        <p className="text-sm text-slate-600 leading-relaxed">
-                          This is built from your answers — not a generic template. Programs are meant to evolve. Your OSSO specialist will help you refine coverage, adjust service levels, and scale the program as your workforce and compliance needs change. The relationship doesn't end when the glasses are delivered.
-                        </p>
                       </div>
                     </div>
                   )}
 
-                  {/* Profile tab: program profile explanation + input-based reasoning */}
+                  {/* Profile tab: package+tier explanation + input-based reasoning */}
                   {activeCardSection === "profile" && (
                     <div className="p-0">
-                      {/* Profile header */}
+                      {/* Fit header */}
                       <div className="px-6 pt-6 pb-5 bg-linear-to-br from-slate-50 via-white to-slate-50/80">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
-                          Your Program Profile
+                          EU Package and Service Tier Fit
                         </p>
                         <div className="inline-flex rounded-full border border-[#244093]/20 bg-[#244093]/6 px-4 py-1.5 text-sm font-bold uppercase tracking-wide text-[#244093] mb-3">
-                          {posture.label}
+                          {selectedPackage && serviceTier
+                            ? `${selectedPackage} + ${serviceTier}`
+                            : "Package and Tier Pending"}
                         </div>
                         <p className="text-[15px] text-slate-700 leading-relaxed">
-                          {posture.explanation}
+                          {packageTierFit.body}
                         </p>
                       </div>
 
-                      {/* Why you received this profile � input-based reasoning */}
+                      {/* Why you received this fit based on your inputs */}
                       <div className="px-6 py-5 border-t border-slate-100">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
-                          Why you received this profile
+                          {packageTierFit.title}
                         </p>
                         <div className="space-y-2.5">
                           {programPosture && (
                             <div className="flex items-start gap-2.5">
                               <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                ?
+                                -
                               </span>
                               <p className="text-sm text-slate-600 leading-relaxed">
                                 <span className="font-medium text-slate-700">
-                                  Budget direction:
+                                  Budget goals:
                                 </span>{" "}
                                 {programPosture}
                               </p>
@@ -888,7 +1133,7 @@ export function RecommendationSummaryPage({
                           {coverageBand && (
                             <div className="flex items-start gap-2.5">
                               <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                ?
+                                -
                               </span>
                               <p className="text-sm text-slate-600 leading-relaxed">
                                 <span className="font-medium text-slate-700">
@@ -901,7 +1146,7 @@ export function RecommendationSummaryPage({
                           {locationModel && (
                             <div className="flex items-start gap-2.5">
                               <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                ?
+                                -
                               </span>
                               <p className="text-sm text-slate-600 leading-relaxed">
                                 <span className="font-medium text-slate-700">
@@ -914,7 +1159,7 @@ export function RecommendationSummaryPage({
                           {exposureSummary && (
                             <div className="flex items-start gap-2.5">
                               <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                ?
+                                -
                               </span>
                               <p className="text-sm text-slate-600 leading-relaxed">
                                 <span className="font-medium text-slate-700">
@@ -927,7 +1172,7 @@ export function RecommendationSummaryPage({
                           {workType && (
                             <div className="flex items-start gap-2.5">
                               <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                ?
+                                -
                               </span>
                               <p className="text-sm text-slate-600 leading-relaxed">
                                 <span className="font-medium text-slate-700">
@@ -940,7 +1185,7 @@ export function RecommendationSummaryPage({
                           {deliveryModel && (
                             <div className="flex items-start gap-2.5">
                               <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                ?
+                                -
                               </span>
                               <p className="text-sm text-slate-600 leading-relaxed">
                                 <span className="font-medium text-slate-700">
@@ -953,7 +1198,7 @@ export function RecommendationSummaryPage({
                           {approvalModel && (
                             <div className="flex items-start gap-2.5">
                               <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                ?
+                                -
                               </span>
                               <p className="text-sm text-slate-600 leading-relaxed">
                                 <span className="font-medium text-slate-700">
@@ -967,7 +1212,7 @@ export function RecommendationSummaryPage({
                             0 && (
                             <div className="flex items-start gap-2.5">
                               <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                ?
+                                -
                               </span>
                               <p className="text-sm text-slate-600 leading-relaxed">
                                 <span className="font-medium text-slate-700">
@@ -985,7 +1230,7 @@ export function RecommendationSummaryPage({
                       {/* Footer note */}
                       <div className="px-6 py-4 border-t border-slate-100 bg-linear-to-r from-[#244093]/3 to-[#2971b5]/2">
                         <p className="text-sm text-slate-600 leading-relaxed">
-                          Your profile is built from the full picture — team size, locations, exposure complexity, delivery structure, program posture, and approval routing. It reflects where your program actually sits today, not where you want it to be. Your specialist will help close the gap.
+                          This fit is built from the full picture: team size, locations, exposure complexity, delivery structure, budget goals, and approval routing. It shows how the EU Package and Service Tier align to your current operating model.
                         </p>
                       </div>
                     </div>
@@ -999,39 +1244,32 @@ export function RecommendationSummaryPage({
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
                           Coverage Configuration
                         </p>
+                        <p className="text-sm text-slate-600 mb-4 leading-relaxed">
+                          Coverage explains how package depth and service structure align to your current exposure mix, workforce size, and operating responsibilities.
+                        </p>
                         <div className="grid grid-cols-3 gap-4">
                           <div>
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
                               EU Package
                             </span>
                             <span className="text-lg font-bold text-[#244093]">
-                              {selectedPackage ?? "�"}
+                              {selectedPackage ?? "-"}
                             </span>
-                            {selectedPackagePrice && (
-                              <span className="block text-xs font-semibold text-slate-500 mt-1">
-                                {selectedPackagePrice}
-                              </span>
-                            )}
                           </div>
                           <div>
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
                               Service Tier
                             </span>
                             <span className="text-lg font-bold text-[#244093]">
-                              {serviceTier ?? "�"}
+                              {serviceTier ?? "-"}
                             </span>
-                            {selectedServiceTierPrice && (
-                              <span className="block text-xs font-semibold text-slate-500 mt-1">
-                                {selectedServiceTierPrice}
-                              </span>
-                            )}
                           </div>
                           <div>
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
                               Coverage Band
                             </span>
                             <span className="text-sm font-bold text-slate-800">
-                              {coverageBand ? `${coverageBand} employees` : "�"}
+                              {coverageBand ? `${coverageBand} employees` : "-"}
                             </span>
                           </div>
                         </div>
@@ -1052,6 +1290,48 @@ export function RecommendationSummaryPage({
                           risks={programConfig.programProfile.exposureRisks}
                         />
                       </div>
+
+                      <div className="px-6 py-5 border-t border-slate-100">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
+                          Why This EU Package Fits (Section by Section)
+                        </p>
+                        <div className="space-y-3">
+                          {coverageSections.map((section) => (
+                            <div
+                              key={section.title}
+                              className="rounded-lg border border-slate-200 bg-slate-50/40 p-3"
+                            >
+                              <p className="text-sm font-semibold text-slate-700">
+                                {section.title}
+                              </p>
+                              <p className="mt-1 text-sm text-slate-600 leading-relaxed">
+                                {section.body}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="px-6 py-5 border-t border-slate-100">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
+                          Why This Service Tier Fits (Section by Section)
+                        </p>
+                        <div className="space-y-3">
+                          {serviceSections.map((section) => (
+                            <div
+                              key={section.title}
+                              className="rounded-lg border border-slate-200 bg-slate-50/40 p-3"
+                            >
+                              <p className="text-sm font-semibold text-slate-700">
+                                {section.title}
+                              </p>
+                              <p className="mt-1 text-sm text-slate-600 leading-relaxed">
+                                {section.body}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   )}
 
@@ -1064,7 +1344,7 @@ export function RecommendationSummaryPage({
                             Recommended Coatings
                           </p>
                           <p className="text-sm text-slate-500">
-                            Based on your industry and exposure profile
+                            Coatings are recommended to support lens durability, visual consistency, and day-to-day wear conditions in your current environment.
                           </p>
                         </div>
                         <div className="px-6 py-5 border-t border-slate-100">
@@ -1083,7 +1363,7 @@ export function RecommendationSummaryPage({
                                   </p>
                                   <div className="flex items-start gap-1.5">
                                     <span className="text-[#2971b5]/60 text-xs mt-px shrink-0">
-                                      ?
+                                      -
                                     </span>
                                     <p className="text-xs text-[#2971b5] font-medium leading-relaxed">
                                       {coating.reason}
@@ -1103,7 +1383,7 @@ export function RecommendationSummaryPage({
                       {/* Operations overview */}
                       <div className="px-6 pt-6 pb-5 bg-linear-to-br from-slate-50 via-white to-slate-50/80">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
-                          Operations & Logistics
+                          Current Logistics and Operations
                         </p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                           <div>
@@ -1140,7 +1420,7 @@ export function RecommendationSummaryPage({
                           </div>
                           <div>
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
-                              Program Profile
+                              Budget Goals
                             </span>
                             <span className="text-sm font-bold text-slate-800">
                               {programPosture ?? "Not set"}
@@ -1204,8 +1484,8 @@ export function RecommendationSummaryPage({
                             <p className="text-xs text-slate-500 leading-relaxed mb-4">
                               Each of your locations is structured as its own
                               program entity and cost center. The recommendation
-                              below applies per location — your specialist will
-                              confirm final counts and pricing for each site on
+                              below applies per location, and your specialist will
+                              confirm final program details for each site on
                               the first call.
                             </p>
                             {locations.length > 0 ? (
@@ -1278,155 +1558,98 @@ export function RecommendationSummaryPage({
                     </div>
                   )}
 
-                  {/* Contact tab: contact info */}
-                  {activeCardSection === "contact" && (
-                    <div className="p-0">
-                      <div className="px-6 pt-6 pb-5 bg-linear-to-br from-slate-50 via-white to-slate-50/80">
-                        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
-                          Contact & Profile
-                        </p>
-                        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                          <div>
-                            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
-                              Company
-                            </span>
-                            <span className="text-sm font-bold text-slate-800">
-                              {companyName ?? "Not provided"}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
-                              Safety Contact
-                            </span>
-                            <span className="text-sm font-bold text-slate-800">
-                              {contactName ?? "Not provided"}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
-                              Role
-                            </span>
-                            <span className="text-sm font-bold text-slate-800">
-                              {contactRole ?? "Not provided"}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
-                              Email
-                            </span>
-                            <span className="text-sm font-bold text-slate-800">
-                              {email ?? "Not provided"}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
-                              Phone
-                            </span>
-                            <span className="text-sm font-bold text-slate-800">
-                              {phone ?? "Not provided"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </article>
               </div>
 
               {/* -- Sidebar -- */}
               <aside className="space-y-5 lg:col-span-4">
-                {/* Submit Card */}
-                <article className="rounded-xl border border-primary/20 bg-linear-to-b from-primary/3 via-white to-white p-5 shadow-sm">
-                  <h2 className="text-base font-bold text-foreground mb-1">
-                    Like what you see?
-                  </h2>
-                  <p className="text-xs text-muted-foreground mb-4">
-                    Submit this to your OSSO specialist, or save a copy first
-                    for your records.
-                  </p>
-                  <div className="grid gap-2">
-                    <button
-                      type="button"
-                      onClick={navigateToCongratulations}
-                      className={`${primaryButtonClass} w-full`}
-                    >
-                      Submit to an OSSO Specialist ?
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handlePrintOrSavePdf}
-                      className={`${secondaryButtonClass} w-full`}
-                    >
-                      Print or Save as PDF
-                    </button>
-                  </div>
-                  {showPrintContinue && (
-                    <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                      <p className="text-sm text-emerald-900 font-medium mb-2">
-                        Print dialog closed. Continue when you're ready.
+                {isIntakeComplete ? (
+                  <>
+                    <article className="rounded-xl border border-primary/20 bg-linear-to-b from-primary/3 via-white to-white p-5 shadow-sm">
+                      <h2 className="text-base font-bold text-foreground mb-1">
+                        Finalize Recommendation
+                      </h2>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        You can now print or save this recommendation as PDF, or submit directly to a Program specialist.
                       </p>
-                      <button
-                        type="button"
-                        onClick={navigateToCongratulations}
-                        className={`${primaryButtonClass} w-full`}
-                      >
-                        Continue ?
-                      </button>
-                    </div>
-                  )}
-                </article>
+                      <div className="grid gap-2">
+                        <button
+                          type="button"
+                          onClick={navigateToCongratulations}
+                          className={`${primaryButtonClass} w-full`}
+                        >
+                          Submit to a Program Specialist
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handlePrintOrSavePdf}
+                          className={`${secondaryButtonClass} w-full`}
+                        >
+                          Print or Save as PDF
+                        </button>
+                      </div>
+                    </article>
 
-                {/* Interactive Checklist */}
-                <article className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
-                  <h2 className="text-sm font-bold text-foreground mb-1">
-                    Things to gather before your call
-                  </h2>
-                  <p className="text-xs text-muted-foreground mb-4">
-                    No pressure on these � your specialist will help you work
-                    through anything you don't have handy yet.
-                  </p>
-                  <div className="space-y-3">
-                    <ChecklistItem>
-                      Eligibility rules and replacement frequency
-                    </ChecklistItem>
-                    <ChecklistItem>
-                      Approval path and who owns exceptions
-                    </ChecklistItem>
-                    <ChecklistItem>
-                      Delivery preference � onsite, mail, or hybrid
-                    </ChecklistItem>
-                    <ChecklistItem>
-                      Primary contacts per site or department
-                    </ChecklistItem>
-                    <ChecklistItem>
-                      Locations and any scheduling constraints
-                    </ChecklistItem>
-                  </div>
-                </article>
+                    <article className="rounded-xl border border-slate-200/80 bg-linear-to-br from-slate-50 to-white p-5 shadow-sm">
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl shrink-0" aria-hidden="true">
+                          ℹ
+                        </span>
+                        <div>
+                          <h3 className="text-sm font-bold text-foreground mb-1">
+                            How this process works
+                          </h3>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {trustNote}
+                          </p>
+                        </div>
+                      </div>
+                    </article>
 
-                {/* Trust Note */}
-                <article className="rounded-xl border border-slate-200/80 bg-linear-to-br from-slate-50 to-white p-5 shadow-sm">
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl shrink-0" aria-hidden="true">
-                      ??
-                    </span>
-                    <div>
-                      <h3 className="text-sm font-bold text-foreground mb-1">
-                        How this process works
-                      </h3>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        {trustNote}
+                    <article className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+                      <h2 className="text-sm font-bold text-foreground mb-1">
+                        Things to gather before your call
+                      </h2>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        Your Program specialist will help you work
+                        through anything you don't have handy yet.
                       </p>
-                    </div>
-                  </div>
-                </article>
+                      <div className="space-y-3">
+                        <ChecklistItem>
+                          Eligibility rules and replacement frequency
+                        </ChecklistItem>
+                        <ChecklistItem>
+                          Approval path and who owns exceptions
+                        </ChecklistItem>
+                        <ChecklistItem>
+                          Delivery preference: onsite, mail, or hybrid
+                        </ChecklistItem>
+                        <ChecklistItem>
+                          Primary contacts per site or department
+                        </ChecklistItem>
+                        <ChecklistItem>
+                          Locations and any scheduling constraints
+                        </ChecklistItem>
+                      </div>
+                    </article>
+                  </>
+                ) : (
+                  <article className="rounded-xl border border-slate-200/80 bg-slate-50 p-5 shadow-sm">
+                    <h2 className="text-sm font-bold text-slate-800 mb-1">
+                      Actions Locked Until Intake Is Complete
+                    </h2>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      Complete the contact and location intake to unlock full recommendation tabs and the final actions for printing, PDF, and specialist submission.
+                    </p>
+                  </article>
+                )}
               </aside>
             </div>
           </SectionWrap>
         </div>
       </div>
 
-      {/* Print-only version � single-page snapshot */}
+      {/* Print-only version single-page snapshot */}
       <div className="print-only recommendation-summary-print">
         {/* -- Header -- */}
         <div className="print-header">
@@ -1439,7 +1662,7 @@ export function RecommendationSummaryPage({
             <div className="print-title">Program Recommendation</div>
             <div className="print-meta">
               {generatedOn}
-              {companyName && ` � ${companyName}`}
+              {companyName && ` | ${companyName}`}
             </div>
           </div>
         </div>
@@ -1450,7 +1673,11 @@ export function RecommendationSummaryPage({
             <span className="print-hero-eyebrow">
               Recommended Configuration
             </span>
-            <span className="print-hero-package">{posture.label}</span>
+            <span className="print-hero-package">
+              {selectedPackage && serviceTier
+                ? `${selectedPackage} + ${serviceTier}`
+                : displayValue(selectedPackage)}
+            </span>
             {(programConfig.programProfile.exposureRisks ?? []).length > 0 && (
               <div className="print-pills print-hero-pills">
                 {(programConfig.programProfile.exposureRisks ?? []).map(
@@ -1466,7 +1693,7 @@ export function RecommendationSummaryPage({
           <div className="print-hero-kpis">
             <div className="print-kpi">
               <span className="print-kpi-value">
-                {displayValue(selectedPackage)} � {displayValue(serviceTier)}
+                {displayValue(selectedPackage)} | {displayValue(serviceTier)}
               </span>
               <span className="print-kpi-label">Package &amp; Tier</span>
             </div>
@@ -1504,7 +1731,7 @@ export function RecommendationSummaryPage({
                 <tr>
                   <td className="print-td-label">Coverage Band</td>
                   <td className="print-td-value">
-                    {coverageBand ? `${coverageBand} employees` : "�"}
+                    {coverageBand ? `${coverageBand} employees` : "-"}
                   </td>
                 </tr>
                 {exposureSummary && (
@@ -1588,7 +1815,7 @@ export function RecommendationSummaryPage({
                   <span className="print-loc-name">
                     {location.label || `Location ${idx + 1}`}
                     {location.oneWayMiles > 0
-                      ? ` � ${location.oneWayMiles} mi`
+                      ? ` | ${location.oneWayMiles} mi`
                       : ""}
                   </span>
                 </div>
@@ -1633,9 +1860,9 @@ export function RecommendationSummaryPage({
         <div className="print-footer">
           <p className="print-footer-disclaimer">
             This document is a preliminary recommendation only and does not
-            constitute a final program agreement. An OSSO Program Specialist
+            constitute a final program agreement. A Program Specialist
             will review this information with you and all details, including
-            coverage, coatings, and service options, are subject to change.
+            coverage, coatings, and service configuration, are subject to change.
           </p>
         </div>
       </div>

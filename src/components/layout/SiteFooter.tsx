@@ -35,46 +35,8 @@ const PARTNER_LOGOS: PartnerLogo[] = [
 export function SiteFooter() {
   return (
     <footer className="mt-16 border-t border-gray-200 bg-white">
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-12">
-          <div>
-            <img
-              src="/brand/osso/osso-logo-horizontal.png"
-              alt="On-Sight Safety Optics"
-              className="h-8 w-auto"
-            />
-            <p className="mt-3 max-w-xs text-sm leading-relaxed text-gray-500">
-              We help teams build the right prescription safety eyewear program
-              — and make sure it actually sticks.
-            </p>
-          </div>
-
-          <div
-            className="hidden overflow-hidden rounded-xl lg:block"
-            aria-hidden="true"
-          >
-            <img
-              src="/images/footer-workforce.jpg"
-              alt=""
-              className="h-28 w-full object-cover"
-              loading="lazy"
-            />
-          </div>
-
-          <div
-            className="hidden overflow-hidden rounded-xl lg:block"
-            aria-hidden="true"
-          >
-            <img
-              src="/images/footer-specialist.jpg"
-              alt=""
-              className="h-28 w-full object-cover"
-              loading="lazy"
-            />
-          </div>
-        </div>
-
-        <div className="mt-8 rounded-xl border border-gray-200 bg-gray-50 px-4 py-4">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
             Partners
           </p>
@@ -97,14 +59,6 @@ export function SiteFooter() {
               </a>
             ))}
           </div>
-        </div>
-
-        <div className="mt-8 flex flex-col gap-1 border-t border-gray-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-gray-400">
-            (c) {new Date().getFullYear()} On-Sight Safety Optics. All rights
-            reserved.
-          </p>
-          <p className="text-xs text-gray-300">OSSO Program Builder</p>
         </div>
       </div>
     </footer>

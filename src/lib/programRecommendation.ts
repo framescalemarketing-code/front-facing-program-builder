@@ -61,7 +61,7 @@ export const DEFAULT_RECOMMENDATION_INPUTS: RecommendationInputs = {
   state: "",
   zip: "",
   workType: "manufacturing",
-  coverageSizeBand: "51_200",
+  coverageSizeBand: "51_100",
   locationModel: "single",
   exposureRisks: [],
   currentSafetySetup: [],
@@ -88,7 +88,8 @@ function employeesRepresentative(
   band: RecommendationInputs["coverageSizeBand"],
 ) {
   if (band === "1_50") return 30;
-  if (band === "51_200") return 100;
+  if (band === "51_100") return 75;
+  if (band === "101_200") return 150;
   return 250; // 201_plus
 }
 
@@ -223,18 +224,18 @@ function budgetPlanningNote(
   serviceTier: ServiceTier,
 ) {
   if (budgetPreference === "super_strict") {
-    return `Program posture: Compliance First. Suggested service tier: ${serviceTier}.`;
+    return `Budget goals: Compliance First. Suggested service tier: ${serviceTier}.`;
   }
   if (budgetPreference === "low_budget") {
-    return `Program posture: Operations Focused. Suggested service tier: ${serviceTier}.`;
+    return `Budget goals: Operations Focused. Suggested service tier: ${serviceTier}.`;
   }
   if (budgetPreference === "unlimited_budget") {
-    return `Program posture: Full Program Investment. Suggested service tier: ${serviceTier}.`;
+    return `Budget goals: Full Program Investment. Suggested service tier: ${serviceTier}.`;
   }
   if (budgetPreference === "good_budget") {
-    return `Program posture: Ready to Grow. Suggested service tier: ${serviceTier}.`;
+    return `Budget goals: Ready to Grow. Suggested service tier: ${serviceTier}.`;
   }
-  return `Program posture not selected. Suggested service tier: ${serviceTier}.`;
+  return `Budget goals not selected. Suggested service tier: ${serviceTier}.`;
 }
 
 function addOnKeyForRecommendation(
@@ -296,7 +297,7 @@ export function buildProgramRecommendation(inputs: RecommendationInputs): {
             euPackage: recommendation.euPackage,
             serviceTier: recommendation.serviceTier,
             note:
-              "Each of your locations is structured as its own program entity and cost center. The EU package and service tier apply per location — your specialist will confirm final counts and pricing per site on the first call.",
+              "Each of your locations is structured as its own program entity and cost center. The EU package and service tier apply per location, and your specialist will confirm final rollout details for each site on the first call.",
           },
         ]
       : undefined;
@@ -331,6 +332,7 @@ export function buildProgramRecommendation(inputs: RecommendationInputs): {
       inputs.budgetPreference,
       recommendation.serviceTier,
     )}${rationaleNotes} Final program scope is confirmed during specialist review.`,
+    upgradeOptions: recommendation.upgradeOptions ?? undefined,
     postureTier,
     coatingRecommendations: recommendation.coatingRecommendations,
     locationRecommendations,

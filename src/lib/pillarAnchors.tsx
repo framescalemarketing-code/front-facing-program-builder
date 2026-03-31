@@ -21,7 +21,7 @@ export const PILLAR_DEFINITIONS: Record<
     icon: "⚙️",
   },
   follow_through: {
-    phrase: "Care That Continues",
+    phrase: "Care that continues",
     icon: "🤝",
   },
 };

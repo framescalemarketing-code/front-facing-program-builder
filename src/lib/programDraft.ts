@@ -1,5 +1,5 @@
-export type EUPackage = "Compliance" | "Comfort" | "Complete";
-export type ServiceTier = "Essential" | "Access" | "Premier";
+export type EUPackage = "Compliance" | "Comfort" | "Complete" | "Covered";
+export type ServiceTier = "Essential" | "Access" | "Premier" | "Partnered";
 export type PaymentTerms = "NET30" | "NET45" | "NET60" | "NET75" | "NET90";
 export type PaymentDiscount = "none" | "2_15_NET30" | "3_10_NET30";
 
