@@ -1827,12 +1827,7 @@ function buildGuidance(args: {
     return {
       selectedLabel: budgetPreferenceLabel(selectedBudget),
       sections: guidanceSections(
-        { title: "How this changes your operating model", body: copy.impact },
-        {
-          title: "How this affects the recommendation",
-          body: copy.recommendation,
-        },
-        { title: "Typical planning priority", body: copy.bestFor },
+        { title: "Your budget approach", body: copy.impact },
       ),
     };
   }
@@ -2319,35 +2314,27 @@ function budgetPreferenceExplainer(value: ProgramBudgetPreference) {
   > = {
     super_strict: {
       impact:
-        "Compliance-ready execution is prioritized first, with budget directed to clearly defined standards and controlled policy pathways.",
-      recommendation:
-        "Recommendations favor foundational coverage and service structure that keep standards consistent and auditable.",
-      bestFor:
-        "Best when compliance consistency is the primary budget objective.",
+        "Compliance-ready execution is the priority. Budget is directed toward clearly defined standards and controlled policy pathways. Recommendations favor foundational coverage and service structure that keep standards consistent and auditable. This approach is best when compliance consistency is the primary budget objective.",
+      recommendation: "",
+      bestFor: "",
     },
     low_budget: {
       impact:
-        "Cost-managed operations are prioritized, with budget focused on dependable day-to-day execution.",
-      recommendation:
-        "Recommendations focus on stable service coverage with practical support depth for current operational demands.",
-      bestFor:
-        "Best when controlled spend and operational consistency are the primary budget goals.",
+        "Cost-managed operations are the priority. Budget is focused on dependable day-to-day execution. Recommendations focus on stable service coverage with practical support depth for current operational demands. This approach is best when controlled spend and operational consistency are the primary budget goals.",
+      recommendation: "",
+      bestFor: "",
     },
     good_budget: {
       impact:
-        "Balanced investment supports broader adoption, stronger consistency, and improved service maturity across teams.",
-      recommendation:
-        "Recommendations can include deeper support structure where workflow consistency and adoption improvements are needed.",
-      bestFor:
-        "Best when growth and long-term program reliability are budget priorities.",
+        "Balanced investment supports broader adoption, stronger consistency, and improved service maturity. Budget can include deeper support structure where workflow consistency and adoption improvements are needed. This approach is best when growth and long-term program reliability are budget priorities.",
+      recommendation: "",
+      bestFor: "",
     },
     unlimited_budget: {
       impact:
-        "Budget can prioritize high-structure support, cross-site governance, and long-term scalability.",
-      recommendation:
-        "Recommendations can support partnership-level service depth when operational signals indicate true complexity.",
-      bestFor:
-        "Best when long-term partnership and enterprise-level consistency are central budget objectives.",
+        "Budget can prioritize high-structure support, cross-site governance, and long-term scalability. Recommendations can support partnership-level service depth when operational signals indicate true complexity. This approach is best when long-term partnership and enterprise-level consistency are central budget objectives.",
+      recommendation: "",
+      bestFor: "",
     },
   };
   return map[value];
