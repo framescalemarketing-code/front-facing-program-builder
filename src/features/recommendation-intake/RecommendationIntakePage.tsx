@@ -970,11 +970,7 @@ export function RecommendationIntakePage({
                       Most programs aren't broken — they're just not built around the people running them.
                     </p>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      We'll walk through seven questions about your team, your environment, and how things run today. From there, we'll put together a recommendation built around your workers — and connect you with a specialist to review it together.
-                    </p>
-                    <p className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
-                      <span aria-hidden="true">✦</span>
-                      No commitments — this is just a starting point we'll refine together.
+                      We'll walk through seven questions about your team, your environment, and how things run today. From there, we'll put together a <span className="font-semibold text-foreground">recommendation</span> built around your workers — and connect you with a specialist to review it together.
                     </p>
                   </div>
                 </div>
