@@ -74,14 +74,14 @@ const STEPS: WizardStep[] = [
     id: "coverage",
     sectionLabel: "Team Size",
     heroTitle: "How big is the team we're covering?",
-    heroSubtitle: "Team size helps us recommend the right program structure",
+    heroSubtitle: "Your team size determines which service tier fits — Essential, Access, or Premier",
     progressLabel: "Team Size",
   },
   {
     id: "locations",
     sectionLabel: "Locations",
     heroTitle: "Where is your team located?",
-    heroSubtitle: "We'll make sure the program works wherever your people are",
+    heroSubtitle: "Multi-site programs are structured per location — each site runs as its own cost center",
     progressLabel: "Locations",
   },
   {
@@ -190,40 +190,22 @@ const COVERAGE_BANDS: Array<{
   helper: string;
 }> = [
   {
-    value: "1_30",
-    label: "1 to 30",
+    value: "1_50",
+    label: "1 to 50",
     helper:
-      "A small, tight-knit team — one point of contact, simple eligibility, and a program that runs without a lot of overhead.",
+      "One point of contact, simple eligibility, and a program that runs without a lot of overhead. The Essential tier is built for this range.",
   },
   {
-    value: "31_60",
-    label: "31 to 60",
+    value: "51_200",
+    label: "51 to 200",
     helper:
-      "Your team is growing past the point where informal coordination works. A repeatable process starts to really pay off here.",
+      "Your team is past the point where informal coordination works. A repeatable process and reliable service cadence starts to really pay off here. The Access tier is built for this range.",
   },
   {
-    value: "61_100",
-    label: "61 to 100",
+    value: "201_plus",
+    label: "200+",
     helper:
-      "With multiple supervisors submitting requests, missed handoffs become the biggest source of delays — a clear workflow keeps things moving.",
-  },
-  {
-    value: "101_250",
-    label: "101 to 250",
-    helper:
-      "Programs spanning departments or buildings need clear routing and approvals — informal rules start to break down at this size.",
-  },
-  {
-    value: "251_500",
-    label: "251 to 500",
-    helper:
-      "Onboarding, reorders, and exceptions are all happening at the same time across your org — coordination is ongoing work at this scale.",
-  },
-  {
-    value: "500_plus",
-    label: "500+",
-    helper:
-      "Enterprise-scale operations running across sites, shifts, and roles — visibility and governance aren't optional, they're infrastructure.",
+      "Coordination is ongoing work at this scale. Onboarding, reorders, and exceptions are all happening at the same time — and your program needs to run without your safety team managing every moving piece. Premier may be recommended depending on your program posture.",
   },
 ];
 
@@ -982,19 +964,14 @@ export function RecommendationIntakePage({
                   />
                   <div className="p-5">
                     <p className="text-base font-bold text-foreground">
-                      Let's build your program recommendation — it only takes
-                      about five minutes.
+                      Most programs aren't broken — they're just not built around the people running them.
                     </p>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      We'll walk through seven steps covering your team, your
-                      environment, and how things run today. From there, we'll
-                      put together a tailored recommendation and connect you
-                      with an OSSO specialist to review it together.
+                      We'll walk through seven questions about your team, your environment, and how things run today. From there, we'll put together a recommendation built around your workers — and connect you with a specialist to review it together.
                     </p>
                     <p className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
                       <span aria-hidden="true">✦</span>
-                      No commitments — this is just a starting point we'll
-                      refine together.
+                      No commitments — this is just a starting point we'll refine together.
                     </p>
                   </div>
                 </div>
@@ -1692,67 +1669,43 @@ function buildGuidance(args: {
         selectedLabel: null,
         sections: guidanceSections({
           title: "What this step covers",
-          body: "Team size helps us recommend the right program structure and service level. Just pick the range that's closest.",
+          body: "Your team size maps directly to the service tier we recommend — Essential for up to 50, Access for 51 to 200, and Premier for 200+ when your program posture calls for it. Pick the range that's closest.",
         }),
       };
     }
-    const band = form.coverageSizeBand ?? "31_60";
+    const band = form.coverageSizeBand ?? "51_200";
     const selected =
       COVERAGE_BANDS.find((option) => option.value === band)?.label ?? null;
     const map: Record<
       string,
       { reality: string; coordination: string; nextBand: string }
     > = {
-      "1_30": {
+      "1_50": {
         reality:
-          "At this headcount, coverage is usually coordinated directly between one program owner and frontline supervisors, so schedule changes are handled in real time.",
+          "At this headcount, coverage is usually coordinated directly between one program owner and frontline supervisors. The Essential tier is sized for exactly this — one clear process, minimal overhead, and a program that holds without someone managing it manually.",
         coordination:
-          "Coordination load typically sits with the safety lead who is simultaneously validating eligibility, answering employee questions, and tracking replacements manually.",
+          "Coordination typically sits with one safety lead handling eligibility, replacements, and employee questions at the same time. Keeping it simple here isn't a limitation — it's what makes it run.",
         nextBand:
-          "Crossing into 31 to 60 introduces recurring onboarding volume, so you usually need a standard intake rhythm instead of one-by-one ordering.",
+          "Crossing into 51 to 200 introduces recurring onboarding volume and competing replacement cycles. That's where Access service cadence starts to pay off.",
       },
-      "31_60": {
+      "51_200": {
         reality:
-          "With 31 to 60 employees, shift overlap starts to matter and onboarding groups begin to compete with replacement needs in the same weekly schedule.",
+          "In this range, shift overlap and onboarding cycles start competing with replacement needs in the same week. A repeatable process and consistent service cadence is what keeps things from piling up.",
         coordination:
-          "Friction usually concentrates on the person maintaining eligibility lists and processing replacement requests by hand before tooling catches up.",
+          "Friction usually concentrates on the person maintaining eligibility lists and handling replacement requests — the point where informal coordination breaks and a structured program proves its value.",
         nextBand:
-          "At 61 to 100, grouped onboarding events become more efficient than individual ordering, and reporting cadence needs to be designed instead of handled reactively.",
+          "Crossing 200+ means exceptions, reorders, and onboarding are all happening in parallel across managers and sites. That's when Premier becomes worth considering — especially if you want OSSO to manage the program rather than your team.",
       },
-      "61_100": {
+      "201_plus": {
         reality:
-          "At this size, multiple supervisors feed requests into the program at once, so missed handoffs become the main source of delays.",
+          "At 200+, program coordination is continuous work — onboarding, reorders, and exceptions are all running at the same time across multiple managers. Programs that depend on manual coordination at this scale break down.",
         coordination:
-          "Coordination pressure often falls on the safety coordinator who must reconcile manager requests with approval status and delivery timing.",
+          "Coordination pressure concentrates wherever cross-site standards are governed and policy conflicts between local operating practices are resolved.",
         nextBand:
-          "Moving to 101 to 250 usually requires explicit response-time targets and a formal exception path so bottlenecks do not spread across teams.",
-      },
-      "101_250": {
-        reality:
-          "Programs in this band are operating across several teams or sites, which means scheduling now depends on shared calendars rather than informal coordination.",
-        coordination:
-          "The heaviest friction usually appears in approval routing, where requests stall between local managers and central safety reviewers.",
-        nextBand:
-          "At 251 to 500, site-level execution owners become necessary, and centralized reporting has to run on a fixed cadence to stay trustworthy.",
-      },
-      "251_500": {
-        reality:
-          "At this scale, coverage is continuous work: onboarding, reorders, and exceptions are all happening at the same time across many managers.",
-        coordination:
-          "Coordination load typically concentrates in whoever governs cross-site standards and resolves policy conflicts between local operating practices.",
-        nextBand:
-          "Crossing 500+ shifts the program into enterprise governance, where specialist support, formal controls, and executive reporting become non-optional.",
-      },
-      "500_plus": {
-        reality:
-          "At 500+, scheduling and fulfillment run as enterprise operations with parallel workflows across sites, shifts, and role families.",
-        coordination:
-          "Friction concentrates at the governance layer, especially in policy harmonization, audit evidence management, and enterprise escalation handling.",
-        nextBand:
-          "You are already at enterprise scale; the next shift is deeper specialist engagement for architecture reviews, regional governance, and continuous optimization.",
+          "Premier is designed for this scale — if your posture is Ready to Grow or Full Program Investment, your recommendation will reflect that. OSSO manages the complexity so your team doesn't have to.",
       },
     };
-    const copy = map[band] ?? map["31_60"];
+    const copy = map[band] ?? map["51_200"];
     return {
       selectedLabel: selected,
       sections: guidanceSections(
@@ -1785,21 +1738,21 @@ function buildGuidance(args: {
       },
       multi_same_region: {
         easier:
-          "Same-region multi-site programs simplify service by sharing travel windows, standardizing playbooks, and reusing one regional escalation path.",
+          "Same-region sites share travel windows and service playbooks, which makes coordination manageable. Each location is structured as its own program entity and cost center — your billing and reporting stays clean and site-specific.",
         change:
-          "If sites spread beyond the region, timezone and carrier variability force you to redesign scheduling windows and tighten handoff rules.",
+          "If sites spread beyond the region, timezone and carrier variability force a redesign of scheduling windows and handoff rules. The per-location structure stays the same.",
       },
       multi_across_regions: {
         easier:
-          "Across-region structure makes it easier to localize scheduling by region while keeping one governance standard for approvals and reporting.",
+          "Across-region programs localize scheduling by region while keeping one governance standard for approvals and reporting. Each site is its own cost center — programs scale without losing site-level visibility.",
         change:
-          "International expansion adds compliance documentation requirements and routing complexity that usually triggers a full program-structure review.",
+          "International expansion adds compliance documentation requirements and routing complexity. Your specialist will work through those with you on the first call.",
       },
       multi_complex: {
         easier:
-          "International or complex networks make it possible to run tiered governance, with central policy control and local execution tuned to legal and operational constraints.",
+          "Complex or international footprints run with tiered governance — central policy control with local execution tuned to legal and operational constraints. Each location is treated as its own program entity.",
         change:
-          "If complexity increases through acquisitions or new countries, program ownership, documentation, and fulfillment routing usually need dedicated specialist redesign.",
+          "If complexity increases through acquisitions or new countries, program ownership and fulfillment routing need specialist redesign. We've done this before — it starts with that first specialist call.",
       },
     };
     const copy = map[args.locationOptionId];

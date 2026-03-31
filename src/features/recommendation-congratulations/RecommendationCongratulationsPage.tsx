@@ -88,13 +88,11 @@ export function RecommendationCongratulationsPage({
                 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl"
               >
                 {contactName
-                  ? `You're all set, ${contactName.split(" ")[0]}!`
-                  : "Your recommendation is ready!"}
+                  ? `We've got what we need, ${contactName.split(" ")[0]}.`
+                  : "Your recommendation is in."}
               </h1>
               <p className="mt-3 max-w-md text-base leading-relaxed text-gray-500">
-                We've got everything we need. An OSSO program specialist will
-                review your details and reach out to walk through next steps
-                together. Nothing moves until you're comfortable.
+                A dedicated OSSO specialist will review your details and reach out to walk through next steps together. Nothing moves until you're ready — and we mean that.
               </p>
             </div>
 
@@ -120,17 +118,17 @@ export function RecommendationCongratulationsPage({
               <article className="overflow-hidden rounded-xl border border-border bg-card">
                 <div className="border-b border-border bg-secondary/30 px-5 py-4">
                   <h2 className="text-base font-bold text-foreground">
-                    Here's what happens next
+                    What happens from here
                   </h2>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    Three simple steps — no surprises
+                    Three steps — no pressure, no surprises
                   </p>
                 </div>
                 <div className="space-y-6 p-5">
                   <StepBadge
                     number="1"
-                    label="We'll review your details — usually within one business day"
-                    description="Your dedicated OSSO specialist will go through your recommendation before reaching out, so they already understand your setup when you connect."
+                    label="We review your recommendation — usually within one business day"
+                    description="Your OSSO specialist will go through everything before reaching out. When they call, they already know your setup — you won't have to explain it twice."
                   />
 
                   <div
@@ -147,13 +145,13 @@ export function RecommendationCongratulationsPage({
 
                   <StepBadge
                     number="2"
-                    label="We'll talk it through together — no pressure"
-                    description="You and your specialist will walk through the recommendation, tweak anything that doesn't quite fit, and make sure the structure works for your team before anything is set."
+                    label="We walk through it together — honestly, no pressure"
+                    description="You and your specialist will review the recommendation, adjust anything that doesn't fit, and make sure the structure actually works for your team before anything is confirmed."
                   />
                   <StepBadge
                     number="3"
-                    label="Your rollout plan, built around your timeline"
-                    description="Once you're aligned, we'll put together a rollout plan that fits your site, your schedule, and how your team actually works day to day."
+                    label="A rollout plan built around your team and timeline"
+                    description="Once you're aligned, we build a plan around your site, your schedule, and how your workers actually operate — not a template we drop on you and hope for the best."
                   />
                 </div>
               </article>
@@ -163,7 +161,7 @@ export function RecommendationCongratulationsPage({
                   href={mailtoHref}
                   className={`${primaryButtonClass} flex-1 text-center`}
                 >
-                  Connect with an OSSO Specialist
+                  Reach Out to Your Specialist
                 </a>
                 <button
                   type="button"

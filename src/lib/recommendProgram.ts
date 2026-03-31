@@ -11,13 +11,7 @@ export type ProgramWorkType =
   | "laboratory"
   | "other";
 
-export type CoverageSizeBand =
-  | "1_30"
-  | "31_60"
-  | "61_100"
-  | "101_250"
-  | "251_500"
-  | "500_plus";
+export type CoverageSizeBand = "1_50" | "51_200" | "201_plus";
 
 export type ProgramLocationModel =
   | "single"
@@ -126,9 +120,9 @@ const SERVICE_TIER_SIZE_TABLE: Array<{
   tier: ServiceTier;
   label: string;
 }> = [
-  { maxEmployees: 50, tier: "Essential", label: "0-50 employees" },
-  { maxEmployees: 200, tier: "Access", label: "51-200 employees" },
-  { maxEmployees: Number.POSITIVE_INFINITY, tier: "Access", label: "200+ employees" },
+  { maxEmployees: 50, tier: "Essential", label: "1–50 employees" },
+  { maxEmployees: 200, tier: "Access", label: "51–200 employees" },
+  { maxEmployees: Number.POSITIVE_INFINITY, tier: "Access", label: "201+ employees" },
 ];
 
 const INDUSTRY_EU_BASELINE: Record<ProgramWorkType, EUPackage> = {
@@ -227,12 +221,9 @@ function hasOnsiteOrHybrid(setup: CurrentSafetySetup[]): boolean {
 
 function representativeEmployeesForBand(band: CoverageSizeBand): number {
   const map: Record<CoverageSizeBand, number> = {
-    "1_30": 30,
-    "31_60": 60,
-    "61_100": 100,
-    "101_250": 250,
-    "251_500": 500,
-    "500_plus": 750,
+    "1_50": 30,
+    "51_200": 100,
+    "201_plus": 250,
   };
   return map[band];
 }
@@ -283,6 +274,7 @@ function recommendServiceTierFromTable(args: {
   exposureRisks: ProgramExposureRisk[];
   currentSafetySetup: CurrentSafetySetup[];
   workType: ProgramWorkType;
+  budgetPreference?: ProgramBudgetPreference;
   rationale: string[];
 }): ServiceTier {
   const employees = representativeEmployeesForBand(args.coverageSizeBand);
@@ -290,22 +282,19 @@ function recommendServiceTierFromTable(args: {
     SERVICE_TIER_SIZE_TABLE.find((row) => employees <= row.maxEmployees) ??
     SERVICE_TIER_SIZE_TABLE[SERVICE_TIER_SIZE_TABLE.length - 1];
   let serviceTier = baseRow.tier;
-  args.rationale.push(
-    `Tier table: ${baseRow.label} -> ${serviceTier}.`,
-  );
+  args.rationale.push(`Tier table: ${baseRow.label} -> ${serviceTier}.`);
 
-  const score = partnerNeedScore({
-    employees,
-    locationModel: args.locationModel,
-    exposureRisks: args.exposureRisks,
-    currentSafetySetup: args.currentSafetySetup,
-    workType: args.workType,
-  });
-
-  if (score >= 3 || (employees > 200 && score >= 2)) {
+  // Premier is only recommended for 201+ employees AND a high-investment posture.
+  // "Ready to Grow" and "Full Program Investment" signal the org wants OSSO to own the
+  // program management. Other postures stay at Access regardless of size.
+  if (
+    args.coverageSizeBand === "201_plus" &&
+    (args.budgetPreference === "good_budget" ||
+      args.budgetPreference === "unlimited_budget")
+  ) {
     serviceTier = "Premier";
     args.rationale.push(
-      "Tier escalation: Partner-takeover signals indicate Premier support.",
+      "Escalation: 201+ employees with Ready to Grow or Full Program Investment posture -> Premier.",
     );
   }
 
@@ -372,10 +361,7 @@ function budgetConstraint(
   budgetPreference: ProgramBudgetPreference,
   coverageSizeBand: CoverageSizeBand,
 ): { allowedEu: EUPackage[]; label: string } {
-  const isLargeTeam =
-    coverageSizeBand === "101_250" ||
-    coverageSizeBand === "251_500" ||
-    coverageSizeBand === "500_plus";
+  const isLargeTeam = coverageSizeBand === "201_plus";
 
   if (budgetPreference === "super_strict") {
     return {
@@ -629,7 +615,7 @@ export function recommendProgram(
   rawInputs: RecommendProgramInputs,
 ): RecommendProgramResult {
   const workType = rawInputs.workType ?? "manufacturing";
-  const coverageSizeBand = rawInputs.coverageSizeBand ?? "31_60";
+  const coverageSizeBand = rawInputs.coverageSizeBand ?? "51_200";
   const locationModel = rawInputs.locationModel ?? "single";
   const exposureRisks = rawInputs.exposureRisks ?? [];
   const currentSafetySetup = rawInputs.currentSafetySetup ?? [];
@@ -649,13 +635,14 @@ export function recommendProgram(
     rationale,
   });
 
-  // STEP 2: Service tier uses company size with partner-level escalation.
+  // STEP 2: Service tier uses company size + budget posture.
   serviceTier = recommendServiceTierFromTable({
     coverageSizeBand,
     locationModel,
     exposureRisks,
     currentSafetySetup,
     workType,
+    budgetPreference,
     rationale,
   });
 
@@ -692,21 +679,20 @@ export function recommendProgram(
   // STEP 5: Safety nets
   // ──────────────────────────────────────────────────────────
 
-  // Ensure Essential only appears for bands that can represent <=50.
-  if (
-    serviceTier === "Essential" &&
-    !["1_30", "31_60"].includes(coverageSizeBand)
-  ) {
+  // Essential only valid for the smallest band.
+  if (serviceTier === "Essential" && coverageSizeBand !== "1_50") {
     serviceTier = "Access";
     rationale.push(
-      "Safety net: Essential only valid for smaller team-size bands -> Access.",
+      "Safety net: Essential only valid for 1\u201350 employees -> Access.",
     );
   }
 
-  // Large multi-site operations should always have partner-level support.
-  if (isMultiLocation && coverageSizeBand !== "1_30") {
-    serviceTier = escalateTier(serviceTier, "Premier");
-    rationale.push("Safety net: Multi-site operations require Premier support.");
+  // Premier is never recommended without the 201+ band, regardless of other signals.
+  if (serviceTier === "Premier" && coverageSizeBand !== "201_plus") {
+    serviceTier = "Access";
+    rationale.push(
+      "Safety net: Premier requires 201+ employees -> Access.",
+    );
   }
 
   // ──────────────────────────────────────────────────────────

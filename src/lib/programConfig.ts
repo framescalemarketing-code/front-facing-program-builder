@@ -1,4 +1,4 @@
-import type { Draft, DraftPatch, ServiceTier } from "@/lib/programDraft";
+import type { Draft, DraftPatch, EUPackage, ServiceTier } from "@/lib/programDraft";
 import type { CoatingRecommendation } from "@/lib/recommendProgram";
 
 export type ProgramConfigVersion = 1;
@@ -80,13 +80,7 @@ export type ProgramConfig = {
 
   programProfile: {
     workType?: ProgramWorkType;
-    coverageSizeBand?:
-      | "1_30"
-      | "31_60"
-      | "61_100"
-      | "101_250"
-      | "251_500"
-      | "500_plus";
+    coverageSizeBand?: "1_50" | "51_200" | "201_plus";
     locationModel?: ProgramLocationModel;
     exposureRisks?: ProgramExposureRisk[];
     currentSafetySetup?: CurrentSafetySetup[];
@@ -113,6 +107,14 @@ export type ProgramConfig = {
   postureTier: ProgramComplexityTier;
   readinessTier?: ProgramComplexityTier;
   coatingRecommendations?: CoatingRecommendation[];
+
+  /** Per-location program recommendations (generated when locationModel is multi-site) */
+  locationRecommendations?: Array<{
+    locationLabel: string;
+    euPackage: EUPackage | "";
+    serviceTier: ServiceTier | "";
+    note: string;
+  }>;
 };
 
 export type ProgramConfigEnvelope = {

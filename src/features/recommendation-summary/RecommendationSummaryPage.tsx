@@ -1,4 +1,4 @@
-"use client";
+ï»¿"use client";
 
 import { useEffect, useRef, useState } from "react";
 import type { NavigateFn } from "@/app/routerTypes";
@@ -52,12 +52,9 @@ function workTypeLabel(value: string | undefined) {
 
 function coverageBandLabel(value: string | undefined) {
   const map: Record<string, string> = {
-    "1_30": "1 to 30",
-    "31_60": "31 to 60",
-    "61_100": "61 to 100",
-    "101_250": "101 to 250",
-    "251_500": "251 to 500",
-    "500_plus": "500+",
+    "1_50": "1 to 50",
+    "51_200": "51 to 200",
+    "201_plus": "200+",
   };
   return map[value ?? ""] ?? null;
 }
@@ -89,13 +86,26 @@ function packageTierExplainer(
   if (!euPackage || !serviceTier) return null;
   const map: Record<string, string> = {
     "Compliance|Essential":
-      "Your program starts with the right foundation — a clear standard your team can actually enforce, simple eligibility rules, and a service structure sized for where you are today. This keeps things manageable while you build the program out.",
+      "Your program starts with a clear, enforceable standard â€” defined eligibility, straightforward ordering, and a service structure sized for where you are today. When the rules are simple and consistent, people follow them. This gives your team a real foundation to build on.",
+    "Compliance|Access":
+      "A structured compliance baseline with enough service cadence to stay current as headcount shifts and new hires come on. No heavy oversight required â€” just a repeatable process that holds up when things get busy.",
+    "Comfort|Access":
+      "Better fit, real selection, and the kind of service that keeps people wearing what they are given. When workers feel heard in the process, they wear their eyewear â€” that is how a program goes from policy to protection.",
+    "Comfort|Premier":
+      "Adoption-focused coverage with the service depth to back it up. Built for environments where a pair sitting in a locker is a compliance failure, not just a loss â€” because protection only works when people wear it.",
+    "Complete|Access":
+      "Broader coverage and prescription flexibility for mixed-role environments, with a service cadence that keeps access consistent without putting coordination burden back on your safety team.",
+    "Complete|Premier":
+      "Full-program coverage with the service structure to match. Built for teams that are done managing exceptions manually â€” this is how programs scale without losing consistency across roles, sites, or shifts.",
+  };
+  return map[`${euPackage}|${serviceTier}`] ?? null;
+} ï¿½ a clear standard your team can actually enforce, simple eligibility rules, and a service structure sized for where you are today. This keeps things manageable while you build the program out.",
     "Compliance|Access":
       "A structured compliance baseline with enough service cadence to keep the program current as headcount grows, shifts change, or new hires come on. It's built to stay consistent without heavy oversight.",
     "Comfort|Access":
-      "Better fit selection and stronger adoption support built into the standard. Employees get what they need to actually wear their eyewear — which is how the program earns its value day to day.",
+      "Better fit selection and stronger adoption support built into the standard. Employees get what they need to actually wear their eyewear ï¿½ which is how the program earns its value day to day.",
     "Comfort|Premier":
-      "Full adoption-focused package with the service depth to run it consistently. The right fit for environments where wear compliance matters as much as technical protection — because a pair sitting in a locker isn't protecting anyone.",
+      "Full adoption-focused package with the service depth to run it consistently. The right fit for environments where wear compliance matters as much as technical protection ï¿½ because a pair sitting in a locker isn't protecting anyone.",
     "Complete|Access":
       "Broader coverage options and prescription flexibility for mixed-role environments, paired with service cadence that keeps access consistent without heavy coordination overhead.",
     "Complete|Premier":
@@ -129,34 +139,30 @@ function trustNoteVariant(
   const isMultiLocation =
     location === "multi_same_region" || location === "multi_across_regions";
 
-  if (band === "500_plus" && location === "multi_across_regions") {
-    return "At this size and spread, a self-serve recommendation is a great starting map — but we want to make sure it really fits. You'll be connected with a senior OSSO specialist who'll work through your site structure, compliance needs, and timeline before anything is confirmed.";
+  if (band === "201_plus" && isMultiLocation) {
+    return "At this size and spread, a self-serve recommendation is a strong starting map â€” but we want to make sure it actually fits your operation. You'll be connected with a senior OSSO specialist who'll work through your site structure, compliance needs, and per-location program design before anything moves forward.";
   }
 
   if (
-    (band === "251_500" || band === "500_plus") &&
-    isMultiLocation &&
+    band === "201_plus" &&
     (posture === "good_budget" || posture === "unlimited_budget")
   ) {
-    return "Programs at this scale get a dedicated specialist before anything is finalized. You'll be paired with someone who's run multi-site programs and knows where things tend to break down — so you don't have to figure that out alone.";
+    return "Programs at this scale with a growth or investment posture get a dedicated specialist before anything is finalized. You'll be paired with someone who has run these programs and knows where things tend to break down â€” so you don't have to figure that out on your own.";
   }
 
-  if (band === "1_30" && hasNoFormalProgram && posture === "super_strict") {
-    return "This gives you a solid starting point — not a finished program. A specialist will review your setup with you and make sure it fits before anything is built. For most programs at this stage, that conversation is about 20 minutes.";
+  if (band === "1_50" && hasNoFormalProgram && posture === "super_strict") {
+    return "This gives you a solid starting point â€” not a finished program. A specialist will review your setup with you and make sure it fits before anything is built. For most programs at this stage, that conversation is about 20 minutes.";
   }
 
-  if (
-    (band === "31_60" || band === "61_100" || band === "101_250") &&
-    location === "single"
-  ) {
-    return "This is a strong starting point for your conversation with a specialist — not a final commitment. They'll review it with you, adjust based on your site and timeline, and make sure it actually fits. Most programs this size are up and running within 60 days.";
+  if (band === "51_200" && location === "single") {
+    return "This is a strong starting point for your conversation with a specialist â€” not a final commitment. They will review it with you, adjust based on your site and timeline, and make sure it actually fits. Most programs this size are up and running within 60 days.";
   }
 
-  if (band === "1_30" && location === "single" && exposureCount === 0) {
-    return "For programs under 30 employees our specialist will confirm program structure fits before proceeding.";
+  if (band === "1_50" && location === "single" && exposureCount === 0) {
+    return "For programs under 50 employees, your specialist will confirm the structure fits before anything moves forward.";
   }
 
-  return "This recommendation is your starting point. Your OSSO specialist will go through it with you and make sure everything fits before anything is finalized.";
+  return "This recommendation is your starting point. Your OSSO specialist will go through it with you and make sure everything fits before anything is finalized â€” nothing moves until you are ready.";
 }
 
 function deliveryModelLabel(value: string | undefined) {
@@ -219,7 +225,7 @@ function postureCard(tier: ProgramComplexityTier) {
       label: "Structurally Sound",
       badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
       explanation:
-        "Your program profile reflects a smaller team with a compliance-first mindset and limited exposure complexity. The recommendation is built around getting a clear, enforceable standard in place — defined eligibility, a simple ordering path, and the controls to start strong. Everything is sized so you can build on it as the program matures.",
+        "Your program is built around getting a clear, enforceable standard in place â€” defined eligibility, a simple ordering path, and the controls to start strong. Smaller teams don't need complexity. They need a process that actually runs without constant oversight. This is that foundation.",
       icon: "",
       accentColor: "#475569",
     },
@@ -227,7 +233,7 @@ function postureCard(tier: ProgramComplexityTier) {
       label: "Operationally Strong",
       badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
       explanation:
-        "Your program profile reflects a mid-tier operation focused on keeping things running smoothly. With an operations-focused budget direction, some exposure risks selected, and a team that's past the startup phase, the recommendation is tuned to reduce day-to-day friction — streamlined workflows, reliable employee access, and enough oversight to catch problems before they compound.",
+        "Your program is tuned to reduce day-to-day friction â€” streamlined workflows, reliable access for workers, and enough structure to catch problems before they compound. When programs are operationally strong, safety teams spend less time managing and more time running.",
       icon: "",
       accentColor: "#475569",
     },
@@ -235,7 +241,7 @@ function postureCard(tier: ProgramComplexityTier) {
       label: "System Scalable",
       badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
       explanation:
-        "Your program profile reflects a larger employee count, multiple sites, and growing capital investment. At this stage, manual coordination breaks down — standards drift between sites, exceptions pile up, and execution gets inconsistent. The recommendation is built for the growth phase: keeping your program aligned across locations and giving you the infrastructure to scale without losing control.",
+        "At this phase, manual coordination is where programs break â€” standards drift between sites, exceptions pile up, and execution gets inconsistent. Your recommendation is built for scale: keeping your program aligned across locations and giving you the infrastructure to grow without losing control of it.",
       icon: "",
       accentColor: "#475569",
     },
@@ -243,7 +249,34 @@ function postureCard(tier: ProgramComplexityTier) {
       label: "Enterprise Grade",
       badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
       explanation:
-        "Your program profile reflects top-tier selections, a large workforce across multiple sites, and high operational complexity. At your scale, governance, dedicated support, and cross-site consistency aren't optional — they're the baseline. The recommendation includes specialist partnership, leadership-level visibility, and processes built to hold up across regions, roles, and compliance environments.",
+        "At your scale, governance, dedicated support, and cross-site consistency aren't optional â€” they're the baseline. Your recommendation includes specialist partnership, leadership-level visibility, and processes built to hold up across regions, roles, and compliance environments.",
+      icon: "",
+      accentColor: "#475569",
+    }, ï¿½ defined eligibility, a simple ordering path, and the controls to start strong. Everything is sized so you can build on it as the program matures.",
+      icon: "",
+      accentColor: "#475569",
+    },
+    operationally_strong: {
+      label: "Operationally Strong",
+      badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
+      explanation:
+        "Your program profile reflects a mid-tier operation focused on keeping things running smoothly. With an operations-focused budget direction, some exposure risks selected, and a team that's past the startup phase, the recommendation is tuned to reduce day-to-day friction ï¿½ streamlined workflows, reliable employee access, and enough oversight to catch problems before they compound.",
+      icon: "",
+      accentColor: "#475569",
+    },
+    system_scalable: {
+      label: "System Scalable",
+      badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
+      explanation:
+        "Your program profile reflects a larger employee count, multiple sites, and growing capital investment. At this stage, manual coordination breaks down ï¿½ standards drift between sites, exceptions pile up, and execution gets inconsistent. The recommendation is built for the growth phase: keeping your program aligned across locations and giving you the infrastructure to scale without losing control.",
+      icon: "",
+      accentColor: "#475569",
+    },
+    enterprise_grade: {
+      label: "Enterprise Grade",
+      badgeClass: "border-slate-300 bg-slate-50 text-slate-800",
+      explanation:
+        "Your program profile reflects top-tier selections, a large workforce across multiple sites, and high operational complexity. At your scale, governance, dedicated support, and cross-site consistency aren't optional ï¿½ they're the baseline. The recommendation includes specialist partnership, leadership-level visibility, and processes built to hold up across regions, roles, and compliance environments.",
       icon: "",
       accentColor: "#475569",
     },
@@ -267,7 +300,7 @@ function generatedRecommendationSummary(args: {
   const packageName = args.packageName ?? "the recommended package";
   const serviceTier = args.serviceTier ?? "the recommended service tier";
 
-  return `Based on your ${workType.toLowerCase()}, ${coverageBand}, and ${exposureSummary}, we're recommending ${packageName} with ${serviceTier} service. This combination is built to keep adoption high, reduce day-to-day friction, and give you a program you can count on.`;
+  return `Based on your ${workType.toLowerCase()}, ${coverageBand}, and ${exposureSummary} â€” we're recommending ${packageName} with ${serviceTier} service. This combination is built so workers actually wear their eyewear, your safety team isn't managing it manually, and the program holds up over time.`;
 }
 
 function ExposurePills(props: { risks: ProgramExposureRisk[] | undefined }) {
@@ -391,7 +424,7 @@ function ProgramSummaryCard(props: {
             </div>
             <div className="shrink-0 rounded-lg px-3 py-2 text-center backdrop-blur-sm bg-white/15 border border-white/25 shadow-lg">
               <div className="text-lg font-bold text-white">
-                {props.selectedPackage ?? "—"}
+                {props.selectedPackage ?? "ï¿½"}
               </div>
               <div className="text-[10px] font-medium text-white/70 uppercase tracking-wide">
                 {props.serviceTier ?? "Service Tier"}
@@ -636,8 +669,8 @@ export function RecommendationSummaryPage({
                     : "Program Recommendation Summary"}
                 </h1>
                 <p className="mt-2 max-w-2xl text-gray-500 text-sm">
-                  Built from your answers. An OSSO specialist will review this
-                  with you before anything moves forward — nothing is locked
+                  Built from your answers â€” your specialist will walk through this with you before anything moves forward. Nothing is set until you are ready.
+                </p> ï¿½ nothing is locked
                   until you're ready.
                 </p>
               </div>
@@ -671,7 +704,7 @@ export function RecommendationSummaryPage({
             <div className="grid gap-6 lg:grid-cols-12">
               {/* -- Main column -- */}
               <div className="lg:col-span-8 space-y-6">
-                {/* Interactive Program Summary Card — replaces the SVG placeholder */}
+                {/* Interactive Program Summary Card ï¿½ replaces the SVG placeholder */}
                 <ProgramSummaryCard
                   companyName={companyName}
                   workType={workType}
@@ -686,12 +719,12 @@ export function RecommendationSummaryPage({
                   onSectionChange={setActiveCardSection}
                 />
 
-                {/* Detailed Sections — driven by active tab */}
+                {/* Detailed Sections ï¿½ driven by active tab */}
                 <article className="rounded-xl border border-slate-200/80 bg-white shadow-sm overflow-hidden">
                   {/* Snapshot: the full picture at a glance */}
                   {activeCardSection === "snapshot" && (
                     <div className="p-0">
-                      {/* Hero narrative — gradient background */}
+                      {/* Hero narrative ï¿½ gradient background */}
                       <div className="px-6 pt-6 pb-5 bg-linear-to-br from-slate-50 via-white to-slate-50/80">
                         <p className="text-[15px] text-slate-700 leading-relaxed">
                           {revealSummary}
@@ -703,7 +736,7 @@ export function RecommendationSummaryPage({
                         )}
                       </div>
 
-                      {/* Key metrics — clean grid */}
+                      {/* Key metrics ï¿½ clean grid */}
                       <div className="px-6 py-5 border-t border-slate-100">
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                           <div>
@@ -711,7 +744,7 @@ export function RecommendationSummaryPage({
                               EU Package
                             </span>
                             <span className="text-lg font-bold text-[#244093]">
-                              {selectedPackage ?? "—"}
+                              {selectedPackage ?? "ï¿½"}
                             </span>
                             {selectedPackagePrice && (
                               <span className="block text-xs font-semibold text-slate-500 mt-1">
@@ -724,7 +757,7 @@ export function RecommendationSummaryPage({
                               Service Tier
                             </span>
                             <span className="text-lg font-bold text-[#244093]">
-                              {serviceTier ?? "—"}
+                              {serviceTier ?? "ï¿½"}
                             </span>
                             {selectedServiceTierPrice && (
                               <span className="block text-xs font-semibold text-slate-500 mt-1">
@@ -737,7 +770,7 @@ export function RecommendationSummaryPage({
                               Coverage
                             </span>
                             <span className="text-sm font-bold text-slate-800">
-                              {coverageBand ? `${coverageBand} employees` : "—"}
+                              {coverageBand ? `${coverageBand} employees` : "ï¿½"}
                             </span>
                           </div>
                           <div>
@@ -801,10 +834,10 @@ export function RecommendationSummaryPage({
                                 </span>
                               )}
                               {contactName && companyName && (
-                                <span className="mx-1">·</span>
+                                <span className="mx-1">ï¿½</span>
                               )}
                               {companyName && <span>{companyName}</span>}
-                              {email && <span className="ml-1">· {email}</span>}
+                              {email && <span className="ml-1">ï¿½ {email}</span>}
                             </span>
                           </div>
                         )}
@@ -847,7 +880,15 @@ export function RecommendationSummaryPage({
                         )}
                       </div>
 
-                      {/* Starting point note — professional footer */}
+                      {/* Starting point note â€” professional footer */}
+                      <div className="px-6 py-5 border-t border-slate-100 bg-linear-to-r from-[#244093]/3 to-[#2971b5]/2">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[#244093]/70 mb-1.5">
+                          Your Starting Point
+                        </p>
+                        <p className="text-sm text-slate-600 leading-relaxed">
+                          This is built from your answers â€” not a generic template. Programs are meant to evolve. Your OSSO specialist will help you refine coverage, adjust service levels, and scale the program as your workforce and compliance needs change. The relationship doesn't end when the glasses are delivered.
+                        </p>
+                      </div> ï¿½ professional footer */}
                       <div className="px-6 py-5 border-t border-slate-100 bg-linear-to-r from-[#244093]/3 to-[#2971b5]/2">
                         <p className="text-xs font-semibold uppercase tracking-wide text-[#244093]/70 mb-1.5">
                           Your Recommended Starting Point
@@ -855,7 +896,7 @@ export function RecommendationSummaryPage({
                         <p className="text-sm text-slate-600 leading-relaxed">
                           This configuration is built from your answers and
                           represents the strongest starting position for your
-                          organization. Programs evolve — your OSSO specialist
+                          organization. Programs evolve ï¿½ your OSSO specialist
                           will help you refine coverage, adjust service levels,
                           and scale the program as your workforce and compliance
                           requirements change over time.
@@ -880,7 +921,7 @@ export function RecommendationSummaryPage({
                         </p>
                       </div>
 
-                      {/* Why you received this profile — input-based reasoning */}
+                      {/* Why you received this profile ï¿½ input-based reasoning */}
                       <div className="px-6 py-5 border-t border-slate-100">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
                           Why you received this profile
@@ -999,10 +1040,12 @@ export function RecommendationSummaryPage({
                       {/* Footer note */}
                       <div className="px-6 py-4 border-t border-slate-100 bg-linear-to-r from-[#244093]/3 to-[#2971b5]/2">
                         <p className="text-sm text-slate-600 leading-relaxed">
-                          Your profile is derived from the full picture — team
+                          Your profile is built from the full picture â€” team size, locations, exposure complexity, delivery structure, program posture, and approval routing. It reflects where your program actually sits today, not where you want it to be. Your specialist will help close the gap.
+                        </p>
+                      </div> ï¿½ team
                           size, number of locations, exposure complexity,
                           delivery structure, budget posture, and approval
-                          routing. It’s not a preference you pick; it reflects
+                          routing. Itï¿½s not a preference you pick; it reflects
                           where your program actually sits today.
                         </p>
                       </div>
@@ -1023,7 +1066,7 @@ export function RecommendationSummaryPage({
                               EU Package
                             </span>
                             <span className="text-lg font-bold text-[#244093]">
-                              {selectedPackage ?? "—"}
+                              {selectedPackage ?? "ï¿½"}
                             </span>
                             {selectedPackagePrice && (
                               <span className="block text-xs font-semibold text-slate-500 mt-1">
@@ -1036,7 +1079,7 @@ export function RecommendationSummaryPage({
                               Service Tier
                             </span>
                             <span className="text-lg font-bold text-[#244093]">
-                              {serviceTier ?? "—"}
+                              {serviceTier ?? "ï¿½"}
                             </span>
                             {selectedServiceTierPrice && (
                               <span className="block text-xs font-semibold text-slate-500 mt-1">
@@ -1049,7 +1092,7 @@ export function RecommendationSummaryPage({
                               Coverage Band
                             </span>
                             <span className="text-sm font-bold text-slate-800">
-                              {coverageBand ? `${coverageBand} employees` : "—"}
+                              {coverageBand ? `${coverageBand} employees` : "ï¿½"}
                             </span>
                           </div>
                         </div>
@@ -1198,7 +1241,7 @@ export function RecommendationSummaryPage({
                                 </div>
                                 {location.oneWayMiles > 50 && (
                                   <div className="text-xs font-medium text-slate-600 bg-slate-100 border border-slate-200 rounded px-2 py-1 mt-1">
-                                    ? Potential travel surcharge
+                                    âš  Potential travel surcharge
                                   </div>
                                 )}
                               </div>
@@ -1206,6 +1249,93 @@ export function RecommendationSummaryPage({
                           </div>
                         )}
                       </div>
+
+                      {/* Per-location program structure â€” shown for multi-site */}
+                      {programConfig.locationRecommendations &&
+                        programConfig.locationRecommendations.length > 0 && (
+                          <div className="px-6 py-5 border-t border-slate-100">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                                Per-Location Program Structure
+                              </p>
+                              <span className="inline-flex items-center rounded-full bg-[#244093]/8 border border-[#244093]/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#244093]">
+                                Multi-Site
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-500 leading-relaxed mb-4">
+                              Each of your locations is structured as its own
+                              program entity and cost center. The recommendation
+                              below applies per location â€” your specialist will
+                              confirm final counts and pricing for each site on
+                              the first call.
+                            </p>
+                            {locations.length > 0 ? (
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                {locations.map((location, idx) => (
+                                  <div
+                                    key={`loc-rec-${idx}`}
+                                    className="rounded-lg border border-[#244093]/15 bg-linear-to-br from-[#244093]/4 to-white p-4"
+                                  >
+                                    <p className="text-xs font-bold text-[#244093] mb-2">
+                                      {location.label || `Location ${idx + 1}`}
+                                    </p>
+                                    <div className="flex gap-4">
+                                      <div>
+                                        <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
+                                          Package
+                                        </span>
+                                        <span className="text-sm font-bold text-slate-800">
+                                          {selectedPackage ?? "â€”"}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
+                                          Service Tier
+                                        </span>
+                                        <span className="text-sm font-bold text-slate-800">
+                                          {serviceTier ?? "â€”"}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    {location.oneWayMiles > 50 && (
+                                      <p className="text-xs font-medium text-slate-500 mt-2">
+                                        âš  Travel surcharge may apply
+                                      </p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="rounded-lg border border-[#244093]/15 bg-linear-to-br from-[#244093]/4 to-white p-4">
+                                <p className="text-xs font-bold text-[#244093] mb-2">
+                                  Per Location
+                                </p>
+                                <div className="flex gap-4">
+                                  <div>
+                                    <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
+                                      Package
+                                    </span>
+                                    <span className="text-sm font-bold text-slate-800">
+                                      {selectedPackage ?? "â€”"}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
+                                      Service Tier
+                                    </span>
+                                    <span className="text-sm font-bold text-slate-800">
+                                      {serviceTier ?? "â€”"}
+                                    </span>
+                                  </div>
+                                </div>
+                                <p className="text-xs text-slate-500 mt-2">
+                                  Add your locations above and this will show
+                                  a card per site.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
                     </div>
                   )}
 
@@ -1313,7 +1443,7 @@ export function RecommendationSummaryPage({
                     Things to gather before your call
                   </h2>
                   <p className="text-xs text-muted-foreground mb-4">
-                    No pressure on these — your specialist will help you work
+                    No pressure on these ï¿½ your specialist will help you work
                     through anything you don't have handy yet.
                   </p>
                   <div className="space-y-3">
@@ -1324,7 +1454,7 @@ export function RecommendationSummaryPage({
                       Approval path and who owns exceptions
                     </ChecklistItem>
                     <ChecklistItem>
-                      Delivery preference — onsite, mail, or hybrid
+                      Delivery preference ï¿½ onsite, mail, or hybrid
                     </ChecklistItem>
                     <ChecklistItem>
                       Primary contacts per site or department
@@ -1357,7 +1487,7 @@ export function RecommendationSummaryPage({
         </div>
       </div>
 
-      {/* Print-only version — single-page snapshot */}
+      {/* Print-only version ï¿½ single-page snapshot */}
       <div className="print-only recommendation-summary-print">
         {/* -- Header -- */}
         <div className="print-header">
@@ -1370,7 +1500,7 @@ export function RecommendationSummaryPage({
             <div className="print-title">Program Recommendation</div>
             <div className="print-meta">
               {generatedOn}
-              {companyName && ` · ${companyName}`}
+              {companyName && ` ï¿½ ${companyName}`}
             </div>
           </div>
         </div>
@@ -1397,7 +1527,7 @@ export function RecommendationSummaryPage({
           <div className="print-hero-kpis">
             <div className="print-kpi">
               <span className="print-kpi-value">
-                {displayValue(selectedPackage)} · {displayValue(serviceTier)}
+                {displayValue(selectedPackage)} ï¿½ {displayValue(serviceTier)}
               </span>
               <span className="print-kpi-label">Package &amp; Tier</span>
             </div>
@@ -1435,7 +1565,7 @@ export function RecommendationSummaryPage({
                 <tr>
                   <td className="print-td-label">Coverage Band</td>
                   <td className="print-td-value">
-                    {coverageBand ? `${coverageBand} employees` : "—"}
+                    {coverageBand ? `${coverageBand} employees` : "ï¿½"}
                   </td>
                 </tr>
                 {exposureSummary && (
@@ -1519,7 +1649,7 @@ export function RecommendationSummaryPage({
                   <span className="print-loc-name">
                     {location.label || `Location ${idx + 1}`}
                     {location.oneWayMiles > 0
-                      ? ` · ${location.oneWayMiles} mi`
+                      ? ` ï¿½ ${location.oneWayMiles} mi`
                       : ""}
                   </span>
                 </div>

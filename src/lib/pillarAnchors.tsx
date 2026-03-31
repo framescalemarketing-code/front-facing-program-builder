@@ -9,19 +9,19 @@ export const PILLAR_DEFINITIONS: Record<
   { phrase: string; icon: string }
 > = {
   human_first: {
-    phrase: "Human First Safety",
-    icon: "🛡️",
+    phrase: "People-First Service",
+    icon: "👤",
   },
   adoption: {
-    phrase: "Adoption over Allowance",
-    icon: "👓",
+    phrase: "Built for Adoption",
+    icon: "🎯",
   },
   reliability: {
-    phrase: "Reliability by Design",
+    phrase: "Reliable by Design",
     icon: "⚙️",
   },
   follow_through: {
-    phrase: "Follow Through as a Feature",
-    icon: "✅",
+    phrase: "Care That Continues",
+    icon: "🤝",
   },
 };

@@ -10,7 +10,7 @@ function makeInputs(
 ): RecommendProgramInputs {
   return {
     workType: "manufacturing",
-    coverageSizeBand: "31_60",
+    coverageSizeBand: "51_200",
     locationModel: "single",
     exposureRisks: [],
     currentSafetySetup: [],
@@ -20,11 +20,11 @@ function makeInputs(
   };
 }
 
-test("1) Manufacturing 1 to 30 with high impact and dust, no program, no service model, no budget", () => {
+test("1) Manufacturing 1 to 50 with high impact and dust, no program, no service model, no budget", () => {
   const result = recommendProgram(
     makeInputs({
       workType: "manufacturing",
-      coverageSizeBand: "1_30",
+      coverageSizeBand: "1_50",
       exposureRisks: ["high_impact", "dust_debris"],
       currentSafetySetup: ["no_formal_program"],
     }),
@@ -34,11 +34,11 @@ test("1) Manufacturing 1 to 30 with high impact and dust, no program, no service
   assert.equal(result.serviceTier, "Essential");
 });
 
-test("2) Manufacturing 61 to 100 with high impact and dust -> Complete and Access", () => {
+test("2) Manufacturing 51 to 200 with high impact and dust -> Complete and Access", () => {
   const result = recommendProgram(
     makeInputs({
       workType: "manufacturing",
-      coverageSizeBand: "61_100",
+      coverageSizeBand: "51_200",
       exposureRisks: ["high_impact", "dust_debris"],
     }),
   );
@@ -47,17 +47,18 @@ test("2) Manufacturing 61 to 100 with high impact and dust -> Complete and Acces
   assert.equal(result.serviceTier, "Access");
 });
 
-test("3) Manufacturing 251 to 500 with high impact and dust -> Complete and Premier", () => {
+test("3) Manufacturing 201+ with high impact and dust and operations budget -> Complete and Access", () => {
   const result = recommendProgram(
     makeInputs({
       workType: "manufacturing",
-      coverageSizeBand: "251_500",
+      coverageSizeBand: "201_plus",
       exposureRisks: ["high_impact", "dust_debris"],
+      budgetPreference: "low_budget",
     }),
   );
 
   assert.equal(result.euPackage, "Complete");
-  assert.equal(result.serviceTier, "Premier");
+  assert.equal(result.serviceTier, "Access");
 });
 
 test("4) Manufacturing with fog and screen intensive hazards infers Anti fog and Blue light", () => {
@@ -71,11 +72,11 @@ test("4) Manufacturing with fog and screen intensive hazards infers Anti fog and
   assert.deepEqual(result.addOns, ["Anti fog", "Blue light"]);
 });
 
-test("5) Healthcare 31 to 60 with no add-ons, 1 location -> Complete and Access", () => {
+test("5) Healthcare 51 to 200 with no add-ons, 1 location -> Complete and Access", () => {
   const result = recommendProgram(
     makeInputs({
       workType: "healthcare",
-      coverageSizeBand: "31_60",
+      coverageSizeBand: "51_200",
       locationModel: "single",
     }),
   );
@@ -84,11 +85,11 @@ test("5) Healthcare 31 to 60 with no add-ons, 1 location -> Complete and Access"
   assert.equal(result.serviceTier, "Access");
 });
 
-test("6) Healthcare 31-60 with selected add-on -> Complete and Access (service tier is location/size driven)", () => {
+test("6) Healthcare 51 to 200 with selected add-on -> Complete and Access (service tier is location/size driven)", () => {
   const result = recommendProgram(
     makeInputs({
       workType: "healthcare",
-      coverageSizeBand: "31_60",
+      coverageSizeBand: "51_200",
       selectedAddOns: ["Blue light"],
     }),
   );
@@ -97,64 +98,64 @@ test("6) Healthcare 31-60 with selected add-on -> Complete and Access (service t
   assert.equal(result.serviceTier, "Access");
 });
 
-test("7) Healthcare with 2 locations in same region -> Complete and Premier", () => {
+test("7) Healthcare with 2 locations in same region stays Access without growth/investment posture", () => {
   const result = recommendProgram(
     makeInputs({
       workType: "healthcare",
-      coverageSizeBand: "31_60",
+      coverageSizeBand: "51_200",
       locationModel: "multi_same_region",
     }),
   );
 
   assert.equal(result.euPackage, "Complete");
-  assert.equal(result.serviceTier, "Premier");
+  assert.equal(result.serviceTier, "Access");
 });
 
-test("8) Healthcare with 2 locations across regions -> Complete and Premier", () => {
+test("8) Healthcare with 2 locations across regions stays Access without growth/investment posture", () => {
   const result = recommendProgram(
     makeInputs({
       workType: "healthcare",
-      coverageSizeBand: "31_60",
+      coverageSizeBand: "51_200",
       locationModel: "multi_across_regions",
     }),
   );
 
   assert.equal(result.euPackage, "Complete");
-  assert.equal(result.serviceTier, "Premier");
+  assert.equal(result.serviceTier, "Access");
 });
 
-test("9) Onsite Events with 101 to 500 employees -> Tier Premier", () => {
+test("9) Onsite Events with 201+ and Ready to Grow posture -> Tier Premier", () => {
   const result = recommendProgram(
     makeInputs({
       workType: "construction",
-      coverageSizeBand: "101_250",
+      coverageSizeBand: "201_plus",
       currentSafetySetup: ["onsite_events"],
+      budgetPreference: "good_budget",
     }),
   );
 
   assert.equal(result.serviceTier, "Premier");
 });
 
-test("10) Compliance First budget is captured but does not override package/tier", () => {
+test("10) Compliance First budget on 201+ does not unlock Premier", () => {
   const result = recommendProgram(
     makeInputs({
       workType: "healthcare",
-      coverageSizeBand: "101_250",
+      coverageSizeBand: "201_plus",
       locationModel: "multi_across_regions",
       budgetPreference: "super_strict",
     }),
   );
 
   assert.equal(result.euPackage, "Complete");
-  // Service tier is location/size driven — multi-region stays at Premier
-  assert.equal(result.serviceTier, "Premier");
+  assert.equal(result.serviceTier, "Access");
 });
 
 test("11) Full Investment budget is captured; small high-hazard team stays Essential", () => {
   const result = recommendProgram(
     makeInputs({
       workType: "manufacturing",
-      coverageSizeBand: "1_30",
+      coverageSizeBand: "1_50",
       exposureRisks: ["high_impact", "dust_debris"],
       budgetPreference: "unlimited_budget",
     }),

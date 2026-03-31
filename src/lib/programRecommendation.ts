@@ -61,7 +61,7 @@ export const DEFAULT_RECOMMENDATION_INPUTS: RecommendationInputs = {
   state: "",
   zip: "",
   workType: "manufacturing",
-  coverageSizeBand: "31_60",
+  coverageSizeBand: "51_200",
   locationModel: "single",
   exposureRisks: [],
   currentSafetySetup: [],
@@ -87,12 +87,9 @@ function nowIso() {
 function employeesRepresentative(
   band: RecommendationInputs["coverageSizeBand"],
 ) {
-  if (band === "1_30") return 20;
-  if (band === "31_60") return 45;
-  if (band === "61_100") return 80;
-  if (band === "101_250") return 175;
-  if (band === "251_500") return 350;
-  return 700;
+  if (band === "1_50") return 30;
+  if (band === "51_200") return 100;
+  return 250; // 201_plus
 }
 
 function locationsRepresentative(model: ProgramLocationModel) {
@@ -216,7 +213,7 @@ function deriveCoverageTypeFromSetup(setup: CurrentSafetySetup[]) {
 function allowanceScopeForInputs(inputs: RecommendationInputs) {
   const employees = employeesRepresentative(inputs.coverageSizeBand);
   const locations = locationsRepresentative(inputs.locationModel);
-  return locations >= 4 || employees >= 250
+  return locations >= 4 || employees >= 200
     ? "department_based"
     : "companywide";
 }
@@ -286,6 +283,24 @@ export function buildProgramRecommendation(inputs: RecommendationInputs): {
       ? ` Rule trace: ${recommendation.rationale.join(" | ")}.`
       : "";
 
+  // Per-location recommendations: for multi-site programs each location is its
+  // own cost center and program entity. Build a placeholder per-location record
+  // that the summary can render for each site. The EU/tier mirrors the overall
+  // recommendation — specialists confirm final per-location split on first call.
+  const isMultiSite = inputs.locationModel !== "single";
+  const locationRecommendations: ProgramConfig["locationRecommendations"] =
+    isMultiSite
+      ? [
+          {
+            locationLabel: "Each Location",
+            euPackage: recommendation.euPackage,
+            serviceTier: recommendation.serviceTier,
+            note:
+              "Each of your locations is structured as its own program entity and cost center. The EU package and service tier apply per location — your specialist will confirm final counts and pricing per site on the first call.",
+          },
+        ]
+      : undefined;
+
   const programConfig: ProgramConfig = {
     programConfigVersion: 1,
     generatedAtIso: nowIso(),
@@ -318,6 +333,7 @@ export function buildProgramRecommendation(inputs: RecommendationInputs): {
     )}${rationaleNotes} Final program scope is confirmed during specialist review.`,
     postureTier,
     coatingRecommendations: recommendation.coatingRecommendations,
+    locationRecommendations,
   };
 
   const draftPatch: DraftPatch = {
