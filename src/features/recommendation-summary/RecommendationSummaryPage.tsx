@@ -221,44 +221,55 @@ function packageFitBySelection(args: {
   budgetGoals: string | null;
   coatings: CoatingRecommendation[];
 }) {
-  const packageLabel = args.selectedPackage ?? "Recommended package";
-  return [
-    {
-      title: "Package depth",
-      body: `${packageLabel} fits because it aligns coverage depth to your selected risk profile and daily operating demands instead of forcing unnecessary package complexity.`,
-    },
-    {
-      title: "Industry",
-      body: `Industry selected: ${args.workType ?? "Not provided"}. This influences baseline coverage requirements and the expected durability/clarity needs of the eyewear program.`,
-    },
-    {
-      title: "Team size",
-      body: `Team size selected: ${args.coverageBand ?? "Not provided"}. This affects whether coverage should remain tightly standardized or support broader role variation at scale.`,
-    },
-    {
-      title: "Locations",
-      body: `Location model selected: ${args.locationModel ?? "Not provided"}. Multi-site structures increase governance demands and can require stronger consistency controls across sites.`,
-    },
-    {
-      title: "Exposure risks",
-      body: `Exposure risks selected: ${args.exposureSummary ?? "Not provided"}. These selections directly drive protection depth and influence why this package level is a good fit.`,
-    },
-    {
-      title: "Setup and logistics",
-      body: `Current delivery and approval model: ${args.deliveryModel ?? "Not provided"} and ${args.approvalModel ?? "Not provided"}. These indicate how easily this package can be executed in real operations.`,
-    },
-    {
-      title: "Budget goals",
-      body: `Budget goals selected: ${args.budgetGoals ?? "Not provided"}. This keeps package depth aligned to your current planning priorities while protecting consistency.`,
-    },
-    {
-      title: "Recommended coatings",
-      body:
-        args.coatings.length > 0
-          ? `Coatings selected from your inputs: ${args.coatings.map((item) => item.label).join(", ")}. These support the package by improving durability, clarity, and wear consistency.`
-          : "No coatings were selected from your inputs, which indicates baseline lens treatment needs are currently sufficient.",
-    },
-  ];
+  const pkg = args.selectedPackage ?? "This package";
+  const rows: { label: string; detail: string }[] = [];
+
+  if (args.workType) {
+    rows.push({
+      label: "Industry",
+      detail: `${pkg} aligns to ${args.workType} environments, which typically require consistent protection depth and clear eligibility standards for day-to-day operations.`,
+    });
+  }
+  if (args.coverageBand) {
+    rows.push({
+      label: "Team size",
+      detail: `With ${args.coverageBand} employees to cover, ${pkg} provides the right level of role flexibility — not over-engineered for small teams, not too restrictive for growing headcount.`,
+    });
+  }
+  if (args.locationModel) {
+    rows.push({
+      label: "Locations",
+      detail: `Your ${args.locationModel.toLowerCase()} structure was a factor in recommending ${pkg} — ${args.locationModel.toLowerCase().includes("multiple") ? "multi-site programs need consistent package standards across sites" : "single-site programs can rely on a tightly standardized package without excess complexity"}.`,
+    });
+  }
+  if (args.exposureSummary) {
+    rows.push({
+      label: "Exposure risks",
+      detail: `Your selected exposure risks (${args.exposureSummary}) indicate the protection depth that ${pkg} is designed to meet — this isn't a one-size guess, it reflects what your team actually faces.`,
+    });
+  }
+  if (args.deliveryModel || args.approvalModel) {
+    const logistics = [args.deliveryModel, args.approvalModel]
+      .filter(Boolean)
+      .join(" and ");
+    rows.push({
+      label: "Setup and logistics",
+      detail: `Your current setup (${logistics}) is compatible with how ${pkg} is deployed — coverage depth and service execution stay aligned without requiring major process changes.`,
+    });
+  }
+  if (args.budgetGoals) {
+    rows.push({
+      label: "Budget goals",
+      detail: `${pkg} fits your stated budget priority of "${args.budgetGoals}" — the coverage depth doesn't exceed what your current planning supports, and it protects long-term consistency.`,
+    });
+  }
+  if (args.coatings.length > 0) {
+    rows.push({
+      label: "Coatings",
+      detail: `The coatings selected from your inputs (${args.coatings.map((c) => c.label).join(", ")}) are compatible with ${pkg} and extend lens durability and wear comfort in your environment.`,
+    });
+  }
+  return rows;
 }
 
 function serviceFitBySelection(args: {
@@ -271,37 +282,49 @@ function serviceFitBySelection(args: {
   approvalModel: string | null;
   budgetGoals: string | null;
 }) {
-  const serviceLabel = args.serviceTier ?? "Recommended service tier";
-  return [
-    {
-      title: "Service model",
-      body: `${serviceLabel} fits because it matches your operating complexity and support volume based on all selected inputs, not only one factor.`,
-    },
-    {
-      title: "Team coordination",
-      body: `Team size selected: ${args.coverageBand ?? "Not provided"}. This determines expected onboarding, reorder, and exception volume that the service tier must support.`,
-    },
-    {
-      title: "Location coordination",
-      body: `Location model selected: ${args.locationModel ?? "Not provided"}. The more distributed the program, the more structured service routing is required.`,
-    },
-    {
-      title: "Industry operations",
-      body: `Industry selected: ${args.workType ?? "Not provided"}. This impacts how service must support day-to-day workforce execution in your environment.`,
-    },
-    {
-      title: "Risk support",
-      body: `Exposure risks selected: ${args.exposureSummary ?? "Not provided"}. Risk complexity influences how tightly service support should be managed and reviewed.`,
-    },
-    {
-      title: "Execution workflow",
-      body: `Delivery and approval selected: ${args.deliveryModel ?? "Not provided"} and ${args.approvalModel ?? "Not provided"}. These are core service design inputs for response speed and control.`,
-    },
-    {
-      title: "Budget alignment",
-      body: `Budget goals selected: ${args.budgetGoals ?? "Not provided"}. Service depth is matched to your current budget direction while protecting operational reliability.`,
-    },
-  ];
+  const svc = args.serviceTier ?? "This service tier";
+  const rows: { label: string; detail: string }[] = [];
+
+  if (args.coverageBand) {
+    rows.push({
+      label: "Team coordination",
+      detail: `With ${args.coverageBand} employees to support, ${svc} provides enough service capacity to handle onboarding, reorders, and exception management without creating a bottleneck.`,
+    });
+  }
+  if (args.locationModel) {
+    rows.push({
+      label: "Location coordination",
+      detail: `Your ${args.locationModel.toLowerCase()} setup drives the coordination load. ${svc} is structured to match that — ${args.locationModel.toLowerCase().includes("multiple") ? "distributed programs need reliable cross-site service routing" : "a single site can be supported with a more direct service model"}.`,
+    });
+  }
+  if (args.workType) {
+    rows.push({
+      label: "Industry operations",
+      detail: `${args.workType} environments have specific service cadence needs. ${svc} keeps support workflows practical for how your team actually operates day-to-day.`,
+    });
+  }
+  if (args.exposureSummary) {
+    rows.push({
+      label: "Risk support",
+      detail: `Your selected exposures (${args.exposureSummary}) introduce replacement and eligibility complexity that ${svc} is calibrated to absorb without putting that burden back on your team.`,
+    });
+  }
+  if (args.deliveryModel || args.approvalModel) {
+    const logistics = [args.deliveryModel, args.approvalModel]
+      .filter(Boolean)
+      .join(" and ");
+    rows.push({
+      label: "Execution workflow",
+      detail: `Your current ${logistics} setup determines how service is triggered and tracked. ${svc} is a fit for this workflow — it supports your execution model without over-engineering it.`,
+    });
+  }
+  if (args.budgetGoals) {
+    rows.push({
+      label: "Budget alignment",
+      detail: `${svc} fits your budget direction of "${args.budgetGoals}" — service depth is matched to what your current program model can sustain operationally.`,
+    });
+  }
+  return rows;
 }
 
 function ExposurePills(props: { risks: ProgramExposureRisk[] | undefined }) {
@@ -422,12 +445,22 @@ function ProgramSummaryCard(props: {
                 is set
               </p>
             </div>
-            <div className="shrink-0 rounded-lg px-3 py-2 text-center backdrop-blur-sm bg-white/15 border border-white/25 shadow-lg">
-              <div className="text-lg font-bold text-white">
-                {props.selectedPackage ?? "-"}
+            <div className="flex gap-2 shrink-0">
+              <div className="rounded-lg px-3 py-2 text-center backdrop-blur-sm bg-white/15 border border-white/25 shadow-lg min-w-[72px]">
+                <div className="text-lg font-bold text-white leading-tight">
+                  {props.selectedPackage ?? "—"}
+                </div>
+                <div className="text-[10px] font-medium text-white/60 uppercase tracking-wide mt-0.5">
+                  EU Package
+                </div>
               </div>
-              <div className="text-[10px] font-medium text-white/70 uppercase tracking-wide">
-                {props.serviceTier ?? "Service Tier"}
+              <div className="rounded-lg px-3 py-2 text-center backdrop-blur-sm bg-white/15 border border-white/25 shadow-lg min-w-[72px]">
+                <div className="text-lg font-bold text-white leading-tight">
+                  {props.serviceTier ?? "—"}
+                </div>
+                <div className="text-[10px] font-medium text-white/60 uppercase tracking-wide mt-0.5">
+                  Service Tier
+                </div>
               </div>
             </div>
           </div>
@@ -593,6 +626,16 @@ export function RecommendationSummaryPage({
     locationState: firstLocation?.state ?? "",
     locationZip: firstLocation?.zipCode ?? "",
   });
+  const [extraAddresses, setExtraAddresses] = useState<
+    Array<{ street: string; city: string; state: string; zip: string }>
+  >(() =>
+    locations.slice(1).map((loc) => ({
+      street: loc.streetAddress ?? "",
+      city: loc.city ?? "",
+      state: loc.state ?? "",
+      zip: loc.zipCode ?? "",
+    }))
+  );
   const [activeCardSection, setActiveCardSection] =
     useState<SummaryCardSection>("snapshot");
 
@@ -742,6 +785,34 @@ export function RecommendationSummaryPage({
         locations: nextLocations,
       },
     });
+  }
+
+  function handleExtraAddressChange(
+    idx: number,
+    field: "street" | "city" | "state" | "zip",
+    value: string,
+  ) {
+    setExtraAddresses((prev) => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], [field]: value };
+      return next;
+    });
+  }
+
+  function saveExtraAddresses() {
+    const nextLocations = [...locations];
+    extraAddresses.forEach((addr, i) => {
+      const existing = nextLocations[i + 1];
+      if (!existing) return;
+      nextLocations[i + 1] = {
+        ...existing,
+        streetAddress: addr.street.trim(),
+        city: addr.city.trim(),
+        state: addr.state.trim(),
+        zipCode: addr.zip.trim(),
+      };
+    });
+    updateDraft({ program: { locations: nextLocations } });
   }
 
   return (
@@ -1160,19 +1231,19 @@ export function RecommendationSummaryPage({
 
                       <div className="px-6 py-5 border-t border-slate-100">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
-                          Why This EU Package Fits (Section by Section)
+                          Why This EU Package Fits
                         </p>
-                        <div className="space-y-3">
-                          {coverageSections.map((section) => (
+                        <div className="grid sm:grid-cols-2 gap-2">
+                          {coverageSections.map((row) => (
                             <div
-                              key={section.title}
-                              className="rounded-lg border border-slate-200 bg-slate-50/40 p-3"
+                              key={row.label}
+                              className="flex gap-3 rounded-lg border border-slate-200 bg-slate-50/30 px-3 py-2.5"
                             >
-                              <p className="text-sm font-semibold text-slate-700">
-                                {section.title}
-                              </p>
-                              <p className="mt-1 text-sm text-slate-600 leading-relaxed">
-                                {section.body}
+                              <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-slate-400 w-24 pt-0.5">
+                                {row.label}
+                              </span>
+                              <p className="text-xs text-slate-600 leading-relaxed">
+                                {row.detail}
                               </p>
                             </div>
                           ))}
@@ -1181,19 +1252,19 @@ export function RecommendationSummaryPage({
 
                       <div className="px-6 py-5 border-t border-slate-100">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
-                          Why This Service Tier Fits (Section by Section)
+                          Why This Service Tier Fits
                         </p>
-                        <div className="space-y-3">
-                          {serviceSections.map((section) => (
+                        <div className="grid sm:grid-cols-2 gap-2">
+                          {serviceSections.map((row) => (
                             <div
-                              key={section.title}
-                              className="rounded-lg border border-slate-200 bg-slate-50/40 p-3"
+                              key={row.label}
+                              className="flex gap-3 rounded-lg border border-slate-200 bg-slate-50/30 px-3 py-2.5"
                             >
-                              <p className="text-sm font-semibold text-slate-700">
-                                {section.title}
-                              </p>
-                              <p className="mt-1 text-sm text-slate-600 leading-relaxed">
-                                {section.body}
+                              <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-slate-400 w-24 pt-0.5">
+                                {row.label}
+                              </span>
+                              <p className="text-xs text-slate-600 leading-relaxed">
+                                {row.detail}
                               </p>
                             </div>
                           ))}
@@ -1211,35 +1282,30 @@ export function RecommendationSummaryPage({
                             Recommended Coatings
                           </p>
                           <p className="text-sm text-slate-500">
-                            Coatings are recommended to support lens durability, visual consistency, and day-to-day wear conditions in your current environment.
+                            Each coating below is specific to an exposure or condition you selected. The reason explains exactly why it applies to your program.
                           </p>
                         </div>
-                        <div className="px-6 py-5 border-t border-slate-100">
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            {(programConfig.coatingRecommendations ?? []).map(
-                              (coating: CoatingRecommendation) => (
-                                <div
-                                  key={coating.id}
-                                  className="group rounded-lg border border-slate-200 bg-linear-to-br from-white to-slate-50/60 p-4 transition-all hover:border-[#2971b5]/25 hover:shadow-md"
-                                >
-                                  <h5 className="text-sm font-semibold text-slate-800 mb-1.5 group-hover:text-[#244093] transition-colors">
+                        <div className="px-6 py-5 border-t border-slate-100 space-y-3">
+                          {(programConfig.coatingRecommendations ?? []).map(
+                            (coating: CoatingRecommendation) => (
+                              <div
+                                key={coating.id}
+                                className="rounded-lg border border-slate-200 bg-white p-4"
+                              >
+                                <div className="flex items-start justify-between gap-3 mb-2">
+                                  <h5 className="text-sm font-bold text-slate-800">
                                     {coating.label}
                                   </h5>
-                                  <p className="text-xs text-slate-500 leading-relaxed mb-2">
-                                    {coating.description}
-                                  </p>
-                                  <div className="flex items-start gap-1.5">
-                                    <span className="text-[#2971b5]/60 text-xs mt-px shrink-0">
-                                      -
-                                    </span>
-                                    <p className="text-xs text-[#2971b5] font-medium leading-relaxed">
-                                      {coating.reason}
-                                    </p>
-                                  </div>
                                 </div>
-                              ),
-                            )}
-                          </div>
+                                <p className="text-xs font-medium text-[#244093] leading-relaxed">
+                                  {coating.reason}
+                                </p>
+                                <p className="mt-1.5 text-xs text-slate-500 leading-relaxed">
+                                  {coating.description}
+                                </p>
+                              </div>
+                            ),
+                          )}
                         </div>
                       </div>
                     )}
@@ -1323,8 +1389,13 @@ export function RecommendationSummaryPage({
                                 className="rounded-lg border border-slate-200 bg-slate-50/40 p-3"
                               >
                                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">
-                                  Location {idx + 1}
+                                  {location.label || `Location ${idx + 1}`}
                                 </div>
+                                {[location.streetAddress, location.city, location.state, location.zipCode].filter(Boolean).length > 0 && (
+                                  <p className="text-xs text-slate-500 leading-relaxed">
+                                    {[location.streetAddress, location.city, location.state, location.zipCode].filter(Boolean).join(", ")}
+                                  </p>
+                                )}
                                 {location.oneWayMiles > 50 && (
                                   <div className="text-xs font-medium text-slate-600 bg-slate-100 border border-slate-200 rounded px-2 py-1 mt-1">
                                     ⚠ Potential travel surcharge
@@ -1332,6 +1403,82 @@ export function RecommendationSummaryPage({
                                 )}
                               </div>
                             ))}
+                          </div>
+                        )}
+
+                        {/* Additional location addresses — shown after intake is unlocked */}
+                        {isIntakeComplete && locations.length > 1 && (
+                          <div className="mt-4 space-y-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                              Additional Location Addresses
+                            </p>
+                            {locations.slice(1).map((loc, i) => (
+                              <div
+                                key={i}
+                                className="rounded-lg border border-slate-200 bg-slate-50/40 p-3"
+                              >
+                                <p className="text-xs font-bold text-slate-600 mb-2">
+                                  {loc.label || `Location ${i + 2}`}
+                                </p>
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                    Street address
+                                    <input
+                                      value={extraAddresses[i]?.street ?? ""}
+                                      onChange={(e) =>
+                                        handleExtraAddressChange(i, "street", e.target.value)
+                                      }
+                                      placeholder="e.g., 123 Industrial Dr"
+                                      className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                                    />
+                                  </label>
+                                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                    City
+                                    <input
+                                      value={extraAddresses[i]?.city ?? ""}
+                                      onChange={(e) =>
+                                        handleExtraAddressChange(i, "city", e.target.value)
+                                      }
+                                      className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                                    />
+                                  </label>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                      State
+                                      <input
+                                        type="text"
+                                        list="us-states-list"
+                                        value={extraAddresses[i]?.state ?? ""}
+                                        onChange={(e) =>
+                                          handleExtraAddressChange(i, "state", e.target.value)
+                                        }
+                                        placeholder="CA"
+                                        maxLength={2}
+                                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800 uppercase"
+                                      />
+                                    </label>
+                                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                      Zip
+                                      <input
+                                        value={extraAddresses[i]?.zip ?? ""}
+                                        onChange={(e) =>
+                                          handleExtraAddressChange(i, "zip", e.target.value)
+                                        }
+                                        placeholder="90210"
+                                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                                      />
+                                    </label>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={saveExtraAddresses}
+                              className={secondaryButtonClass}
+                            >
+                              Save additional addresses
+                            </button>
                           </div>
                         )}
                       </div>
@@ -1809,17 +1956,27 @@ export function RecommendationSummaryPage({
                 Site details collected on first specialist call.
               </div>
             ) : (
-              locations.map((location, idx) => (
-                <div key={`${location.label}_${idx}`} className="print-loc-row">
-                  <span className="print-loc-num">#{idx + 1}</span>
-                  <span className="print-loc-name">
-                    {location.label || `Location ${idx + 1}`}
-                    {location.oneWayMiles > 0
-                      ? ` | ${location.oneWayMiles} mi`
-                      : ""}
-                  </span>
-                </div>
-              ))
+              locations.map((location, idx) => {
+                const addressParts = [
+                  location.streetAddress,
+                  location.city,
+                  location.state,
+                  location.zipCode,
+                ].filter(Boolean);
+                const hasAddress = addressParts.length > 0;
+                return (
+                  <div key={`${location.label}_${idx}`} className="print-loc-row">
+                    <span className="print-loc-num">#{idx + 1}</span>
+                    <span className="print-loc-name">
+                      {location.label || `Location ${idx + 1}`}
+                      {hasAddress && ` — ${addressParts.join(", ")}`}
+                      {location.oneWayMiles > 0
+                        ? ` | ${location.oneWayMiles} mi`
+                        : ""}
+                    </span>
+                  </div>
+                );
+              })
             )}
             {(companyName || contactName || email || phone) && (
               <div className="print-contact-block">
