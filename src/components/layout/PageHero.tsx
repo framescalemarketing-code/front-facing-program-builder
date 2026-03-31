@@ -14,7 +14,7 @@ export function PageHero(props: {
     <header className="relative border-b border-gray-200/60 bg-white">
       {/* Thin blue accent line at the very top */}
       <div
-        className="h-1 bg-gradient-to-r from-[#2971b5] via-[#5e97dd] to-[#2971b5]"
+        className="h-1 bg-linear-to-r from-[#2971b5] via-[#5e97dd] to-[#2971b5]"
         aria-hidden="true"
       />
 

@@ -1486,7 +1486,7 @@ export function RecommendationIntakePage({
                   <img
                     src={stepImage}
                     alt="Program guidance visual"
-                    className="aspect-[16/9] w-full object-cover"
+                    className="aspect-video w-full object-cover"
                     loading="lazy"
                   />
                 </div>

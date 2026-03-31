@@ -66,7 +66,7 @@ export function RecommendationCongratulationsPage({
     <section aria-labelledby="recommendation-congratulations-title">
       <header className="relative border-b border-gray-200/60 bg-white">
         <div
-          className="h-1 bg-gradient-to-r from-[#2971b5] via-[#5e97dd] to-[#2971b5]"
+          className="h-1 bg-linear-to-r from-[#2971b5] via-[#5e97dd] to-[#2971b5]"
           aria-hidden="true"
         />
 
@@ -103,7 +103,7 @@ export function RecommendationCongratulationsPage({
               <img
                 src="/images/congrats-specialist-handoff.jpg"
                 alt=""
-                className="aspect-[4/3] w-full rounded-2xl border border-gray-200 object-cover"
+                className="aspect-4/3 w-full rounded-2xl border border-gray-200 object-cover"
                 loading="lazy"
               />
             </div>
@@ -198,7 +198,7 @@ export function RecommendationCongratulationsPage({
                 <img
                   src="/images/congrats-team.jpg"
                   alt=""
-                  className="aspect-[3/2] w-full rounded-xl border border-border object-cover"
+                  className="aspect-3/2 w-full rounded-xl border border-border object-cover"
                   loading="lazy"
                 />
               </div>
