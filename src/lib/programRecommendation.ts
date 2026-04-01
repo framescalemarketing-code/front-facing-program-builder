@@ -114,11 +114,11 @@ function deriveDeliverySignals(setup: CurrentSafetySetup[]) {
 
 function deriveApprovalSignals(setup: CurrentSafetySetup[]) {
   const signals: Array<"none" | "manager" | "centralized"> = [];
-  if (setup.includes("approval_required")) signals.push("manager");
-  if (setup.includes("centralized_safety_approval")) {
+  if (setup.includes("single_approval_process")) signals.push("manager");
+  if (setup.includes("multiple_approval_process")) {
     signals.push("centralized");
   }
-  if (setup.includes("manager_approval_required")) signals.push("manager");
+  if (setup.includes("single_approval_process")) signals.push("manager");
   if (!signals.length) signals.push("none");
   return signals;
 }
@@ -126,7 +126,7 @@ function deriveApprovalSignals(setup: CurrentSafetySetup[]) {
 function deriveApprovalModel(
   setup: CurrentSafetySetup[],
 ): ProgramConfig["approvalModel"] {
-  if (setup.includes("centralized_safety_approval")) {
+  if (setup.includes("multiple_approval_process")) {
     return {
       model: "centralized_safety",
       notes:
@@ -135,8 +135,8 @@ function deriveApprovalModel(
   }
 
   if (
-    setup.includes("approval_required") ||
-    setup.includes("manager_approval_required")
+    setup.includes("single_approval_process") ||
+    setup.includes("single_approval_process")
   ) {
     return {
       model: "manager",

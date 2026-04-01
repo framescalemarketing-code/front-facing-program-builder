@@ -29,4 +29,6 @@ test("recommendation summary keeps responsive columns and location flag copy", (
   assert.match(source, /Program Recommendation Summary/);
   assert.match(source, /lg:grid-cols-12/);
   assert.match(source, /Potential travel surcharge/);
+  assert.match(source, /You May Also Need This/);
+  assert.match(source, /Talk to a Program Specialist/);
 });

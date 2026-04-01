@@ -254,7 +254,7 @@ const EXPOSURE_OPTIONS: Array<{
     value: "high_impact",
     label: "High Impact",
     helper:
-      "Machine-adjacent and tool-heavy work where impact-rated frames aren't optional — they're the baseline.",
+      "Machine-adjacent and tool-heavy work where impact-rated frames aren't optional ÃƒÂ¯Ã‚Â¿Ã‚Â½ they're the baseline.",
   },
   {
     value: "dust_debris",
@@ -272,7 +272,7 @@ const EXPOSURE_OPTIONS: Array<{
     value: "outdoor_glare",
     label: "Outdoor Glare",
     helper:
-      "Extended outdoor exposure where glare isn't just annoying — it reduces hazard awareness and pushes people to take off their eyewear.",
+      "Extended outdoor exposure where glare isn't just annoying ÃƒÂ¯Ã‚Â¿Ã‚Â½ it reduces hazard awareness and pushes people to take off their eyewear.",
   },
   {
     value: "fog_humidity",
@@ -284,7 +284,7 @@ const EXPOSURE_OPTIONS: Array<{
     value: "indoor_outdoor_shift",
     label: "Indoor and Outdoor Shift Changes",
     helper:
-      "Roles that move between inside and outside — dock to floor, office to field — where slow light adaptation creates a real safety gap.",
+      "Roles that move between inside and outside ÃƒÂ¯Ã‚Â¿Ã‚Â½ dock to floor, office to field ÃƒÂ¯Ã‚Â¿Ã‚Â½ where slow light adaptation creates a real safety gap.",
   },
   {
     value: "screen_intensive",
@@ -296,7 +296,7 @@ const EXPOSURE_OPTIONS: Array<{
     value: "temperature_extremes",
     label: "Temperature Extremes",
     helper:
-      "Foundry floors, cold storage, outdoor summers — temperature swings that stress lenses and make people want to ditch their eyewear.",
+      "Foundry floors, cold storage, outdoor summers ÃƒÂ¯Ã‚Â¿Ã‚Â½ temperature swings that stress lenses and make people want to ditch their eyewear.",
   },
 ];
 
@@ -965,10 +965,10 @@ export function RecommendationIntakePage({
                   />
                   <div className="p-5">
                     <p className="text-base font-bold text-foreground">
-                      Most programs aren't broken — they're just not built around the people running them.
+                      Most programs aren't broken ÃƒÂ¯Ã‚Â¿Ã‚Â½ they're just not built around the people running them.
                     </p>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      We'll walk through seven questions about your team, your environment, and how things run today. From there, we'll put together a <span className="font-semibold text-foreground">recommendation</span> built around your workers — and connect you with a specialist to review it together.
+                      We'll walk through seven questions about your team, your environment, and how things run today. From there, we'll put together a <span className="font-semibold text-foreground">recommendation</span> built around your workers ÃƒÂ¯Ã‚Â¿Ã‚Â½ and connect you with a specialist to review it together.
                     </p>
                   </div>
                 </div>
@@ -1529,9 +1529,9 @@ function buildGuidance(args: {
     > = {
       "1_50": {
         reality:
-          "At this headcount, coverage is usually coordinated directly between one program owner and frontline supervisors. The Essential tier is sized for exactly this — one clear process, minimal overhead, and a program that holds without someone managing it manually.",
+          "At this headcount, coverage is usually coordinated directly between one program owner and frontline supervisors. The Essential tier is sized for exactly this ÃƒÂ¯Ã‚Â¿Ã‚Â½ one clear process, minimal overhead, and a program that holds without someone managing it manually.",
         coordination:
-          "Coordination typically sits with one safety lead handling eligibility, replacements, and employee questions at the same time. Keeping it simple here isn't a limitation — it's what makes it run.",
+          "Coordination typically sits with one safety lead handling eligibility, replacements, and employee questions at the same time. Keeping it simple here isn't a limitation ÃƒÂ¯Ã‚Â¿Ã‚Â½ it's what makes it run.",
         nextBand:
           "Crossing into the next size band usually introduces recurring onboarding volume, more replacement activity, and a greater need for repeatable service support.",
       },
@@ -1630,7 +1630,7 @@ function buildGuidance(args: {
           },
           {
             title: "Why accuracy here matters",
-            body: "Exposure accuracy drives wear behavior and replacement frequency. An incomplete profile produces a generic recommendation — the kind that gets overridden the first time conditions don't match the standard.",
+            body: "Exposure accuracy drives wear behavior and replacement frequency. An incomplete profile produces a generic recommendation ÃƒÂ¯Ã‚Â¿Ã‚Â½ the kind that gets overridden the first time conditions don't match the standard.",
           },
         ),
       };
@@ -1815,9 +1815,9 @@ function workTypeExplainer(workType: ProgramWorkType) {
   const map: Record<ProgramWorkType, { needs: string; pattern: string }> = {
     manufacturing: {
       needs:
-        "Recommendations prioritize impact-rated durability, all-shift comfort, and fast remake support — because when a lens scratches out on second shift, the replacement can't wait until Monday.",
+        "Recommendations prioritize impact-rated durability, all-shift comfort, and fast remake support ÃƒÂ¯Ã‚Â¿Ã‚Â½ because when a lens scratches out on second shift, the replacement can't wait until Monday.",
       pattern:
-        "Programs that hold up in manufacturing build replacement pathways before they're needed — shift-based staffing turns eligibility over fast, and reactive programs always fall behind.",
+        "Programs that hold up in manufacturing build replacement pathways before they're needed ÃƒÂ¯Ã‚Â¿Ã‚Â½ shift-based staffing turns eligibility over fast, and reactive programs always fall behind.",
     },
     construction: {
       needs:
@@ -1833,7 +1833,7 @@ function workTypeExplainer(workType: ProgramWorkType) {
     },
     warehouse: {
       needs:
-        "Warehouse recommendations focus on impact-ready daily wear, scratch resilience, and predictable reorder access — because high-turnover environments need replacement to be automatic, not an exception process.",
+        "Warehouse recommendations focus on impact-ready daily wear, scratch resilience, and predictable reorder access ÃƒÂ¯Ã‚Â¿Ã‚Â½ because high-turnover environments need replacement to be automatic, not an exception process.",
       pattern:
         "Programs perform best when onboarding and replacement are triggered from workforce rosters, not ad hoc requests after a problem appears.",
     },
@@ -1853,7 +1853,7 @@ function workTypeExplainer(workType: ProgramWorkType) {
       needs:
         "Laboratory recommendations prioritize sealed or splash-oriented designs, anti-fog performance, and strict option control tied to protocol-driven tasks.",
       pattern:
-        "Lab programs work when approved eyewear options are mapped to procedure classes — selections driven by protocol, not supervisor preference, and not workarounds when the standard option doesn't arrive on time.",
+        "Lab programs work when approved eyewear options are mapped to procedure classes ÃƒÂ¯Ã‚Â¿Ã‚Â½ selections driven by protocol, not supervisor preference, and not workarounds when the standard option doesn't arrive on time.",
     },
     other: {
       needs:
@@ -1890,7 +1890,7 @@ function exposureExplainer(risk: ProgramExposureRisk) {
       implications:
         "Prioritize high-durability frames, dependable side protection, and fit consistency that holds during active motion.",
       compliance:
-        "Programs should define approved frame classes and replacement triggers up front — reactive replacement after a damage event is where compliance gaps usually start.",
+        "Programs should define approved frame classes and replacement triggers up front ÃƒÂ¯Ã‚Â¿Ã‚Â½ reactive replacement after a damage event is where compliance gaps usually start.",
     },
     dust_debris: {
       meaning:
@@ -1914,7 +1914,7 @@ function exposureExplainer(risk: ProgramExposureRisk) {
       implications:
         "Glare-management options support safer visibility, stronger comfort, and higher day-to-day wear consistency.",
       compliance:
-        "Define whether glare-management options are role-based or open — undefined eligibility here tends to become the most-requested exception category.",
+        "Define whether glare-management options are role-based or open ÃƒÂ¯Ã‚Â¿Ã‚Â½ undefined eligibility here tends to become the most-requested exception category.",
     },
     fog_humidity: {
       meaning:
@@ -1934,7 +1934,7 @@ function exposureExplainer(risk: ProgramExposureRisk) {
     },
     screen_intensive: {
       meaning:
-        "Extended screen time builds visual fatigue across the shift — and fatigued employees are more likely to remove their eyewear or stop wearing it altogether.",
+        "Extended screen time builds visual fatigue across the shift ÃƒÂ¯Ã‚Â¿Ã‚Â½ and fatigued employees are more likely to remove their eyewear or stop wearing it altogether.",
       implications:
         "Anti-reflective and blue-light-support options can improve clarity, comfort, and sustained program adoption.",
       compliance:
@@ -2053,15 +2053,15 @@ function setupExplainer(item: CurrentSafetySetup) {
       compliance:
         "This adds control over policy adherence and reduces unapproved ordering paths.",
       admin:
-        "Queue ownership and turnaround targets matter a lot here – undefined approval chains are where fulfillment quietly becomes unpredictable.",
+        "Queue ownership and turnaround targets matter a lot here ÃƒÂ¯Ã‚Â¿Ã‚Â½ undefined approval chains are where fulfillment quietly becomes unpredictable.",
     },
-    manager_no_formal_approval_process: {
+    single_approval_process: {
       structure:
         "Orders and exceptions route through a required approval checkpoint before fulfillment.",
       compliance:
         "This adds control over policy adherence and reduces unapproved ordering paths.",
       admin:
-        "Queue ownership and turnaround targets matter a lot here – undefined approval chains are where fulfillment quietly becomes unpredictable.",
+        "Queue ownership and turnaround targets matter a lot here ÃƒÂ¯Ã‚Â¿Ã‚Â½ undefined approval chains are where fulfillment quietly becomes unpredictable.",
     },
     multiple_approval_process: {
       structure:
@@ -2091,7 +2091,7 @@ function setupExplainer(item: CurrentSafetySetup) {
       structure:
         "Orders are placed online and fulfilled directly, expanding access without requiring onsite event cadence.",
       compliance:
-        "Compliance depends on eligibility guardrails staying tight — without them, self-ordering environments drift toward catalog choices that fall outside policy.",
+        "Compliance depends on eligibility guardrails staying tight ÃƒÂ¯Ã‚Â¿Ã‚Â½ without them, self-ordering environments drift toward catalog choices that fall outside policy.",
       admin:
         "Scheduling overhead drops, while fit guidance, support handling, and return management typically increase.",
     },

@@ -673,6 +673,9 @@ export function RecommendationSummaryPage({
     approvalModel,
     budgetGoals: programPosture,
   });
+  const hasCoveredUpgrade = programConfig.upgradeOptions?.euPackage === "Covered";
+  const hasPartneredUpgrade =
+    programConfig.upgradeOptions?.serviceTier === "Partnered";
 
   const generatedOn = new Date().toLocaleDateString("en-US", {
     month: "long",
@@ -1248,6 +1251,38 @@ export function RecommendationSummaryPage({
                             </div>
                           ))}
                         </div>
+                        {hasCoveredUpgrade && (
+                          <div className="mt-4 rounded-lg border border-[#244093]/20 bg-linear-to-br from-[#244093]/6 via-white to-[#244093]/3 p-4">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#244093] mb-1">
+                              You May Also Need This
+                            </p>
+                            <h5 className="text-sm font-bold text-slate-900 mb-1">
+                              Covered Package Signal
+                            </h5>
+                            <p className="text-xs text-slate-600 leading-relaxed">
+                              Your selections show enterprise-level signals where the Covered package may unlock a higher level of policy control, role-based tailoring, and customization depth.
+                            </p>
+                            <p className="mt-2 text-xs text-slate-500 leading-relaxed">
+                              If you want to explore high-end configuration options, a Program Specialist can walk you through what Covered looks like for your exact team structure.
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={navigateToCongratulations}
+                                className={primaryButtonClass}
+                              >
+                                Covered
+                              </button>
+                              <button
+                                type="button"
+                                onClick={navigateToCongratulations}
+                                className={secondaryButtonClass}
+                              >
+                                Talk to a Program Specialist
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <div className="px-6 py-5 border-t border-slate-100">
@@ -1269,6 +1304,38 @@ export function RecommendationSummaryPage({
                             </div>
                           ))}
                         </div>
+                        {hasPartneredUpgrade && (
+                          <div className="mt-4 rounded-lg border border-[#244093]/20 bg-linear-to-br from-[#244093]/6 via-white to-[#244093]/3 p-4">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#244093] mb-1">
+                              You May Also Need This
+                            </p>
+                            <h5 className="text-sm font-bold text-slate-900 mb-1">
+                              Partnered Service Signal
+                            </h5>
+                            <p className="text-xs text-slate-600 leading-relaxed">
+                              Your inputs suggest a level of operational complexity where the Partnered tier may be a better long-term fit for governance, service continuity, and advanced customization support.
+                            </p>
+                            <p className="mt-2 text-xs text-slate-500 leading-relaxed">
+                              If you want to learn what a high-touch Partnered model can look like for your organization, connect with a Program Specialist.
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={navigateToCongratulations}
+                                className={primaryButtonClass}
+                              >
+                                Partnered
+                              </button>
+                              <button
+                                type="button"
+                                onClick={navigateToCongratulations}
+                                className={secondaryButtonClass}
+                              >
+                                Talk to a Program Specialist
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

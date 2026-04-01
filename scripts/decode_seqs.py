@@ -1,0 +1,18 @@
+seq1 = bytes.fromhex('c3a2e280a0c290')
+level1 = seq1.decode('utf-8') 
+print('seq1 text:', repr(level1))
+b1 = level1.encode('latin-1', errors='replace')
+print('latin-1 bytes:', b1.hex())
+result1 = b1.decode('utf-8', errors='replace')
+print('result1:', repr(result1), '= U+%04X' % (ord(result1[0]) if result1 else 0))
+
+print()
+seq2 = bytes.fromhex('c3a2c593e2809c')
+level2 = seq2.decode('utf-8')
+print('seq2 text:', repr(level2))
+b2 = level2.encode('latin-1', errors='replace')
+print('latin-1 bytes:', b2.hex())
+result2 = b2.decode('utf-8', errors='replace')
+print('result2:', repr(result2))
+for ch in result2:
+    print('  char:', repr(ch), 'U+%04X' % ord(ch))
