@@ -133,6 +133,8 @@ const HAZARD_ADD_ON_MAP: Partial<
   indoor_outdoor_shift: "Transitions",
 };
 
+const EU_PACKAGE_ORDER: EUPackage[] = ["Compliance", "Comfort", "Complete"];
+
 function dedupeAddOns(addOns: RecommendationAddOn[]): RecommendationAddOn[] {
   const set = new Set(addOns);
   return ADD_ON_ORDER.filter((addOn) => set.has(addOn));
@@ -269,36 +271,50 @@ function recommendEuPackageFromIndustryAndHazards(args: {
     (sum, risk) => sum + (HAZARD_WEIGHTS[risk] ?? 0),
     0,
   );
+  const budgetSupportsUpgrade =
+    args.budgetPreference === "good_budget" ||
+    args.budgetPreference === "unlimited_budget";
+  const isHighComplexityIndustry =
+    args.workType === "healthcare" || args.workType === "laboratory";
+  const hasChemicalAndImpact =
+    uniqueRisks.includes("chemical_splash") &&
+    uniqueRisks.includes("high_impact");
+  const costConstrained =
+    args.budgetPreference === "super_strict" ||
+    args.budgetPreference === "low_budget";
 
-  let euPackage: EUPackage = "Comfort";
-
-  // Compliance: Compliance First budget with minimal hazards
-  if (args.budgetPreference === "super_strict" && hazardScore <= 1) {
-    euPackage = "Compliance";
+  // Compliance baseline: minimal hazard profiles stay in Compliance.
+  if (hazardScore <= 1) {
     args.rationale.push(
-      `EU package: Compliance First budget preference with minimal hazards (${hazardScore}) -> Compliance.`,
+      `EU package: minimal hazard profile (${hazardScore}) -> Compliance baseline.`,
     );
+    return "Compliance";
   }
-  // Complete: Specialized industry ONLY with 4+ hazard score and good/unlimited budget
-  else if (
-    args.workType === "other" &&
+
+  // Compliance remains common for moderate hazard programs with cost-constrained posture.
+  if (hazardScore <= 3 && costConstrained) {
+    args.rationale.push(
+      `EU package: moderate hazard profile (${hazardScore}) with cost-constrained goals -> Compliance.`,
+    );
+    return "Compliance";
+  }
+
+  // Complete remains rare: requires high hazards and upgrade-supporting budget.
+  if (
     hazardScore >= 4 &&
-    (args.budgetPreference === "good_budget" || args.budgetPreference === "unlimited_budget")
+    budgetSupportsUpgrade &&
+    (isHighComplexityIndustry || hasChemicalAndImpact || hazardScore >= 6)
   ) {
-    euPackage = "Complete";
     args.rationale.push(
-      `EU package: Specialized industry with high hazards (${hazardScore}) and good/unlimited budget -> Complete.`,
+      `EU package: elevated risk profile (${hazardScore}) with upgrade-supporting budget -> Complete.`,
     );
-  }
-  // Comfort: default for all other combinations
-  else {
-    euPackage = "Comfort";
-    args.rationale.push(
-      `EU package: moderate risk and budget profile -> Comfort (hazard ${hazardScore}, budget ${args.budgetPreference ?? "not specified"}).`,
-    );
+    return "Complete";
   }
 
-  return euPackage;
+  args.rationale.push(
+    `EU package: intermediate risk profile (${hazardScore}) -> Comfort (budget ${args.budgetPreference ?? "not specified"}).`,
+  );
+  return "Comfort";
 }
 
 // ─── Budget constraint — affects EU package only ─────────────────────────────
@@ -306,10 +322,7 @@ function recommendEuPackageFromIndustryAndHazards(args: {
 // Budget influences the EU package level (coverage depth).
 function budgetConstraint(
   budgetPreference: ProgramBudgetPreference,
-  coverageSizeBand: CoverageSizeBand,
 ): { allowedEu: EUPackage[]; label: string } {
-  const isLargeTeam = coverageSizeBand === "201_plus";
-
   if (budgetPreference === "super_strict") {
     return {
       allowedEu: ["Compliance", "Comfort"],
@@ -318,30 +331,44 @@ function budgetConstraint(
   }
 
   if (budgetPreference === "low_budget") {
-    if (isLargeTeam) {
-      return {
-        allowedEu: ["Comfort", "Complete"],
-        label: "Operations Focused",
-      };
-    }
     return {
-      allowedEu: ["Compliance", "Comfort", "Complete"],
+      allowedEu: ["Compliance", "Comfort"],
       label: "Operations Focused",
     };
   }
 
   if (budgetPreference === "good_budget") {
     return {
-      allowedEu: ["Comfort", "Complete"],
+      allowedEu: ["Compliance", "Comfort", "Complete"],
       label: "Ready to Grow",
     };
   }
 
   // unlimited_budget
   return {
-    allowedEu: ["Complete"],
+    allowedEu: ["Compliance", "Comfort", "Complete"],
     label: "Full Program Investment",
   };
+}
+
+function clampEuPackage(
+  euPackage: EUPackage,
+  allowedEu: EUPackage[],
+): EUPackage {
+  if (allowedEu.includes(euPackage)) {
+    return euPackage;
+  }
+
+  const selectedRank = EU_PACKAGE_ORDER.indexOf(euPackage);
+  const rankedAllowed = allowedEu
+    .map((pkg) => ({ pkg, rank: EU_PACKAGE_ORDER.indexOf(pkg) }))
+    .sort((a, b) => a.rank - b.rank);
+
+  const nearest =
+    rankedAllowed.find((candidate) => candidate.rank >= selectedRank) ??
+    rankedAllowed[rankedAllowed.length - 1];
+
+  return nearest.pkg;
 }
 
 function determineUpgradeOptions(args: {
@@ -701,8 +728,15 @@ export function recommendProgram(
   // ──────────────────────────────────────────────────────────
   // STEP 4: Budget goals are part of package/tier selection and also documented.
   if (budgetPreference) {
-    const constraints = budgetConstraint(budgetPreference, coverageSizeBand);
+    const constraints = budgetConstraint(budgetPreference);
     rationale.push(`Budget goals applied: ${constraints.label}.`);
+    const constrainedEuPackage = clampEuPackage(euPackage, constraints.allowedEu);
+    if (constrainedEuPackage !== euPackage) {
+      rationale.push(
+        `Budget goals constrained EU package from ${euPackage} to ${constrainedEuPackage}.`,
+      );
+      euPackage = constrainedEuPackage;
+    }
   }
 
   // ──────────────────────────────────────────────────────────
@@ -714,6 +748,13 @@ export function recommendProgram(
     serviceTier = "Access";
     rationale.push(
       "Safety net: Essential only valid for 1\u201350 employees -> Access.",
+    );
+  }
+
+  if (serviceTier === "Essential" && locationModel !== "single") {
+    serviceTier = "Access";
+    rationale.push(
+      "Safety net: Multi-site programs can never remain Essential -> Access.",
     );
   }
 
