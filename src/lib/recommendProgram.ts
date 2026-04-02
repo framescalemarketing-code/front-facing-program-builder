@@ -95,8 +95,6 @@ export type RecommendProgramResult = {
   coatingRecommendations: CoatingRecommendation[];
 };
 
-const EU_ORDER: EUPackage[] = ["Compliance", "Comfort", "Complete", "Covered"];
-
 const SERVICE_TIER_SIZE_TABLE: Array<{
   maxEmployees: number;
   tier: ServiceTier;
@@ -134,10 +132,6 @@ const HAZARD_ADD_ON_MAP: Partial<
   outdoor_glare: "Polarized sunglasses",
   indoor_outdoor_shift: "Transitions",
 };
-
-function rankOf<T extends string>(order: T[], value: T): number {
-  return order.indexOf(value);
-}
 
 function dedupeAddOns(addOns: RecommendationAddOn[]): RecommendationAddOn[] {
   const set = new Set(addOns);

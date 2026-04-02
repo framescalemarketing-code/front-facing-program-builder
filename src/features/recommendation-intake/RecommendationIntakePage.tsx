@@ -2055,7 +2055,7 @@ function setupExplainer(item: CurrentSafetySetup) {
       admin:
         "Queue ownership and turnaround targets matter a lot here – undefined approval chains are where fulfillment quietly becomes unpredictable.",
     },
-    manager_no_formal_approval_process: {
+    single_approval_process: {
       structure:
         "Orders and exceptions route through a required approval checkpoint before fulfillment.",
       compliance:
