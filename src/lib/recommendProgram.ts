@@ -540,7 +540,7 @@ export function recommendCoatings(inputs: {
       case "screen_intensive":
         addCoating(
           "blue_light_filter",
-          "Recommended for screen-intensive work to reduce eye strain over long shifts.",
+          "Recommended for high screen usage to reduce eye strain over long shifts.",
         );
         addCoating(
           "anti_reflective",

@@ -1639,11 +1639,11 @@ function exposureLabel(risk: ProgramExposureRisk) {
     high_impact: "High Impact",
     dust_debris: "Dust or Debris",
     chemical_splash: "Chemical Splash",
-    outdoor_glare: "Outdoor Glare",
-    fog_humidity: "Fog or Humidity",
-    indoor_outdoor_shift: "Indoor and Outdoor Shift Changes",
-    screen_intensive: "Screen Intensive Tasks",
-    temperature_extremes: "Temperature Extremes",
+    outdoor_glare: "Outdoor Glare and Light Shifts",
+    fog_humidity: "Fog or Extreme Temperatures",
+    indoor_outdoor_shift: "Outdoor Glare and Light Shifts",
+    screen_intensive: "High Screen Usage",
+    temperature_extremes: "Fog or Extreme Temperatures",
   };
   return map[risk];
 }
