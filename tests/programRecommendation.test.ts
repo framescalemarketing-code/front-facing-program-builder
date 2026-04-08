@@ -49,7 +49,7 @@ test("2) Hazardous profile with middle budget -> Comfort", () => {
   assert.equal(result.serviceTier, "Access");
 });
 
-test("3) Hazardous profile with higher budget in complex industry -> Complete", () => {
+test("3) Hazardous profile with higher budget and skipped setup -> Comfort", () => {
   const result = recommendProgram(
     makeInputs({
       workType: "healthcare",
@@ -59,7 +59,7 @@ test("3) Hazardous profile with higher budget in complex industry -> Complete", 
     }),
   );
 
-  assert.equal(result.euPackage, "Complete");
+  assert.equal(result.euPackage, "Comfort");
   assert.equal(result.serviceTier, "Access");
 });
 
@@ -87,11 +87,24 @@ test("5) High hazards with low budget move to Comfort, not Complete", () => {
   assert.equal(result.euPackage, "Comfort");
 });
 
-test("6) High hazards with good budget in standard industry can reach Complete", () => {
+test("6) High hazards with good budget and skipped setup -> Comfort", () => {
   const result = recommendProgram(
     makeInputs({
       workType: "manufacturing",
       exposureRisks: ["high_impact", "chemical_splash"],
+      budgetPreference: "good_budget",
+    }),
+  );
+
+  assert.equal(result.euPackage, "Comfort");
+});
+
+test("6b) High hazards with good budget and formal setup can still reach Complete", () => {
+  const result = recommendProgram(
+    makeInputs({
+      workType: "manufacturing",
+      exposureRisks: ["high_impact", "chemical_splash"],
+      currentSafetySetup: ["single_approval_process", "onsite_events"],
       budgetPreference: "good_budget",
     }),
   );
@@ -211,4 +224,33 @@ test("13) Full investment budget alone does not force Premier", () => {
   );
 
   assert.equal(result.serviceTier, "Access");
+});
+
+test("14) 200+ employees with larger investment budget signals Partnership tier", () => {
+  const result = recommendProgram(
+    makeInputs({
+      coverageSizeBand: "201_plus",
+      budgetPreference: "unlimited_budget",
+      currentSafetySetup: ["single_approval_process"],
+    }),
+  );
+
+  assert.equal(result.upgradeOptions?.serviceTier, "Partnered");
+});
+
+test("15) Four or more hazards signal Covered package upgrade", () => {
+  const result = recommendProgram(
+    makeInputs({
+      exposureRisks: [
+        "high_impact",
+        "dust_debris",
+        "chemical_splash",
+        "screen_intensive",
+      ],
+      budgetPreference: "good_budget",
+      currentSafetySetup: ["single_approval_process"],
+    }),
+  );
+
+  assert.equal(result.upgradeOptions?.euPackage, "Covered");
 });

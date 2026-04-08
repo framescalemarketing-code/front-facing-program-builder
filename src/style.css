@@ -100,6 +100,7 @@ html,
 body,
 #root {
   width: 100%;
+  height: auto;
   min-height: 100%;
 }
 
@@ -113,17 +114,19 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: clip;
+  overflow-x: hidden;
 }
 
 #root {
+  min-height: 100vh;
   min-height: 100dvh;
-  overflow-x: clip;
+  overflow-x: hidden;
 }
 
 main {
   background: #f8f9fb;
-  overflow-x: clip;
+  overflow-x: hidden;
+  min-height: calc(100vh - 56px);
   min-height: calc(100dvh - 56px);
 }
 
@@ -204,9 +207,7 @@ h3 {
 
 /* Touch-friendly interactive elements */
 @media (max-width: 1023px) {
-  button,
-  [role="button"],
-  a {
+  main :is(button, [role="button"], a) {
     min-height: 44px;
     min-width: 44px;
   }
@@ -242,6 +243,14 @@ h3 {
       color, background-color, border-color, box-shadow, opacity;
     transition-duration: 150ms;
     transition-timing-function: ease-in-out;
+  }
+}
+
+@supports (overflow: clip) {
+  body,
+  #root,
+  main {
+    overflow-x: clip;
   }
 }
 

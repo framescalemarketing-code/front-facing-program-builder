@@ -225,6 +225,7 @@ function recommendServiceTierFromTable(args: {
   const setupScore = setupStructureScore(args.currentSafetySetup);
   const hasStrongPartnershipSignals =
     setupScore.structuredSignals >= 3 && setupScore.partnershipSignals >= 2;
+  const setupSkipped = args.currentSafetySetup.length === 0;
 
   if (
     args.budgetPreference === "super_strict" &&
@@ -254,6 +255,17 @@ function recommendServiceTierFromTable(args: {
     serviceTier = "Premier";
     args.rationale.push(
       "Tier escalation: structured partnership signals and scale indicate Premier support needs.",
+    );
+  }
+
+  if (setupSkipped) {
+    if (args.coverageSizeBand === "1_50" && !isMultiLocation) {
+      serviceTier = "Essential";
+    } else {
+      serviceTier = "Access";
+    }
+    args.rationale.push(
+      "Setup skipped: service tier held to lower-structure baseline.",
     );
   }
 
@@ -326,28 +338,28 @@ function budgetConstraint(
   if (budgetPreference === "super_strict") {
     return {
       allowedEu: ["Compliance", "Comfort"],
-      label: "Compliance First",
+      label: "Lean Budget",
     };
   }
 
   if (budgetPreference === "low_budget") {
     return {
       allowedEu: ["Compliance", "Comfort"],
-      label: "Operations Focused",
+      label: "Lean Budget",
     };
   }
 
   if (budgetPreference === "good_budget") {
     return {
       allowedEu: ["Compliance", "Comfort", "Complete"],
-      label: "Ready to Grow",
+      label: "Balanced Budget",
     };
   }
 
   // unlimited_budget
   return {
     allowedEu: ["Compliance", "Comfort", "Complete"],
-    label: "Full Program Investment",
+    label: "Growth Budget",
   };
 }
 
@@ -382,6 +394,9 @@ function determineUpgradeOptions(args: {
 }): RecommendProgramResult["upgradeOptions"] {
   const rationale: string[] = [];
   const uniqueRisks = Array.from(new Set(args.exposureRisks));
+  const hasFourPlusHazards = uniqueRisks.length >= 4;
+  const hasLargerInvestmentBudget = args.budgetPreference === "unlimited_budget";
+  const hasLargeTeam = args.coverageSizeBand === "201_plus";
   const hazardScore = uniqueRisks.reduce(
     (sum, risk) => sum + (HAZARD_WEIGHTS[risk] ?? 0),
     0,
@@ -399,6 +414,20 @@ function determineUpgradeOptions(args: {
 
   let euPackage: "Covered" | undefined;
   let serviceTier: "Partnered" | undefined;
+
+  if (hasFourPlusHazards) {
+    euPackage = "Covered";
+    rationale.push(
+      "Covered signal: 4+ hazards selected. Ask about customizable allowance, lens options, and frame options.",
+    );
+  }
+
+  if (hasLargeTeam && hasLargerInvestmentBudget) {
+    serviceTier = "Partnered";
+    rationale.push(
+      "Partnership service signal: 200+ employees with larger investment budget. Ask about a customizable service tier setup.",
+    );
+  }
 
   if (
     args.euPackage === "Complete" &&
@@ -685,6 +714,7 @@ export function recommendProgram(
   const currentSafetySetup = rawInputs.currentSafetySetup ?? [];
   const budgetPreference = rawInputs.budgetPreference;
   const selectedAddOns = dedupeAddOns(rawInputs.selectedAddOns ?? []);
+  const setupSkipped = currentSafetySetup.length === 0;
 
   const rationale: string[] = [];
 
@@ -698,6 +728,18 @@ export function recommendProgram(
     budgetPreference,
     rationale,
   });
+
+  if (setupSkipped) {
+    const loweredEu = clampEuPackage(euPackage, ["Compliance", "Comfort"]);
+    if (loweredEu !== euPackage) {
+      rationale.push(
+        `Setup skipped: EU package adjusted from ${euPackage} to ${loweredEu}.`,
+      );
+      euPackage = loweredEu;
+    } else {
+      rationale.push("Setup skipped: EU package held to baseline depth.");
+    }
+  }
 
   // STEP 2: Service tier uses team size + locations + setup + budget goals.
   serviceTier = recommendServiceTierFromTable({

@@ -25,8 +25,8 @@ import type { CoatingRecommendation } from "@/lib/recommendProgram";
 import "./recommendationSummaryPrint.css";
 
 const RECOMMENDATION_START_STEP_KEY = "osso_recommendation_start_step";
-const DIRECTION_STEP_INDEX = 6;
-const LOCATIONS_STEP_INDEX = 3;
+const DIRECTION_STEP_INDEX = 4;
+const LOCATIONS_STEP_INDEX = 1;
 type CoverageSizeBand = NonNullable<
   ProgramConfig["programProfile"]["coverageSizeBand"]
 >;
@@ -45,7 +45,7 @@ function workTypeLabel(value: string | undefined) {
     healthcare: "Healthcare & Clinical",
     public_sector: "Public Sector & Municipal",
     laboratory: "Laboratory & Research",
-    other: "Specialized / Mixed Environment",
+    other: "Other",
   };
   return map[value ?? ""] ?? null;
 }
@@ -71,10 +71,10 @@ function locationModelLabel(value: string | undefined) {
 
 function budgetPreferenceLabel(value: ProgramBudgetPreference | undefined) {
   const map: Record<ProgramBudgetPreference, string> = {
-    super_strict: "Compliance First",
-    low_budget: "Operations Focused",
-    good_budget: "Ready to Grow",
-    unlimited_budget: "Full Program Investment",
+    super_strict: "Lean Budget",
+    low_budget: "Lean Budget",
+    good_budget: "Balanced Budget",
+    unlimited_budget: "Growth Budget",
   };
   if (!value) return null;
   return map[value] ?? null;
@@ -210,123 +210,6 @@ function summarizeExposureRisks(risks: ProgramExposureRisk[] | undefined) {
   return `${firstTwo}, and related risk controls`;
 }
 
-function packageFitBySelection(args: {
-  selectedPackage: EUPackage | null;
-  workType: string | null;
-  coverageBand: string | null;
-  locationModel: string | null;
-  exposureSummary: string | null;
-  deliveryModel: string | null;
-  approvalModel: string | null;
-  budgetGoals: string | null;
-  coatings: CoatingRecommendation[];
-}) {
-  const pkg = args.selectedPackage ?? "This package";
-  const rows: { label: string; detail: string }[] = [];
-
-  if (args.workType) {
-    rows.push({
-      label: "Industry",
-      detail: `${pkg} aligns to ${args.workType} environments, which typically require consistent protection depth and clear eligibility standards for day-to-day operations.`,
-    });
-  }
-  if (args.coverageBand) {
-    rows.push({
-      label: "Team size",
-      detail: `With ${args.coverageBand} employees to cover, ${pkg} provides the right level of role flexibility — not over-engineered for small teams, not too restrictive for growing headcount.`,
-    });
-  }
-  if (args.locationModel) {
-    rows.push({
-      label: "Locations",
-      detail: `Your ${args.locationModel.toLowerCase()} structure was a factor in recommending ${pkg} — ${args.locationModel.toLowerCase().includes("multiple") ? "multi-site programs need consistent package standards across sites" : "single-site programs can rely on a tightly standardized package without excess complexity"}.`,
-    });
-  }
-  if (args.exposureSummary) {
-    rows.push({
-      label: "Exposure risks",
-      detail: `Your selected exposure risks (${args.exposureSummary}) indicate the protection depth that ${pkg} is designed to meet — this isn't a one-size guess, it reflects what your team actually faces.`,
-    });
-  }
-  if (args.deliveryModel || args.approvalModel) {
-    const logistics = [args.deliveryModel, args.approvalModel]
-      .filter(Boolean)
-      .join(" and ");
-    rows.push({
-      label: "Setup and logistics",
-      detail: `Your current setup (${logistics}) is compatible with how ${pkg} is deployed — coverage depth and service execution stay aligned without requiring major process changes.`,
-    });
-  }
-  if (args.budgetGoals) {
-    rows.push({
-      label: "Budget goals",
-      detail: `${pkg} fits your stated budget priority of "${args.budgetGoals}" — the coverage depth doesn't exceed what your current planning supports, and it protects long-term consistency.`,
-    });
-  }
-  if (args.coatings.length > 0) {
-    rows.push({
-      label: "Coatings",
-      detail: `The coatings selected from your inputs (${args.coatings.map((c) => c.label).join(", ")}) are compatible with ${pkg} and extend lens durability and wear comfort in your environment.`,
-    });
-  }
-  return rows;
-}
-
-function serviceFitBySelection(args: {
-  serviceTier: ServiceTier | null;
-  coverageBand: string | null;
-  locationModel: string | null;
-  workType: string | null;
-  exposureSummary: string | null;
-  deliveryModel: string | null;
-  approvalModel: string | null;
-  budgetGoals: string | null;
-}) {
-  const svc = args.serviceTier ?? "This service tier";
-  const rows: { label: string; detail: string }[] = [];
-
-  if (args.coverageBand) {
-    rows.push({
-      label: "Team coordination",
-      detail: `With ${args.coverageBand} employees to support, ${svc} provides enough service capacity to handle onboarding, reorders, and exception management without creating a bottleneck.`,
-    });
-  }
-  if (args.locationModel) {
-    rows.push({
-      label: "Location coordination",
-      detail: `Your ${args.locationModel.toLowerCase()} setup drives the coordination load. ${svc} is structured to match that — ${args.locationModel.toLowerCase().includes("multiple") ? "distributed programs need reliable cross-site service routing" : "a single site can be supported with a more direct service model"}.`,
-    });
-  }
-  if (args.workType) {
-    rows.push({
-      label: "Industry operations",
-      detail: `${args.workType} environments have specific service cadence needs. ${svc} keeps support workflows practical for how your team actually operates day-to-day.`,
-    });
-  }
-  if (args.exposureSummary) {
-    rows.push({
-      label: "Risk support",
-      detail: `Your selected exposures (${args.exposureSummary}) introduce replacement and eligibility complexity that ${svc} is calibrated to absorb without putting that burden back on your team.`,
-    });
-  }
-  if (args.deliveryModel || args.approvalModel) {
-    const logistics = [args.deliveryModel, args.approvalModel]
-      .filter(Boolean)
-      .join(" and ");
-    rows.push({
-      label: "Execution workflow",
-      detail: `Your current ${logistics} setup determines how service is triggered and tracked. ${svc} is a fit for this workflow — it supports your execution model without over-engineering it.`,
-    });
-  }
-  if (args.budgetGoals) {
-    rows.push({
-      label: "Budget alignment",
-      detail: `${svc} fits your budget direction of "${args.budgetGoals}" — service depth is matched to what your current program model can sustain operationally.`,
-    });
-  }
-  return rows;
-}
-
 function ExposurePills(props: { risks: ProgramExposureRisk[] | undefined }) {
   if (!props.risks || props.risks.length === 0) return null;
   return (
@@ -430,59 +313,19 @@ function ProgramSummaryCard(props: {
         </svg>
 
         <div className="relative">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              {props.companyName && (
-                <p className="text-xs font-semibold uppercase tracking-widest text-white/50 mb-1">
-                  {props.companyName}
-                </p>
-              )}
-              <h2 className="text-xl font-bold text-white leading-tight">
-                Program Recommendation
-              </h2>
-              <p className="text-sm text-white/70 mt-1">
-                Your specialist will walk through this with you before anything
-                is set
+          <div>
+            {props.companyName && (
+              <p className="text-xs font-semibold uppercase tracking-widest text-white/50 mb-1">
+                {props.companyName}
               </p>
-            </div>
-            <div className="flex gap-2 shrink-0">
-              <div className="rounded-lg px-3 py-2 text-center backdrop-blur-sm bg-white/15 border border-white/25 shadow-lg min-w-[72px]">
-                <div className="text-lg font-bold text-white leading-tight">
-                  {props.selectedPackage ?? "—"}
-                </div>
-                <div className="text-[10px] font-medium text-white/60 uppercase tracking-wide mt-0.5">
-                  EU Package
-                </div>
-              </div>
-              <div className="rounded-lg px-3 py-2 text-center backdrop-blur-sm bg-white/15 border border-white/25 shadow-lg min-w-[72px]">
-                <div className="text-lg font-bold text-white leading-tight">
-                  {props.serviceTier ?? "—"}
-                </div>
-                <div className="text-[10px] font-medium text-white/60 uppercase tracking-wide mt-0.5">
-                  Service Tier
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Stat Pills */}
-          <div className="flex flex-wrap gap-2 mt-4">
-            {props.workType && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-medium text-white/90">
-                <span aria-hidden="true">▤</span> {props.workType}
-              </span>
             )}
-            {props.coverageBand && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-medium text-white/90">
-                <span aria-hidden="true">◷</span> {props.coverageBand}{" "}
-                employees
-              </span>
-            )}
-            {props.locationModel && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-medium text-white/90">
-                <span aria-hidden="true">⌂</span> {props.locationModel}
-              </span>
-            )}
+            <h2 className="text-xl font-bold text-white leading-tight">
+              Program Recommendation
+            </h2>
+            <p className="text-sm text-white/70 mt-1">
+              This is our recommended fit based on your inputs and current
+              operating model.
+            </p>
           </div>
         </div>
       </div>
@@ -652,30 +495,10 @@ export function RecommendationSummaryPage({
     intake.locationZip.trim().length > 0;
   const isIntakeComplete = hasContactInfo && hasLocationInfo;
 
-  const coverageSections = packageFitBySelection({
-    selectedPackage,
-    workType,
-    coverageBand,
-    locationModel,
-    exposureSummary,
-    deliveryModel,
-    approvalModel,
-    budgetGoals: programPosture,
-    coatings: programConfig.coatingRecommendations ?? [],
-  });
-  const serviceSections = serviceFitBySelection({
-    serviceTier,
-    coverageBand,
-    locationModel,
-    workType,
-    exposureSummary,
-    deliveryModel,
-    approvalModel,
-    budgetGoals: programPosture,
-  });
   const hasCoveredUpgrade = programConfig.upgradeOptions?.euPackage === "Covered";
   const hasPartneredUpgrade =
     programConfig.upgradeOptions?.serviceTier === "Partnered";
+  const exposureCount = programConfig.programProfile.exposureRisks?.length ?? 0;
 
   const generatedOn = new Date().toLocaleDateString("en-US", {
     month: "long",
@@ -897,81 +720,95 @@ export function RecommendationSummaryPage({
                   {/* Snapshot: the full picture at a glance */}
                   {activeCardSection === "snapshot" && (
                     <div className="p-0">
-                      <div className="px-6 py-6 border-t border-slate-100">
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                          <div>
-                            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
-                              EU Package
-                            </span>
-                            <span className="text-lg font-bold text-[#244093]">
-                              {selectedPackage ?? "-"}
-                            </span>
+                      <div className="px-6 py-6 border-t border-slate-100 bg-linear-to-br from-slate-50/80 via-white to-slate-50/50">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                          Snapshot Fit Overview
+                        </p>
+                        <p className="text-sm text-slate-600 leading-relaxed">
+                          This snapshot shows our recommendation based on your inputs, including team profile, exposure conditions, and how your program runs today.
+                        </p>
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                          <div className="rounded-lg border border-[#244093]/20 bg-linear-to-br from-white to-[#f3f7ff] px-3 py-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                              Recommended Fit
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-slate-800">
+                              {selectedPackage ?? "Package pending"}
+                              <span className="mx-1 text-slate-400">+</span>
+                              {serviceTier ?? "Tier pending"}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              EU package and service tier selected from your current program inputs.
+                            </p>
                           </div>
-                          <div>
-                            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
-                              Service Tier
-                            </span>
-                            <span className="text-lg font-bold text-[#244093]">
-                              {serviceTier ?? "-"}
-                            </span>
+
+                          <div className="rounded-lg border border-slate-200 bg-white px-3 py-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                              Workforce Footprint
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-slate-800">
+                              {coverageBand ? `${coverageBand} employees` : "Team size pending"}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {locationModel ? `${locationModel}${locations.length > 0 ? ` (${locations.length})` : ""}` : "Location model pending"}
+                            </p>
                           </div>
-                          <div>
-                            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
-                              Coverage
-                            </span>
-                            <span className="text-sm font-bold text-slate-800">
-                              {coverageBand ? `${coverageBand} employees` : "-"}
-                            </span>
+
+                          <div className="rounded-lg border border-slate-200 bg-white px-3 py-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                              Risk Posture
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-slate-800">
+                              {exposureCount > 0
+                                ? `${exposureCount} hazards selected`
+                                : "No hazards selected"}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {exposureSummary ?? "No hazard signals were selected."}
+                            </p>
                           </div>
-                          <div>
-                            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
-                              Fit Overview
-                            </span>
-                            <span className="text-sm font-bold text-slate-800">
-                              {selectedPackage && serviceTier
-                                ? `${selectedPackage} + ${serviceTier}`
-                                : "Package and tier pending"}
-                            </span>
+
+                          <div className="rounded-lg border border-slate-200 bg-white px-3 py-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                              Operating Mode
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-slate-800">
+                              {(deliveryModel || approvalModel)
+                                ? [deliveryModel, approvalModel].filter(Boolean).join(" + ")
+                                : "Setup details pending"}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {programPosture ? `Budget direction: ${programPosture}` : "Budget direction pending"}
+                            </p>
                           </div>
                         </div>
                       </div>
 
                       {/* Profile details */}
                       <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/40">
-                        <div className="flex flex-wrap gap-x-8 gap-y-1.5 text-sm">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                          Key Signals
+                        </p>
+                        <div className="flex flex-wrap gap-2 text-xs">
                           {workType && (
-                            <span className="text-slate-500">
-                              <span className="font-medium text-slate-700">
-                                Industry:
-                              </span>{" "}
-                              {workType}
+                            <span className="inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-600">
+                              Industry: {workType}
                             </span>
                           )}
                           {locationModel && (
-                            <span className="text-slate-500">
-                              <span className="font-medium text-slate-700">
-                                Locations:
-                              </span>{" "}
-                              {locationModel}
-                              {locations.length > 0
-                                ? ` (${locations.length})`
-                                : ""}
+                            <span className="inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-600">
+                              Locations: {locationModel}
+                              {locations.length > 0 ? ` (${locations.length})` : ""}
                             </span>
                           )}
                           {deliveryModel && (
-                            <span className="text-slate-500">
-                              <span className="font-medium text-slate-700">
-                                Delivery:
-                              </span>{" "}
-                              {deliveryModel}
+                            <span className="inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-600">
+                              Delivery: {deliveryModel}
                             </span>
                           )}
                           {approvalModel && (
-                            <span className="text-slate-500">
-                              <span className="font-medium text-slate-700">
-                                Approval:
-                              </span>{" "}
-                              {approvalModel}
+                            <span className="inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-600">
+                              Approval: {approvalModel}
                             </span>
                           )}
                         </div>
@@ -1002,33 +839,68 @@ export function RecommendationSummaryPage({
                           risks={programConfig.programProfile.exposureRisks}
                         />
 
-                        {/* Coating pills */}
-                        {(programConfig.coatingRecommendations ?? []).length >
-                          0 && (
-                          <div>
-                            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mr-2">
-                              Recommended Coatings
-                            </span>
-                            <div className="flex flex-wrap gap-1.5 mt-1.5">
-                              {(programConfig.coatingRecommendations ?? []).map(
-                                (coating: CoatingRecommendation) => (
-                                  <span
-                                    key={coating.id}
-                                    className="inline-flex rounded-full bg-[#244093]/6 border border-[#244093]/15 px-2.5 py-0.5 text-xs font-medium text-[#244093]"
-                                  >
-                                    {coating.label}
-                                  </span>
-                                ),
-                              )}
-                            </div>
-                          </div>
-                        )}
-
                         {/* Travel flag */}
                         {locations.some((l) => l.oneWayMiles > 50) && (
                           <p className="text-xs font-medium text-slate-500">
-                            ⚠ Travel surcharge may apply to some locations
+                            Potential travel surcharge may apply to some locations
                           </p>
+                        )}
+
+                        {(hasCoveredUpgrade || hasPartneredUpgrade) && (
+                          <div className="space-y-3 pt-1">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                              You May Also Need This
+                            </p>
+                            {hasCoveredUpgrade && (
+                              <div className="relative overflow-hidden rounded-xl border border-[#d6e2f7] bg-linear-to-br from-[#fdfefe] via-[#f9fbff] to-[#f2f6ff] p-4 shadow-sm shadow-[#244093]/8">
+                                <div
+                                  aria-hidden="true"
+                                  className="pointer-events-none absolute inset-0 bg-linear-to-r from-[#244093]/4 via-transparent to-transparent"
+                                />
+                                <div
+                                  aria-hidden="true"
+                                  className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-[#c8a45a] via-[#e2c98a] to-[#c8a45a]"
+                                />
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#355a9a] mb-1">
+                                  Concierge Upgrade
+                                </p>
+                                <h5 className="text-sm font-bold text-slate-900 mb-1">
+                                  Covered Package Signal
+                                </h5>
+                                <p className="text-xs text-slate-600 leading-relaxed">
+                                  You can ask about a Covered package with a more customizable allowance, plus expanded lens and frame options.
+                                </p>
+                                <div className="mt-3 inline-flex rounded-full border border-[#d8e1f2] bg-white/85 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[#355a9a]">
+                                  Custom Allowance + Lens + Frame Options
+                                </div>
+                              </div>
+                            )}
+
+                            {hasPartneredUpgrade && (
+                              <div className="relative overflow-hidden rounded-xl border border-[#d6e2f7] bg-linear-to-br from-[#fdfefe] via-[#f9fbff] to-[#f2f6ff] p-4 shadow-sm shadow-[#244093]/8">
+                                <div
+                                  aria-hidden="true"
+                                  className="pointer-events-none absolute inset-0 bg-linear-to-r from-[#244093]/4 via-transparent to-transparent"
+                                />
+                                <div
+                                  aria-hidden="true"
+                                  className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-[#c8a45a] via-[#e2c98a] to-[#c8a45a]"
+                                />
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#355a9a] mb-1">
+                                  Concierge Upgrade
+                                </p>
+                                <h5 className="text-sm font-bold text-slate-900 mb-1">
+                                  Partnership Service Signal
+                                </h5>
+                                <p className="text-xs text-slate-600 leading-relaxed">
+                                  You can ask about a more customizable Partnership service tier setup.
+                                </p>
+                                <div className="mt-3 inline-flex rounded-full border border-[#d8e1f2] bg-white/85 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[#355a9a]">
+                                  Premium Service Tier Configuration
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1040,7 +912,7 @@ export function RecommendationSummaryPage({
                       {/* Fit header */}
                       <div className="px-6 pt-6 pb-5 bg-linear-to-br from-slate-50 via-white to-slate-50/80">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
-                          EU Package and Service Tier Fit
+                          Operational Profile and Fit
                         </p>
                         <div className="inline-flex rounded-full border border-[#244093]/20 bg-[#244093]/6 px-4 py-1.5 text-sm font-bold uppercase tracking-wide text-[#244093] mb-3">
                           {selectedPackage && serviceTier
@@ -1048,130 +920,43 @@ export function RecommendationSummaryPage({
                             : "Package and Tier Pending"}
                         </div>
                         <p className="text-[15px] text-slate-700 leading-relaxed">
-                          {packageTierFit.body}
+                          This section summarizes who your operation is today, what day-to-day execution likely looks like, and why this recommended fit matches your current stage.
                         </p>
                       </div>
 
-                      {/* Why you received this fit based on your inputs */}
+                      {/* Day-to-day profile + fit rationale */}
                       <div className="px-6 py-5 border-t border-slate-100">
-                        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
-                          {packageTierFit.title}
-                        </p>
-                        <div className="space-y-2.5">
-                          {programPosture && (
-                            <div className="flex items-start gap-2.5">
-                              <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                -
-                              </span>
-                              <p className="text-sm text-slate-600 leading-relaxed">
-                                <span className="font-medium text-slate-700">
-                                  Budget goals:
-                                </span>{" "}
-                                {programPosture}
-                              </p>
-                            </div>
-                          )}
-                          {coverageBand && (
-                            <div className="flex items-start gap-2.5">
-                              <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                -
-                              </span>
-                              <p className="text-sm text-slate-600 leading-relaxed">
-                                <span className="font-medium text-slate-700">
-                                  Team size:
-                                </span>{" "}
-                                {coverageBand} employees
-                              </p>
-                            </div>
-                          )}
-                          {locationModel && (
-                            <div className="flex items-start gap-2.5">
-                              <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                -
-                              </span>
-                              <p className="text-sm text-slate-600 leading-relaxed">
-                                <span className="font-medium text-slate-700">
-                                  Locations:
-                                </span>{" "}
-                                {locationModel}
-                              </p>
-                            </div>
-                          )}
-                          {exposureSummary && (
-                            <div className="flex items-start gap-2.5">
-                              <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                -
-                              </span>
-                              <p className="text-sm text-slate-600 leading-relaxed">
-                                <span className="font-medium text-slate-700">
-                                  Exposure risks:
-                                </span>{" "}
-                                {exposureSummary}
-                              </p>
-                            </div>
-                          )}
-                          {workType && (
-                            <div className="flex items-start gap-2.5">
-                              <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                -
-                              </span>
-                              <p className="text-sm text-slate-600 leading-relaxed">
-                                <span className="font-medium text-slate-700">
-                                  Industry:
-                                </span>{" "}
-                                {workType}
-                              </p>
-                            </div>
-                          )}
-                          {deliveryModel && (
-                            <div className="flex items-start gap-2.5">
-                              <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                -
-                              </span>
-                              <p className="text-sm text-slate-600 leading-relaxed">
-                                <span className="font-medium text-slate-700">
-                                  Delivery model:
-                                </span>{" "}
-                                {deliveryModel}
-                              </p>
-                            </div>
-                          )}
-                          {approvalModel && (
-                            <div className="flex items-start gap-2.5">
-                              <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                -
-                              </span>
-                              <p className="text-sm text-slate-600 leading-relaxed">
-                                <span className="font-medium text-slate-700">
-                                  Approval routing:
-                                </span>{" "}
-                                {approvalModel}
-                              </p>
-                            </div>
-                          )}
-                          {(programConfig.coatingRecommendations ?? []).length >
-                            0 && (
-                            <div className="flex items-start gap-2.5">
-                              <span className="text-[#2971b5]/60 text-xs mt-0.5 shrink-0">
-                                -
-                              </span>
-                              <p className="text-sm text-slate-600 leading-relaxed">
-                                <span className="font-medium text-slate-700">
-                                  Recommended coatings:
-                                </span>{" "}
-                                {(programConfig.coatingRecommendations ?? [])
-                                  .map((c: CoatingRecommendation) => c.label)
-                                  .join(", ")}
-                              </p>
-                            </div>
-                          )}
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-4">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                              Day-to-Day Operating Profile
+                            </p>
+                            <p className="text-sm text-slate-700 leading-relaxed">
+                              {workType ?? "Your operation"} teams with {coverageBand ?? "your current"} employee coverage and {locationModel ?? "your location"} structure typically need steady service rhythm, clear routing, and reliable replacement support.
+                            </p>
+                            <p className="mt-2 text-xs text-slate-500 leading-relaxed">
+                              Current execution signals: {deliveryModel ?? "Delivery pending"} + {approvalModel ?? "Approval pending"}.
+                            </p>
+                          </div>
+
+                          <div className="rounded-lg border border-slate-200 bg-white p-4">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                              Recommended Fit Right Now
+                            </p>
+                            <p className="text-sm text-slate-700 leading-relaxed">
+                              {selectedPackage ?? "Package"} + {serviceTier ?? "Tier"} fits where your program is today: enough structure to support current demand without overbuilding the model.
+                            </p>
+                            <p className="mt-2 text-xs text-slate-500 leading-relaxed">
+                              Budget direction: {programPosture ?? "Not selected"}. Exposure context: {exposureSummary ?? "No hazards selected"}.
+                            </p>
+                          </div>
                         </div>
                       </div>
 
                       {/* Footer note */}
                       <div className="px-6 py-4 border-t border-slate-100 bg-linear-to-r from-[#244093]/3 to-[#2971b5]/2">
                         <p className="text-sm text-slate-600 leading-relaxed">
-                          This fit is built from the full picture: team size, locations, exposure complexity, delivery structure, budget goals, and approval routing. It shows how the EU Package and Service Tier align to your current operating model.
+                          {packageTierFit.body}
                         </p>
                       </div>
                     </div>
@@ -1183,12 +968,12 @@ export function RecommendationSummaryPage({
                       {/* Coverage metrics */}
                       <div className="px-6 pt-6 pb-5 bg-linear-to-br from-slate-50 via-white to-slate-50/80">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
-                          Coverage Configuration
+                          Coverage Decision Logic
                         </p>
                         <p className="text-sm text-slate-600 mb-4 leading-relaxed">
-                          Coverage explains how package depth and service structure align to your current exposure mix, workforce size, and operating responsibilities.
+                          Here is how your EU package and service tier were selected.
                         </p>
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid gap-3 sm:grid-cols-3">
                           <div>
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block mb-0.5">
                               EU Package
@@ -1216,54 +1001,66 @@ export function RecommendationSummaryPage({
                         </div>
                       </div>
 
-                      {/* Why this combination */}
-                      {packageTierSummary && (
-                        <div className="px-6 py-4 border-t border-slate-100">
-                          <p className="text-sm text-slate-500 leading-relaxed pl-4 border-l-2 border-[#2971b5]/30 italic">
-                            {packageTierSummary}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Exposure risks */}
-                      <div className="px-6 py-4 border-t border-slate-100">
-                        <ExposurePills
-                          risks={programConfig.programProfile.exposureRisks}
-                        />
-                      </div>
-
                       <div className="px-6 py-5 border-t border-slate-100">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
-                          Why This EU Package Fits
+                          How The Decision Was Made
                         </p>
-                        <div className="grid sm:grid-cols-2 gap-2">
-                          {coverageSections.map((row) => (
-                            <div
-                              key={row.label}
-                              className="flex gap-3 rounded-lg border border-slate-200 bg-slate-50/30 px-3 py-2.5"
-                            >
-                              <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-slate-400 w-24 pt-0.5">
-                                {row.label}
-                              </span>
-                              <p className="text-xs text-slate-600 leading-relaxed">
-                                {row.detail}
-                              </p>
-                            </div>
-                          ))}
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="rounded-lg border border-slate-200 bg-slate-50/30 px-3 py-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                              Team + Locations
+                            </p>
+                            <p className="mt-1 text-xs text-slate-600 leading-relaxed">
+                              {coverageBand ?? "Team size pending"} employees across {locationModel ?? "location model pending"} sets the base service load and coordination needs.
+                            </p>
+                          </div>
+                          <div className="rounded-lg border border-slate-200 bg-slate-50/30 px-3 py-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                              Exposure Complexity
+                            </p>
+                            <p className="mt-1 text-xs text-slate-600 leading-relaxed">
+                              {exposureSummary ?? "No hazards selected"} informs how deep package coverage should go.
+                            </p>
+                          </div>
+                          <div className="rounded-lg border border-slate-200 bg-slate-50/30 px-3 py-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                              Current Setup
+                            </p>
+                            <p className="mt-1 text-xs text-slate-600 leading-relaxed">
+                              {deliveryModel ?? "Delivery pending"} + {approvalModel ?? "Approval pending"} indicates the level of operational structure needed.
+                            </p>
+                          </div>
+                          <div className="rounded-lg border border-slate-200 bg-slate-50/30 px-3 py-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                              Budget Direction
+                            </p>
+                            <p className="mt-1 text-xs text-slate-600 leading-relaxed">
+                              {programPosture ?? "Budget pending"} helps confirm the right balance between coverage depth and service support.
+                            </p>
+                          </div>
                         </div>
+
                         {hasCoveredUpgrade && (
-                          <div className="mt-4 rounded-lg border border-[#244093]/20 bg-linear-to-br from-[#244093]/6 via-white to-[#244093]/3 p-4">
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#244093] mb-1">
-                              You May Also Need This
+                          <div className="mt-4 relative overflow-hidden rounded-xl border border-[#d6e2f7] bg-linear-to-br from-[#fdfefe] via-[#f9fbff] to-[#f2f6ff] p-4 shadow-sm shadow-[#244093]/8">
+                            <div
+                              aria-hidden="true"
+                              className="pointer-events-none absolute inset-0 bg-linear-to-r from-[#244093]/4 via-transparent to-transparent"
+                            />
+                            <div
+                              aria-hidden="true"
+                              className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-[#c8a45a] via-[#e2c98a] to-[#c8a45a]"
+                            />
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#355a9a] mb-1">
+                              Concierge Upgrade
                             </p>
                             <h5 className="text-sm font-bold text-slate-900 mb-1">
                               Covered Package Signal
                             </h5>
                             <p className="text-xs text-slate-600 leading-relaxed">
-                              Your selections show enterprise-level signals where the Covered package may unlock a higher level of policy control, role-based tailoring, and customization depth.
+                              Your selections indicate a Covered package conversation is worth having, especially if you want a more customizable allowance with expanded lens and frame options.
                             </p>
-                            <p className="mt-2 text-xs text-slate-500 leading-relaxed">
-                              If you want to explore high-end configuration options, a Program Specialist can walk you through what Covered looks like for your exact team structure.
+                            <p className="mt-2 text-xs text-slate-600 leading-relaxed">
+                              Ask your Program Specialist about how Covered can be tailored to your team's specific policy and product needs.
                             </p>
                             <div className="mt-3 flex flex-wrap gap-2">
                               <button
@@ -1271,7 +1068,7 @@ export function RecommendationSummaryPage({
                                 onClick={navigateToCongratulations}
                                 className={primaryButtonClass}
                               >
-                                Covered
+                                Explore Covered
                               </button>
                               <button
                                 type="button"
@@ -1286,37 +1083,30 @@ export function RecommendationSummaryPage({
                       </div>
 
                       <div className="px-6 py-5 border-t border-slate-100">
-                        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
-                          Why This Service Tier Fits
+                        <p className="text-xs text-slate-500 leading-relaxed">
+                          {packageTierSummary ?? "This recommendation reflects your current program signals and operating context."}
                         </p>
-                        <div className="grid sm:grid-cols-2 gap-2">
-                          {serviceSections.map((row) => (
-                            <div
-                              key={row.label}
-                              className="flex gap-3 rounded-lg border border-slate-200 bg-slate-50/30 px-3 py-2.5"
-                            >
-                              <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-slate-400 w-24 pt-0.5">
-                                {row.label}
-                              </span>
-                              <p className="text-xs text-slate-600 leading-relaxed">
-                                {row.detail}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
                         {hasPartneredUpgrade && (
-                          <div className="mt-4 rounded-lg border border-[#244093]/20 bg-linear-to-br from-[#244093]/6 via-white to-[#244093]/3 p-4">
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#244093] mb-1">
-                              You May Also Need This
+                          <div className="mt-4 relative overflow-hidden rounded-xl border border-[#d6e2f7] bg-linear-to-br from-[#fdfefe] via-[#f9fbff] to-[#f2f6ff] p-4 shadow-sm shadow-[#244093]/8">
+                            <div
+                              aria-hidden="true"
+                              className="pointer-events-none absolute inset-0 bg-linear-to-r from-[#244093]/4 via-transparent to-transparent"
+                            />
+                            <div
+                              aria-hidden="true"
+                              className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-[#c8a45a] via-[#e2c98a] to-[#c8a45a]"
+                            />
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#355a9a] mb-1">
+                              Concierge Upgrade
                             </p>
                             <h5 className="text-sm font-bold text-slate-900 mb-1">
-                              Partnered Service Signal
+                              Partnership Service Signal
                             </h5>
                             <p className="text-xs text-slate-600 leading-relaxed">
-                              Your inputs suggest a level of operational complexity where the Partnered tier may be a better long-term fit for governance, service continuity, and advanced customization support.
+                              Your inputs suggest the Partnership service tier may be a strong fit if you want a more customizable service tier setup.
                             </p>
-                            <p className="mt-2 text-xs text-slate-500 leading-relaxed">
-                              If you want to learn what a high-touch Partnered model can look like for your organization, connect with a Program Specialist.
+                            <p className="mt-2 text-xs text-slate-600 leading-relaxed">
+                              Ask your Program Specialist how a Partnership model can be configured for your rollout, governance, and support needs.
                             </p>
                             <div className="mt-3 flex flex-wrap gap-2">
                               <button
@@ -1324,7 +1114,7 @@ export function RecommendationSummaryPage({
                                 onClick={navigateToCongratulations}
                                 className={primaryButtonClass}
                               >
-                                Partnered
+                                Explore Partnership
                               </button>
                               <button
                                 type="button"
@@ -1349,7 +1139,7 @@ export function RecommendationSummaryPage({
                             Recommended Coatings
                           </p>
                           <p className="text-sm text-slate-500">
-                            Each coating below is specific to an exposure or condition you selected. The reason explains exactly why it applies to your program.
+                            These coatings are tailored to your {workType ?? "team"} profile, {coverageBand ?? "current"} coverage scale, and selected exposure conditions.
                           </p>
                         </div>
                         <div className="px-6 py-5 border-t border-slate-100 space-y-3">
@@ -1365,10 +1155,10 @@ export function RecommendationSummaryPage({
                                   </h5>
                                 </div>
                                 <p className="text-xs font-medium text-[#244093] leading-relaxed">
-                                  {coating.reason}
+                                  Tailored fit: {coating.reason}
                                 </p>
                                 <p className="mt-1.5 text-xs text-slate-500 leading-relaxed">
-                                  {coating.description}
+                                  {coating.description} This supports the current {selectedPackage ?? "recommended"} package and {serviceTier ?? "service"} tier model.
                                 </p>
                               </div>
                             ),
@@ -1384,6 +1174,9 @@ export function RecommendationSummaryPage({
                       <div className="px-6 pt-6 pb-5 bg-linear-to-br from-slate-50 via-white to-slate-50/80">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
                           Current Logistics and Operations
+                        </p>
+                        <p className="text-sm text-slate-500 mb-4 leading-relaxed">
+                          This section combines your current state with the operational and logistics support we can provide across ordering, approvals, fulfillment, and multi-site coordination.
                         </p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                           <div>
@@ -1425,6 +1218,30 @@ export function RecommendationSummaryPage({
                             <span className="text-sm font-bold text-slate-800">
                               {programPosture ?? "Not set"}
                             </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="px-6 py-5 border-t border-slate-100">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
+                          Operations and Logistics Support We Can Provide
+                        </p>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-3">
+                            <p className="text-xs font-semibold text-slate-700">Program setup and onboarding</p>
+                            <p className="mt-1 text-xs text-slate-500">Eligibility setup, launch support, and rollout guidance for teams and locations.</p>
+                          </div>
+                          <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-3">
+                            <p className="text-xs font-semibold text-slate-700">Ordering and fulfillment channels</p>
+                            <p className="mt-1 text-xs text-slate-500">Onsite events, online ordering, and hybrid delivery models matched to your workflow.</p>
+                          </div>
+                          <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-3">
+                            <p className="text-xs font-semibold text-slate-700">Approval and policy routing</p>
+                            <p className="mt-1 text-xs text-slate-500">Single or multi-step approval structures with clearer routing and accountability.</p>
+                          </div>
+                          <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-3">
+                            <p className="text-xs font-semibold text-slate-700">Ongoing operations support</p>
+                            <p className="mt-1 text-xs text-slate-500">Replacement workflows, service continuity, and multi-site coordination support.</p>
                           </div>
                         </div>
                       </div>
@@ -1871,6 +1688,9 @@ export function RecommendationSummaryPage({
             src="/brand/osso/osso-logo-horizontal.png"
             alt="OSSO Safety Eyewear"
             className="print-logo"
+            decoding="async"
+            width={320}
+            height={64}
           />
           <div className="print-header-right">
             <div className="print-title">Program Recommendation</div>
@@ -1997,10 +1817,10 @@ export function RecommendationSummaryPage({
 
         {/* -- Two Card Row: Coatings + Locations/Contact -- */}
         <div className="print-card-row">
-          {(programConfig.coatingRecommendations ?? []).length > 0 && (
-            <div className="print-card">
-              <div className="print-card-title">Recommended Coatings</div>
-              {(programConfig.coatingRecommendations ?? []).map(
+          <div className="print-card">
+            <div className="print-card-title">Recommended Coatings</div>
+            {(programConfig.coatingRecommendations ?? []).length > 0 ? (
+              (programConfig.coatingRecommendations ?? []).map(
                 (coating: CoatingRecommendation) => (
                   <div key={coating.id} className="print-coating">
                     <div className="print-coating-name">{coating.label}</div>
@@ -2009,9 +1829,14 @@ export function RecommendationSummaryPage({
                     </div>
                   </div>
                 ),
-              )}
-            </div>
-          )}
+              )
+            ) : (
+              <div className="print-empty-state">
+                No coating recommendations were generated from the selected
+                profile.
+              </div>
+            )}
+          </div>
 
           <div className="print-card">
             <div className="print-card-title">

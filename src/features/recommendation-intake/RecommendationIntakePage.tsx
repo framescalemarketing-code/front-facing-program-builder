@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { NavigateFn } from "@/app/routerTypes";
-import { PageHero } from "@/components/layout/PageHero";
 import { SectionWrap } from "@/components/layout/SectionWrap";
 import {
   primaryButtonClass,
@@ -27,9 +26,7 @@ import type {
 
 type StepId =
   | "company"
-  | "work_type"
-  | "coverage"
-  | "locations"
+  | "profile"
   | "exposures"
   | "current_setup"
   | "budget";
@@ -56,66 +53,45 @@ const STEPS: WizardStep[] = [
   {
     id: "company",
     sectionLabel: "Start",
-    heroTitle: "Start your recommendation",
+    heroTitle: "Build your safety eyewear recommendation",
     heroSubtitle:
-      "Answer seven quick questions about your team and setup. You'll add contact details on the recommendation page.",
+      "Complete five quick steps so we can generate a recommendation that matches your operation.",
     progressLabel: "Start",
   },
   {
-    id: "work_type",
-    sectionLabel: "Industry",
-    heroTitle: "What kind of work does your team do?",
+    id: "profile",
+    sectionLabel: "Team Profile",
+    heroTitle: "Tell us about your team",
     heroSubtitle:
-      "This helps us match the right protection to your environment",
-    progressLabel: "Industry",
-  },
-  {
-    id: "coverage",
-    sectionLabel: "Team Size",
-    heroTitle: "How big is the team we're covering?",
-    heroSubtitle:
-      "This helps us determine the service type that can best support your team size.",
-    progressLabel: "Team Size",
-  },
-  {
-    id: "locations",
-    sectionLabel: "Locations",
-    heroTitle: "Where is your team located?",
-    heroSubtitle:
-      "Location structure helps us plan how service is coordinated across one site or many sites.",
-    progressLabel: "Locations",
+      "Choose your industry, team size, and location model so we can size the recommendation correctly.",
+    progressLabel: "Team Profile",
   },
   {
     id: "exposures",
     sectionLabel: "Exposures",
     heroTitle: "What hazards does your team face on the job?",
-    heroSubtitle:
-      "The more specific you are here, the better your recommendation will be",
+    heroSubtitle: "Select the main exposure conditions your team deals with.",
     progressLabel: "Exposures",
   },
   {
     id: "current_setup",
     sectionLabel: "Setup",
     heroTitle: "How are things set up today?",
-    heroSubtitle:
-      "Your current setup shows how employees access eyewear and how approvals and delivery are managed.",
+    heroSubtitle: "Tell us how orders, approvals, and delivery are handled today.",
     progressLabel: "Setup",
   },
   {
     id: "budget",
     sectionLabel: "Budget Goals",
     heroTitle: "What are your budget goals?",
-    heroSubtitle:
-      "Your budget goals help us balance coverage depth, service structure, and long-term program support.",
+    heroSubtitle: "Pick the budget range that best matches your current plan.",
     progressLabel: "Budget Goals",
   },
 ];
 
 const FOUR_PILLAR_BY_STEP: Record<StepId, PillarIconKey | null> = {
   company: null,
-  work_type: "human_first",
-  coverage: "reliability",
-  locations: "reliability",
+  profile: "reliability",
   exposures: "human_first",
   current_setup: "follow_through",
   budget: "adoption",
@@ -133,55 +109,38 @@ const RECOMMENDATION_START_STEP_KEY = "osso_recommendation_start_step";
 const WORK_TYPE_OPTIONS: Array<{
   value: ProgramWorkType;
   label: string;
-  helper: string;
 }> = [
   {
     value: "manufacturing",
     label: "Manufacturing & Production",
-    helper:
-      "Production floors, assembly lines, and fabrication environments where eyewear is used around machinery, repetitive motion, and role-based task variation.",
   },
   {
     value: "construction",
     label: "Construction & Field Work",
-    helper:
-      "Active job sites and field assignments where impact hazards, debris, weather, and changing site conditions shape daily eyewear requirements.",
   },
   {
     value: "utilities",
     label: "Utilities & Field Services",
-    helper:
-      "Field service and utility teams working across routes, facilities, and service areas where conditions and support needs vary by assignment.",
   },
   {
     value: "warehouse",
     label: "Warehouse & Distribution",
-    helper:
-      "Distribution, fulfillment, and warehouse environments with constant movement, shared workflows, and recurring replacement needs.",
   },
   {
     value: "healthcare",
     label: "Healthcare & Clinical",
-    helper:
-      "Clinical and healthcare settings where splash exposure, cleaning protocols, shift work, and visual clarity all influence eyewear use.",
   },
   {
     value: "public_sector",
     label: "Public Sector & Municipal",
-    helper:
-      "Municipal, public works, and government-led programs where procurement rules, department standards, and eligibility policies must stay aligned.",
   },
   {
     value: "laboratory",
     label: "Laboratory & Research",
-    helper:
-      "Laboratory and research environments where controlled procedures, splash exposure, humidity changes, and precise visual tasks shape eyewear requirements.",
   },
   {
     value: "other",
-    label: "Specialized / Mixed Environment",
-    helper:
-      "Operations that combine multiple work environments, role types, or exposure conditions that do not fit a single category cleanly.",
+    label: "Other",
   },
 ];
 
@@ -246,57 +205,46 @@ const LOCATION_MODELS: Array<{
 ];
 
 const EXPOSURE_OPTIONS: Array<{
-  value: ProgramExposureRisk;
+  id: string;
+  values: ProgramExposureRisk[];
   label: string;
   helper: string;
 }> = [
   {
-    value: "high_impact",
+    id: "high_impact",
+    values: ["high_impact"],
     label: "High Impact",
-    helper:
-      "Machine-adjacent and tool-heavy work where impact-rated frames aren't optional — they're the baseline.",
+    helper: "Frequent impact risk from tools or active equipment.",
   },
   {
-    value: "dust_debris",
+    id: "dust_debris",
+    values: ["dust_debris"],
     label: "Dust or Debris",
-    helper:
-      "Grinding, sanding, and cutting environments where airborne particles wear down lenses fast and interrupt visibility mid-shift.",
+    helper: "Regular airborne particles from cutting, grinding, or sanding.",
   },
   {
-    value: "chemical_splash",
+    id: "chemical_splash",
+    values: ["chemical_splash"],
     label: "Chemical Splash",
-    helper:
-      "Chemical handling or lab work where fluid contact risk calls for splash-oriented designs, not standard safety frames.",
+    helper: "Liquid or chemical contact risk during normal work.",
   },
   {
-    value: "outdoor_glare",
-    label: "Outdoor Glare",
-    helper:
-      "Extended outdoor exposure where glare isn't just annoying — it reduces hazard awareness and pushes people to take off their eyewear.",
+    id: "glare_shift",
+    values: ["outdoor_glare", "indoor_outdoor_shift"],
+    label: "Outdoor Glare and Light Shifts",
+    helper: "Frequent glare and transitions between indoor and outdoor work.",
   },
   {
-    value: "fog_humidity",
-    label: "Fog or Humidity",
-    helper:
-      "Cold storage, humid processing, or hot environments where fogging disrupts work and tempts people to remove their eyewear.",
+    id: "fog_temp",
+    values: ["fog_humidity", "temperature_extremes"],
+    label: "Fog or Extreme Temperatures",
+    helper: "Fogging or temperature swings that affect visibility and wear time.",
   },
   {
-    value: "indoor_outdoor_shift",
-    label: "Indoor and Outdoor Shift Changes",
-    helper:
-      "Roles that move between inside and outside — dock to floor, office to field — where slow light adaptation creates a real safety gap.",
-  },
-  {
-    value: "screen_intensive",
-    label: "Screen Intensive Tasks",
-    helper:
-      "Extended screen work where visual fatigue builds over the shift and affects comfort, focus, and willingness to keep eyewear on.",
-  },
-  {
-    value: "temperature_extremes",
-    label: "Temperature Extremes",
-    helper:
-      "Foundry floors, cold storage, outdoor summers — temperature swings that stress lenses and make people want to ditch their eyewear.",
+    id: "screen_intensive",
+    values: ["screen_intensive"],
+    label: "High Screen Usage",
+    helper: "Long periods of screen work during a typical shift.",
   },
 ];
 
@@ -315,118 +263,88 @@ const CURRENT_SETUP_SECTIONS: Array<{
   {
     id: "funding",
     title: "Safety Program",
-    helper: "How does your team currently get their safety eyewear?",
+    helper: "How is safety eyewear paid for today?",
     options: [
-      {
-        value: "no_formal_program",
-        label: "No Formal Program",
-        helper:
-          "Safety eyewear is handled case by case without a standardized ordering, approval, or funding process.",
-      },
       {
         value: "voucher",
         label: "Voucher / Reimbursement",
-        helper:
-          "Employees access eyewear through a defined voucher or reimbursement path with documented eligibility and policy requirements.",
+        helper: "Employees use vouchers or reimbursement.",
       },
       {
         value: "covered_through_vision_insurance",
         label: "Covered Through Vision Insurance",
-        helper:
-          "Safety eyewear is handled through the existing vision insurance structure, including plan rules, covered items, and member workflows.",
+        helper: "Coverage runs through vision insurance.",
       },
       {
         value: "vendor_optometry_partnership",
-        label: "Vendor / Optometry Partnership",
-        helper:
-          "Eyewear is coordinated through an established vendor or optometry partner, with existing operational processes for fitting, ordering, and fulfillment.",
+        label: "Sole Vendor Partnership",
+        helper: "One vendor manages fitting, ordering, and delivery.",
       },
     ],
   },
   {
     id: "approval",
     title: "Approval Workflow",
-    helper: "How many approval steps are required before an order is released?",
+    helper: "How many approval steps are required?",
     options: [
-      {
-        value: "no_formal_approval_process",
-        label: "No Formal Approval Process",
-        helper:
-          "Orders flow through without formal sign-off steps. Employees or managers can place orders directly based on established eligibility.",
-      },
       {
         value: "single_approval_process",
         label: "Single Approval Process",
-        helper:
-          "Orders move through one approval step (manager or safety review) before being released for fulfillment.",
+        helper: "One person approves before release.",
       },
       {
         value: "multiple_approval_process",
         label: "Multiple Approval Process",
-        helper:
-          "Orders require approval from multiple stakeholders (e.g., manager, then HR or safety team) before fulfillment. Ensures coordinated governance and compliance oversight.",
+        helper: "More than one stakeholder must approve.",
       },
     ],
   },
   {
     id: "delivery",
     title: "Delivery Method",
-    helper: "How do your employees actually receive their eyewear today?",
+    helper: "How do employees receive eyewear?",
     options: [
       {
         value: "employee_self_order",
         label: "Employee Self-Order",
-        helper:
-          "Employees place orders through an approved ordering channel using the rules and selections defined for the program.",
+        helper: "Employees place their own orders.",
       },
       {
         value: "onsite_events",
         label: "Onsite Events",
-        helper:
-          "Scheduled workplace fitting and ordering events where employees are served in person during planned service windows.",
+        helper: "Scheduled onsite fitting and ordering events.",
       },
       {
         value: "mail_fulfillment",
         label: "Online Ordering",
-        helper:
-          "Employees order through an online process and receive eyewear through direct shipment rather than on-site service events.",
+        helper: "Orders are placed online and shipped.",
       },
       {
         value: "hybrid_delivery",
         label: "Hybrid",
-        helper:
-          "The program uses more than one delivery path, such as onsite events for some groups and online ordering for others.",
+        helper: "Uses more than one delivery method.",
       },
     ],
   },
   {
     id: "coverage_type",
     title: "Coverage Type",
-    helper: "What kind of eyewear does your program need to cover?",
+    helper: "What eyewear types are covered?",
     options: [
       {
         value: "prescription_safety_eyewear",
         label: "Prescription Safety Eyewear",
-        helper:
-          "Prescription-rated safety eyewear for employees who need vision correction as part of their required protective eyewear.",
-      },
-      {
-        value: "otg_non_prescription_eyewear",
-        label: "Bulk Over the Glasses (OTG)",
-        helper:
-          "Over-the-glasses safety eyewear provided for employees who wear their own prescription glasses underneath a protective frame.",
+        helper: "Prescription safety eyewear is included.",
       },
       {
         value: "non_prescription_safety_eyewear",
         label: "Non Prescription Safety Eyewear",
-        helper:
-          "Standard non-prescription safety eyewear provided to employees who do not require prescription correction for work tasks.",
+        helper: "Non-prescription safety eyewear is included.",
       },
       {
         value: "hybrid_eyewear",
         label: "Hybrid Model",
-        helper:
-          "A mixed coverage structure where different employee groups are assigned prescription, non-prescription, or OTG pathways based on role needs.",
+        helper: "Both prescription and non-prescription pathways are used.",
       },
     ],
   },
@@ -440,31 +358,21 @@ const BUDGET_OPTIONS: Array<{
 }> = [
   {
     value: "super_strict",
-    label: "Compliance First",
-    helper:
-      "Your primary budget objective is to establish compliance-ready standards first, with tightly defined eligibility, products, and approval boundaries.",
-    impact: "Budget is directed first toward approved standards, role alignment, and controlled policy execution.",
-  },
-  {
-    value: "low_budget",
-    label: "Operations Focused",
-    helper:
-      "Your budget goal is to maintain dependable day-to-day service while managing cost boundaries and avoiding unnecessary complexity.",
-    impact: "Budget is directed toward dependable ordering, fulfillment, and replacement workflows within tighter spend limits.",
+    label: "Lean Budget",
+    helper: "Best for tighter budgets and essential program controls.",
+    impact: "Focuses on core compliance and cost control.",
   },
   {
     value: "good_budget",
-    label: "Ready to Grow",
-    helper:
-      "Your budget goal is to support broader program maturity, including stronger adoption support and more structured service operations.",
-    impact: "Budget can support stronger service structure, wider coverage depth, and more consistent operating support.",
+    label: "Balanced Budget",
+    helper: "Best for stable operations with moderate flexibility.",
+    impact: "Balances service quality and budget discipline.",
   },
   {
     value: "unlimited_budget",
-    label: "Full Program Investment",
-    helper:
-      "Your budget goal is to fund high-structure program support for complex operations that need governance, consistency, and long-term resilience.",
-    impact: "Budget can support enterprise-level coordination, governance, and long-term program infrastructure.",
+    label: "Growth Budget",
+    helper: "Best for higher investment and long-term program scale.",
+    impact: "Supports deeper service structure and broader program support.",
   },
 ];
 
@@ -531,6 +439,16 @@ function setupSectionForItem(item: CurrentSafetySetup) {
   );
 }
 
+const ACTIVE_SETUP_VALUES = new Set(
+  CURRENT_SETUP_SECTIONS.flatMap((section) =>
+    section.options.map((option) => option.value),
+  ),
+);
+
+function sanitizeSetupSelections(values: CurrentSafetySetup[]) {
+  return values.filter((value) => ACTIVE_SETUP_VALUES.has(value));
+}
+
 function consumeInitialStepIndex() {
   if (typeof window === "undefined") return 0;
   const raw = window.sessionStorage.getItem(RECOMMENDATION_START_STEP_KEY);
@@ -556,12 +474,10 @@ export function RecommendationIntakePage({
   }));
   const [stepIndex, setStepIndex] = useState(initialStepIndex);
   const [assessmentApplied, setAssessmentApplied] = useState(false);
-  const [hasSelectedWorkType, setHasSelectedWorkType] = useState(false);
-  const [hasSelectedCoverageBand, setHasSelectedCoverageBand] = useState(false);
   const [framingDismissed, setFramingDismissed] = useState(false);
-  const [locationOptionId, setLocationOptionId] = useState<
-    "single" | "multi_same_region" | "multi_across_regions"
-  >("single");
+  const [hasFormalProgram, setHasFormalProgram] = useState<boolean | null>(
+    null,
+  );
   const [activeExposureFocus, setActiveExposureFocus] =
     useState<ProgramExposureRisk | null>(null);
   const [activeSetupFocus, setActiveSetupFocus] =
@@ -576,7 +492,6 @@ export function RecommendationIntakePage({
     delivery: true,
     coverage_type: true,
   });
-  const [mobileGuidanceOpen, setMobileGuidanceOpen] = useState(false);
   const [error, setError] = useState<string>("");
   const setupSectionRefs = useRef<
     Record<CurrentSetupSectionId, HTMLElement | null>
@@ -601,7 +516,11 @@ export function RecommendationIntakePage({
       if (assessment.company) next.companyName = assessment.company;
       if (assessment.phone) next.phone = assessment.phone;
       if (assessment.setupHints && assessment.setupHints.length > 0) {
-        next.currentSafetySetup = assessment.setupHints;
+        const hints = assessment.setupHints;
+        const hasLegacyNoFormal = hints.includes("no_formal_program");
+        const sanitized = sanitizeSetupSelections(hints);
+        setHasFormalProgram(hasLegacyNoFormal ? false : sanitized.length > 0);
+        next.currentSafetySetup = hasLegacyNoFormal ? [] : sanitized;
       }
       if (assessment.budgetHint) {
         next.budgetPreference = assessment.budgetHint;
@@ -619,9 +538,7 @@ export function RecommendationIntakePage({
     return buildGuidance({
       stepId: step.id,
       form,
-      hasSelectedWorkType,
-      hasSelectedCoverageBand,
-      locationOptionId,
+      hasFormalProgram,
       activeExposureFocus,
       activeSetupFocus,
       activeSetupSection,
@@ -633,28 +550,16 @@ export function RecommendationIntakePage({
     activeSetupSection,
     collapsedSetupSections,
     form,
-    hasSelectedCoverageBand,
-    hasSelectedWorkType,
-    locationOptionId,
+    hasFormalProgram,
     step.id,
   ]);
+  void guidance;
 
   function setField<K extends keyof RecommendationInputs>(
     key: K,
     value: RecommendationInputs[K],
   ) {
     setForm((prev) => ({ ...prev, [key]: value }));
-  }
-
-  function selectLocationOption(
-    id:
-      | "single"
-      | "multi_same_region"
-      | "multi_across_regions",
-    value: ProgramLocationModel,
-  ) {
-    setLocationOptionId(id);
-    setField("locationModel", value);
   }
 
   function setSetupFocus(item: CurrentSafetySetup | null) {
@@ -666,19 +571,6 @@ export function RecommendationIntakePage({
       setCollapsedSetupSections((prev) =>
         prev[section.id] ? { ...prev, [section.id]: false } : prev,
       );
-    }
-  }
-
-  function toggleExposureSelection(
-    risk: ProgramExposureRisk,
-    shouldFocus = true,
-  ) {
-    const selected = form.exposureRisks.includes(risk);
-    const next = toggleMulti(form.exposureRisks, risk);
-    setField("exposureRisks", next);
-    if (shouldFocus) {
-      setActiveExposureFocus(selected ? (next[next.length - 1] ?? null) : risk);
-      setMobileGuidanceOpen(true);
     }
   }
 
@@ -711,7 +603,6 @@ export function RecommendationIntakePage({
       prev[section.id] ? { ...prev, [section.id]: false } : prev,
     );
     setSetupFocus(item);
-    setMobileGuidanceOpen(true);
   }
 
   function toggleSetupSection(sectionId: CurrentSetupSectionId) {
@@ -763,10 +654,6 @@ export function RecommendationIntakePage({
     const clamped = Math.max(0, Math.min(nextIndex, STEPS.length - 1));
     if (clamped === 0) setFramingDismissed(false);
     setStepIndex(clamped);
-    const nextStepId = STEPS[clamped].id;
-    setMobileGuidanceOpen(
-      nextStepId === "exposures" || nextStepId === "current_setup",
-    );
     // Push browser history so the browser Back button navigates wizard steps
     if (!fromPopState) {
       window.history.pushState({ wizardStep: clamped }, "");
@@ -846,9 +733,7 @@ export function RecommendationIntakePage({
   // Per-step visual paths.
   const STEP_IMAGES: Record<StepId, string> = {
     company: "/images/step-01-company.jpg",
-    work_type: "/images/step-02-work-type.jpg",
-    coverage: "/images/step-03-team-size.jpg",
-    locations: "/images/step-04-locations.jpg",
+    profile: "/images/step-02-work-type.jpg",
     exposures: "/images/step-05-exposures.jpg",
     current_setup: "/images/step-06-current-setup.jpg",
     budget: "/images/step-07-program-posture.jpg",
@@ -858,82 +743,90 @@ export function RecommendationIntakePage({
 
   return (
     <section aria-labelledby="recommendation-title">
-      <PageHero
-        id="recommendation-title"
-        title={step.heroTitle}
-        subtitle={step.heroSubtitle}
-      />
-
       <div className="mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8 lg:pb-0">
-        <SectionWrap>
+        <SectionWrap className="pt-3 pb-8 sm:pt-4 sm:pb-9">
           {/* -- Progress bar + step nav -- */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={goBack}
-              disabled={stepIndex === 0}
-              className={secondaryButtonClass}
-            >
-              ← Back
-            </button>
-            <div className="flex items-center gap-3">
-              {pillarAnchor ? (
-                <div className="hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground sm:flex">
-                  <span
-                    aria-hidden="true"
-                    className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border/80 bg-background text-primary"
-                  >
-                    {PILLAR_DEFINITIONS[pillarAnchor].icon}
-                  </span>
-                  <span className="font-medium text-foreground/90">
-                    {PILLAR_DEFINITIONS[pillarAnchor].phrase}
-                  </span>
+          <div className="rounded-xl border border-border bg-card px-4 py-4 sm:px-5">
+            <div className="mb-4 border-b border-border/80 pb-4">
+              <h1
+                id="recommendation-title"
+                className="text-2xl font-bold tracking-tight text-gray-900 sm:text-[2rem]"
+              >
+                {step.heroTitle}
+              </h1>
+              <p className="mt-2 max-w-4xl text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
+                {step.heroSubtitle}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={goBack}
+                disabled={stepIndex === 0}
+                className={secondaryButtonClass}
+              >
+                ← Back
+              </button>
+              <div className="flex items-center gap-3">
+                {pillarAnchor ? (
+                  <div className="hidden items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground sm:flex">
+                    <span
+                      aria-hidden="true"
+                      className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border/80 bg-card text-primary"
+                    >
+                      {PILLAR_DEFINITIONS[pillarAnchor].icon}
+                    </span>
+                    <span className="font-medium text-foreground/90">
+                      {PILLAR_DEFINITIONS[pillarAnchor].phrase}
+                    </span>
+                  </div>
+                ) : null}
+                <div className="text-sm font-semibold text-foreground">
+                  {stepProgressLabel(stepIndex)}
                 </div>
-              ) : null}
-              <div className="text-sm font-semibold text-foreground">
-                {stepProgressLabel(stepIndex)}
               </div>
             </div>
-          </div>
 
-          {/* Progress track */}
-          <div className="mt-3">
-            <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
-              <div
-                className="h-1.5 rounded-full bg-primary transition-all duration-500"
-                style={{ width: `${Math.round(progress * 100)}%` }}
-              />
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] font-semibold uppercase tracking-wide sm:grid-cols-4 lg:grid-cols-7">
-              {STEPS.map((item, idx) => {
-                const active = idx === stepIndex;
-                const complete = idx < stepIndex;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => goToStep(idx)}
-                    aria-current={active ? "step" : undefined}
-                    className={`rounded-md border px-2 py-1.5 text-center leading-snug transition ${
-                      active
-                        ? "border-primary bg-primary/10 text-primary"
-                        : complete
-                          ? "border-primary/40 bg-primary/5 text-primary/80"
-                          : "border-border bg-card text-muted-foreground hover:border-ring hover:bg-secondary/50"
-                    }`}
-                  >
-                    {complete && (
-                      <span
-                        className="mr-1 inline-block text-primary/70"
-                        aria-hidden="true"
-                      >
-                        ✓
-                      </span>
-                    )}
-                    {item.progressLabel}
-                  </button>
-                );
-              })}
+            {/* Progress track */}
+            <div className="mt-3">
+              <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
+                <div
+                  className="h-1.5 rounded-full bg-primary transition-all duration-500"
+                  style={{ width: `${Math.round(progress * 100)}%` }}
+                />
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] font-semibold tracking-wide md:grid-cols-5">
+                {STEPS.map((item, idx) => {
+                  const active = idx === stepIndex;
+                  const complete = idx < stepIndex;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => goToStep(idx)}
+                      aria-current={active ? "step" : undefined}
+                      className={`rounded-full border px-3 py-1.5 text-center leading-snug transition ${
+                        active
+                          ? "border-primary bg-primary/10 text-primary"
+                          : complete
+                            ? "border-primary/40 bg-primary/5 text-primary/80"
+                            : "border-border bg-background text-muted-foreground hover:border-ring hover:bg-secondary/50"
+                      }`}
+                    >
+                      {complete && (
+                        <span
+                          className="mr-1 inline-block text-primary/70"
+                          aria-hidden="true"
+                        >
+                          ✓
+                        </span>
+                      )}
+                      {item.progressLabel}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -953,147 +846,129 @@ export function RecommendationIntakePage({
             </div>
           ) : null}
 
-          <div className="mt-8 grid gap-8 lg:grid-cols-12">
-            <div className="space-y-6 lg:col-span-7">
+          <div className="mt-8 grid gap-8 lg:grid-cols-12 lg:items-stretch">
+            <div className="space-y-6 lg:col-span-8">
               {shouldShowPreWizardFraming ? (
                 <div className="rounded-xl overflow-hidden border border-border bg-card">
                   <img
                     src="/images/intro-program-builder.jpg"
                     alt="Program specialist reviewing a safety eyewear plan with a team"
-                    className="h-40 w-full object-cover"
-                    loading="lazy"
+                    className="aspect-[16/5] w-full object-cover object-[center_30%]"
+                    loading="eager"
+                    fetchPriority="high"
+                    decoding="async"
+                    width={1280}
+                    height={640}
                   />
                   <div className="p-5">
                     <p className="text-base font-bold text-foreground">
-                      Most programs aren't broken — they're just not built around the people running them.
+                      What you will complete in this wizard
                     </p>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      We'll walk through seven questions about your team, your environment, and how things run today. From there, we'll put together a <span className="font-semibold text-foreground">recommendation</span> built around your workers — and connect you with a specialist to review it together.
+                      Share your team profile, exposure risks, setup details, and budget direction. We use this to build a recommendation you can review quickly with your specialist.
                     </p>
                   </div>
                 </div>
               ) : null}
 
-              {step.id === "company" ? (
-                <div className="rounded-lg border border-border bg-card p-5">
-                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-5">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                      Start
-                    </p>
-                    <p className="mt-2 text-2xl font-black leading-tight text-foreground sm:text-3xl">
-                      Build your recommendation
-                    </p>
-                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                      This quick wizard captures how your team works, the risks
-                      they face, and how coverage should be structured. We will use
-                      your answers to generate a recommendation, then collect
-                      contact details on the recommendation page.
-                    </p>
+              {step.id === "profile" ? (
+                <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                    <label
+                      htmlFor="profile-work-type"
+                      className="text-sm font-semibold text-foreground"
+                    >
+                      Industry
+                    </label>
+                    <select
+                      id="profile-work-type"
+                      value={form.workType}
+                      onChange={(event) =>
+                        setField("workType", event.target.value as ProgramWorkType)
+                      }
+                      className="mt-2 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      {WORK_TYPE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    </div>
+
+                    <div>
+                    <label
+                      htmlFor="profile-team-size"
+                      className="text-sm font-semibold text-foreground"
+                    >
+                      Team size
+                    </label>
+                    <select
+                      id="profile-team-size"
+                      value={form.coverageSizeBand}
+                      onChange={(event) =>
+                        setField(
+                          "coverageSizeBand",
+                          event.target
+                            .value as RecommendationInputs["coverageSizeBand"],
+                        )
+                      }
+                      className="mt-2 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      {COVERAGE_BANDS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    </div>
+
+                    <div className="md:col-span-2">
+                    <label
+                      htmlFor="profile-location-model"
+                      className="text-sm font-semibold text-foreground"
+                    >
+                      Locations
+                    </label>
+                    <select
+                      id="profile-location-model"
+                      value={form.locationModel}
+                      onChange={(event) =>
+                        setField(
+                          "locationModel",
+                          event.target.value as RecommendationInputs["locationModel"],
+                        )
+                      }
+                      className="mt-2 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      {LOCATION_MODELS.map((option) => (
+                        <option key={option.id} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    </div>
                   </div>
-                </div>
-              ) : null}
-
-              {step.id === "work_type" ? (
-                <div className="space-y-3">
-                  <div className="grid gap-3">
-                    {WORK_TYPE_OPTIONS.map((opt) => {
-                      const selected = form.workType === opt.value;
-                      return (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          className={cardClass(selected)}
-                          onClick={() => {
-                            setHasSelectedWorkType(true);
-                            setField("workType", opt.value);
-                          }}
-                        >
-                          <div className="absolute right-3 top-3">
-                            {selected ? selectedBadge() : null}
-                          </div>
-                          <div className="pr-10 text-sm font-semibold text-foreground">
-                            {opt.label}
-                          </div>
-                          <div className="mt-1 pr-10 text-xs text-muted-foreground">
-                            {opt.helper}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Not seeing your environment? Specialized / Mixed covers
-                    custom exposure profiles and edge cases.
-                  </p>
-                </div>
-              ) : null}
-
-              {step.id === "coverage" ? (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {COVERAGE_BANDS.map((opt) => {
-                    const selected = form.coverageSizeBand === opt.value;
-                    return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        className={cardClass(selected)}
-                        onClick={() => {
-                          setHasSelectedCoverageBand(true);
-                          setField("coverageSizeBand", opt.value);
-                        }}
-                      >
-                        <div className="absolute right-3 top-3">
-                          {selected ? selectedBadge() : null}
-                        </div>
-                        <div className="pr-10 text-sm font-semibold text-foreground">
-                          {opt.label}
-                        </div>
-                        <div className="mt-1 pr-10 text-xs text-muted-foreground">
-                          {opt.helper}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : null}
-
-              {step.id === "locations" ? (
-                <div className="grid gap-3">
-                  {LOCATION_MODELS.map((opt) => {
-                    const selected = locationOptionId === opt.id;
-                    return (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        className={cardClass(selected)}
-                        onClick={() => selectLocationOption(opt.id, opt.value)}
-                      >
-                        <div className="absolute right-3 top-3">
-                          {selected ? selectedBadge() : null}
-                        </div>
-                        <div className="pr-10 text-sm font-semibold text-foreground">
-                          {opt.label}
-                        </div>
-                        <div className="mt-1 pr-10 text-xs text-muted-foreground">
-                          {opt.helper}
-                        </div>
-                      </button>
-                    );
-                  })}
                 </div>
               ) : null}
 
               {step.id === "exposures" ? (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {EXPOSURE_OPTIONS.map((opt, idx) => {
-                    const selected = form.exposureRisks.includes(opt.value);
-                    const focused = activeExposureFocus === opt.value;
+                    const selected = opt.values.every((value) =>
+                      form.exposureRisks.includes(value),
+                    );
+                    const focused = opt.values.includes(
+                      activeExposureFocus ?? "high_impact",
+                    );
                     const isFinalOddCard =
                       EXPOSURE_OPTIONS.length % 2 === 1 &&
                       idx === EXPOSURE_OPTIONS.length - 1;
                     return (
                       <div
-                        key={opt.value}
+                        key={opt.id}
                         role="button"
                         tabIndex={0}
                         aria-label={
@@ -1102,18 +977,41 @@ export function RecommendationIntakePage({
                             : `Select ${opt.label}`
                         }
                         aria-pressed={selected}
-                        onClick={() => toggleExposureSelection(opt.value)}
-                        onFocus={() => setActiveExposureFocus(opt.value)}
-                        onMouseEnter={() => setActiveExposureFocus(opt.value)}
+                        onClick={() => {
+                          const next = selected
+                            ? form.exposureRisks.filter(
+                                (risk) => !opt.values.includes(risk),
+                              )
+                            : Array.from(
+                                new Set([...form.exposureRisks, ...opt.values]),
+                              );
+                          setField("exposureRisks", next);
+                          setActiveExposureFocus(opt.values[0] ?? null);
+                        }}
+                        onFocus={() => setActiveExposureFocus(opt.values[0] ?? null)}
+                        onMouseEnter={() =>
+                          setActiveExposureFocus(opt.values[0] ?? null)
+                        }
                         onMouseLeave={() => {
                           setActiveExposureFocus((prev) =>
-                            prev === opt.value ? null : prev,
+                            prev && opt.values.includes(prev) ? null : prev,
                           );
                         }}
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault();
-                            toggleExposureSelection(opt.value);
+                            const next = selected
+                              ? form.exposureRisks.filter(
+                                  (risk) => !opt.values.includes(risk),
+                                )
+                              : Array.from(
+                                  new Set([
+                                    ...form.exposureRisks,
+                                    ...opt.values,
+                                  ]),
+                                );
+                            setField("exposureRisks", next);
+                            setActiveExposureFocus(opt.values[0] ?? null);
                           }
                         }}
                         className={`${exposureCardClass(focused, selected)} ${isFinalOddCard ? "sm:col-span-2" : ""}`}
@@ -1138,135 +1036,184 @@ export function RecommendationIntakePage({
                       </div>
                     );
                   })}
+                  </div>
                 </div>
               ) : null}
 
               {step.id === "current_setup" ? (
                 <div className="space-y-6">
-                  {CURRENT_SETUP_SECTIONS.map((section) => {
-                    const sectionCollapsed = collapsedSetupSections[section.id];
-                    const sectionFocused = activeSetupSection === section.id;
-                    return (
-                      <section
-                        key={section.id}
-                        ref={(node) => {
-                          setupSectionRefs.current[section.id] = node;
-                        }}
-                        data-setup-section={section.id}
-                        className="rounded-lg border border-border bg-card p-4 sm:p-5"
+                  <section className="rounded-lg border border-border bg-card p-4 sm:p-5">
+                    <p className="text-sm font-semibold text-foreground">
+                      Do you have a formal safety eyewear program in place?
+                    </p>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        className={cardClass(hasFormalProgram === true)}
+                        onClick={() => setHasFormalProgram(true)}
                       >
-                        <button
-                          type="button"
-                          onClick={() => toggleSetupSection(section.id)}
-                          className="flex w-full items-start justify-between gap-3 text-left"
-                          aria-expanded={!sectionCollapsed}
-                        >
-                          <div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="inline-flex rounded-full border border-primary/35 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
-                                {setupSectionBadge(section.id)}
-                              </span>
-                              <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                                {section.title}
-                              </p>
-                            </div>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              {section.helper}
-                            </p>
-                          </div>
-                          <span
-                            className={`text-[11px] font-semibold uppercase tracking-wide ${
-                              sectionFocused
-                                ? "text-primary"
-                                : "text-muted-foreground"
-                            }`}
+                        <div className="absolute right-3 top-3">
+                          {hasFormalProgram === true ? selectedBadge() : null}
+                        </div>
+                        <div className="pr-10 text-sm font-semibold text-foreground">
+                          Yes
+                        </div>
+                        <div className="mt-1 pr-10 text-xs text-muted-foreground">
+                          Show setup details so we can match your current structure.
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={cardClass(hasFormalProgram === false)}
+                        onClick={() => {
+                          setHasFormalProgram(false);
+                          setField("currentSafetySetup", []);
+                          setActiveSetupFocus(null);
+                        }}
+                      >
+                        <div className="absolute right-3 top-3">
+                          {hasFormalProgram === false ? selectedBadge() : null}
+                        </div>
+                        <div className="pr-10 text-sm font-semibold text-foreground">
+                          No
+                        </div>
+                        <div className="mt-1 pr-10 text-xs text-muted-foreground">
+                          Skip setup details and continue to budget goals.
+                        </div>
+                      </button>
+                    </div>
+                  </section>
+
+                  {hasFormalProgram ? (
+                    <>
+                      {CURRENT_SETUP_SECTIONS.map((section) => {
+                        const sectionCollapsed = collapsedSetupSections[section.id];
+                        const sectionFocused = activeSetupSection === section.id;
+                        return (
+                          <section
+                            key={section.id}
+                            ref={(node) => {
+                              setupSectionRefs.current[section.id] = node;
+                            }}
+                            data-setup-section={section.id}
+                            className="rounded-lg border border-border bg-card p-4 sm:p-5"
                           >
-                            {sectionCollapsed ? "Expand" : "Collapse"}
-                          </span>
-                        </button>
-
-                        {sectionCollapsed ? null : (
-                          <div className="mt-4 border-t border-border pt-4">
-                            <div
-                              className={`grid gap-3 ${section.options.length > 1 ? "sm:grid-cols-2" : ""}`}
+                            <button
+                              type="button"
+                              onClick={() => toggleSetupSection(section.id)}
+                              className="flex w-full items-start justify-between gap-3 text-left"
+                              aria-expanded={!sectionCollapsed}
                             >
-                              {section.options.map((opt) => {
-                                const selected =
-                                  form.currentSafetySetup.includes(opt.value);
-                                const focused = activeSetupFocus === opt.value;
-                                return (
-                                  <div
-                                    key={opt.value}
-                                    role="button"
-                                    tabIndex={0}
-                                    aria-label={
-                                      selected
-                                        ? `Unselect ${opt.label}`
-                                        : `Select ${opt.label}`
-                                    }
-                                    aria-pressed={selected}
-                                    onClick={() =>
-                                      toggleSetupSelection(opt.value)
-                                    }
-                                    onFocus={() => {
-                                      setActiveSetupSection(section.id);
-                                      setSetupFocus(opt.value);
-                                    }}
-                                    onMouseEnter={() => {
-                                      setActiveSetupSection(section.id);
-                                      setSetupFocus(opt.value);
-                                    }}
-                                    onMouseLeave={() => {
-                                      setActiveSetupFocus((prev) =>
-                                        prev === opt.value ? null : prev,
-                                      );
-                                    }}
-                                    onKeyDown={(event) => {
-                                      if (
-                                        event.key === "Enter" ||
-                                        event.key === " "
-                                      ) {
-                                        event.preventDefault();
-                                        toggleSetupSelection(opt.value);
-                                      }
-                                    }}
-                                    className={exposureCardClass(
-                                      focused,
-                                      selected,
-                                      true,
-                                    )}
-                                  >
-                                    {focused ? (
-                                      <span
-                                        className="absolute inset-y-0 left-0 w-1 rounded-l-lg bg-primary"
-                                        aria-hidden="true"
-                                      />
-                                    ) : null}
+                              <div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="inline-flex rounded-full border border-primary/35 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+                                    {setupSectionBadge(section.id)}
+                                  </span>
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                                    {section.title}
+                                  </p>
+                                </div>
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                  {section.helper}
+                                </p>
+                              </div>
+                              <span
+                                className={`text-[11px] font-semibold uppercase tracking-wide ${
+                                  sectionFocused
+                                    ? "text-primary"
+                                    : "text-muted-foreground"
+                                }`}
+                              >
+                                {sectionCollapsed ? "Expand" : "Collapse"}
+                              </span>
+                            </button>
 
-                                    <div className="flex items-center justify-end">
-                                      {selected ? selectedBadge() : null}
-                                    </div>
+                            {sectionCollapsed ? null : (
+                              <div className="mt-4 border-t border-border pt-4">
+                                <div
+                                  className={`grid gap-3 ${section.options.length > 1 ? "sm:grid-cols-2" : ""}`}
+                                >
+                                  {section.options.map((opt) => {
+                                    const selected =
+                                      form.currentSafetySetup.includes(opt.value);
+                                    const focused = activeSetupFocus === opt.value;
+                                    return (
+                                      <div
+                                        key={opt.value}
+                                        role="button"
+                                        tabIndex={0}
+                                        aria-label={
+                                          selected
+                                            ? `Unselect ${opt.label}`
+                                            : `Select ${opt.label}`
+                                        }
+                                        aria-pressed={selected}
+                                        onClick={() =>
+                                          toggleSetupSelection(opt.value)
+                                        }
+                                        onFocus={() => {
+                                          setActiveSetupSection(section.id);
+                                          setSetupFocus(opt.value);
+                                        }}
+                                        onMouseEnter={() => {
+                                          setActiveSetupSection(section.id);
+                                          setSetupFocus(opt.value);
+                                        }}
+                                        onMouseLeave={() => {
+                                          setActiveSetupFocus((prev) =>
+                                            prev === opt.value ? null : prev,
+                                          );
+                                        }}
+                                        onKeyDown={(event) => {
+                                          if (
+                                            event.key === "Enter" ||
+                                            event.key === " "
+                                          ) {
+                                            event.preventDefault();
+                                            toggleSetupSelection(opt.value);
+                                          }
+                                        }}
+                                        className={exposureCardClass(
+                                          focused,
+                                          selected,
+                                          true,
+                                        )}
+                                      >
+                                        {focused ? (
+                                          <span
+                                            className="absolute inset-y-0 left-0 w-1 rounded-l-lg bg-primary"
+                                            aria-hidden="true"
+                                          />
+                                        ) : null}
 
-                                    <div className="text-sm font-semibold leading-tight text-foreground">
-                                      {opt.label}
-                                    </div>
-                                    <div className="mt-1 text-xs leading-snug text-muted-foreground">
-                                      {opt.helper}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </section>
-                    );
-                  })}
+                                        <div className="flex items-center justify-end">
+                                          {selected ? selectedBadge() : null}
+                                        </div>
+
+                                        <div className="text-sm font-semibold leading-tight text-foreground">
+                                          {opt.label}
+                                        </div>
+                                        <div className="mt-1 text-xs leading-snug text-muted-foreground">
+                                          {opt.helper}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </section>
+                        );
+                      })}
+                    </>
+                  ) : null}
                 </div>
               ) : null}
 
               {step.id === "budget" ? (
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+                  <div className="grid gap-3 sm:grid-cols-2">
                   {BUDGET_OPTIONS.map((opt) => {
                     const selected = form.budgetPreference === opt.value;
                     return (
@@ -1288,6 +1235,7 @@ export function RecommendationIntakePage({
                       </button>
                     );
                   })}
+                  </div>
                 </div>
               ) : null}
 
@@ -1323,114 +1271,21 @@ export function RecommendationIntakePage({
               </div>
             </div>
 
-            <aside className="hidden lg:col-span-5 lg:block">
-              <div className="sticky top-6 space-y-4">
-                <div className="overflow-hidden rounded-xl border border-border bg-[#f0f4fb]">
+            <aside className="hidden lg:col-span-4 lg:flex">
+              <div className="flex h-full w-full">
+                <div className="h-full w-full overflow-hidden rounded-xl border border-border bg-[#f0f4fb]">
                   <img
                     src={stepImage}
                     alt="Program guidance visual"
-                    className="aspect-video w-full object-cover"
+                    className="h-full w-full object-cover object-[center_25%]"
                     loading="lazy"
+                    decoding="async"
+                    width={840}
+                    height={920}
                   />
-                </div>
-
-                {/* -- Advisory guidance panel -- */}
-                <div className="rounded-xl border border-border bg-card p-5">
-                  <div className="text-sm font-semibold text-foreground">
-                    Advisory Guidance
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {step.id === "company" &&
-                      "Start by defining your operational context so we can generate a recommendation worth reviewing."}
-                    {step.id === "work_type" &&
-                      "Choose the industry that best reflects your day-to-day work environment."}
-                    {step.id === "coverage" &&
-                      "Team size helps determine the service type that can support your workforce."}
-                    {step.id === "locations" &&
-                      "Location structure helps define coordination, fulfillment, and support workflows."}
-                    {step.id === "exposures" &&
-                      "Hazard selections shape the protection profile and coating recommendations."}
-                    {step.id === "current_setup" &&
-                      "Current setup details help identify how your program runs today."}
-                    {step.id === "budget" &&
-                      "Budget goals help determine how much structure, coverage depth, and ongoing support should be reflected in your recommendation."}
-                  </div>
-                  {guidance.selectedLabel ? (
-                    <div className="mt-3">
-                      <span className="inline-flex rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
-                        {guidance.selectedLabel}
-                      </span>
-                    </div>
-                  ) : null}
-                  <div className="mt-4 space-y-4 text-sm text-muted-foreground">
-                    {guidance.sections.map((section) => (
-                      <section key={section.title}>
-                        <h3 className="text-sm font-semibold text-foreground">
-                          {section.title}
-                        </h3>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {section.body}
-                        </p>
-                      </section>
-                    ))}
-                  </div>
                 </div>
               </div>
             </aside>
-          </div>
-
-          <div
-            className="fixed inset-x-3 bottom-3 z-40 pb-[env(safe-area-inset-bottom)] lg:hidden"
-            data-pdf-exclude="true"
-          >
-            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-lg">
-              <button
-                type="button"
-                onClick={() => setMobileGuidanceOpen((prev) => !prev)}
-                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-                aria-expanded={mobileGuidanceOpen}
-                aria-controls="mobile-program-guidance"
-                aria-label="Program guidance drawer"
-              >
-                <div>
-                  <div className="text-sm font-semibold text-foreground">
-                    Helpful Context
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Tap to{" "}
-                    {mobileGuidanceOpen ? "minimize" : "see why this matters"}
-                  </div>
-                </div>
-                <span className="text-xs font-semibold uppercase tracking-wide text-primary">
-                  {mobileGuidanceOpen ? "Close" : "Why?"}
-                </span>
-              </button>
-
-              {mobileGuidanceOpen ? (
-                <div
-                  id="mobile-program-guidance"
-                  className="max-h-[70vh] space-y-4 overflow-y-auto border-t border-border p-4 text-sm text-muted-foreground"
-                >
-                  {guidance.selectedLabel ? (
-                    <div>
-                      <span className="inline-flex rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
-                        {guidance.selectedLabel}
-                      </span>
-                    </div>
-                  ) : null}
-                  {guidance.sections.map((section) => (
-                    <section key={section.title}>
-                      <h3 className="text-sm font-semibold text-foreground">
-                        {section.title}
-                      </h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {section.body}
-                      </p>
-                    </section>
-                  ))}
-                </div>
-              ) : null}
-            </div>
           </div>
 
         </SectionWrap>
@@ -1458,12 +1313,7 @@ function selectedSetupInSection(
 function buildGuidance(args: {
   stepId: StepId;
   form: RecommendationInputs;
-  hasSelectedWorkType: boolean;
-  hasSelectedCoverageBand: boolean;
-  locationOptionId:
-    | "single"
-    | "multi_same_region"
-    | "multi_across_regions";
+  hasFormalProgram: boolean | null;
   activeExposureFocus: ProgramExposureRisk | null;
   activeSetupFocus: CurrentSafetySetup | null;
   activeSetupSection: CurrentSetupSectionId;
@@ -1476,140 +1326,43 @@ function buildGuidance(args: {
       selectedLabel: null,
       sections: guidanceSections(
         {
-          title: "How this step helps",
-          body: "This intro step frames what you will decide across industry, team size, locations, hazards, setup, and budget priorities so your recommendation reflects how your team actually operates.",
+          title: "What you will enter",
+          body: "You will provide your team profile, exposure risks, current setup, and budget direction.",
         },
         {
-          title: "What happens next",
-          body: "After you answer the seven guided sections, you will review your recommendation first and then add contact details on the recommendation page to unlock full tabs and final actions.",
+          title: "Why this matters",
+          body: "These answers determine the recommendation structure so your review is focused and actionable.",
         },
       ),
     };
   }
 
-  if (stepId === "work_type") {
-    if (!args.hasSelectedWorkType) {
-      return {
-        selectedLabel: null,
-        sections: guidanceSections({
-          title: "What this step is deciding",
-          body: "Select the industry that most closely matches where your employees perform their daily work. This helps determine the protection profile and operational support model used in your recommendation.",
-        }),
-      };
-    }
-    const content = workTypeExplainer(form.workType);
+  if (stepId === "profile") {
     const selected =
       WORK_TYPE_OPTIONS.find((option) => option.value === form.workType)
         ?.label ?? null;
+    const workTypeGuidance = workTypeExplainer(form.workType);
+    const locationLabel =
+      LOCATION_MODELS.find((option) => option.value === form.locationModel)
+        ?.label ?? "";
+    const teamLabel =
+      COVERAGE_BANDS.find((option) => option.value === form.coverageSizeBand)
+        ?.label ?? "";
     return {
       selectedLabel: selected,
       sections: guidanceSections(
-        { title: "What this environment typically needs", body: content.needs },
-        { title: "What makes programs work here", body: content.pattern },
-      ),
-    };
-  }
-
-  if (stepId === "coverage") {
-    if (!args.hasSelectedCoverageBand) {
-      return {
-        selectedLabel: null,
-        sections: guidanceSections({
-          title: "What this step covers",
-          body: "This helps us determine the service type that can best handle your current team size and program coordination needs.",
-        }),
-      };
-    }
-    const band = form.coverageSizeBand ?? "51_100";
-    const selected =
-      COVERAGE_BANDS.find((option) => option.value === band)?.label ?? null;
-    const map: Record<
-      string,
-      { reality: string; coordination: string; nextBand: string }
-    > = {
-      "1_50": {
-        reality:
-          "At this headcount, coverage is usually coordinated directly between one program owner and frontline supervisors. The Essential tier is sized for exactly this — one clear process, minimal overhead, and a program that holds without someone managing it manually.",
-        coordination:
-          "Coordination typically sits with one safety lead handling eligibility, replacements, and employee questions at the same time. Keeping it simple here isn't a limitation — it's what makes it run.",
-        nextBand:
-          "Crossing into the next size band usually introduces recurring onboarding volume, more replacement activity, and a greater need for repeatable service support.",
-      },
-      "51_100": {
-        reality:
-          "At this size, teams usually need a clearly defined process for onboarding, replacements, and ongoing policy support.",
-        coordination:
-          "Coordination load usually sits with one or two owners managing eligibility, approvals, and employee requests in parallel.",
-        nextBand:
-          "As programs move into larger bands, support requirements usually expand to include stronger workflow governance and service consistency.",
-      },
-      "101_200": {
-        reality:
-          "Programs in this range often need structured support for multiple supervisors, recurring onboarding, and frequent replacement activity.",
-        coordination:
-          "Coordination pressure usually appears in approval turnaround, exception handling, and keeping fulfillment timelines predictable.",
-        nextBand:
-          "Moving above 200 employees typically adds higher service orchestration needs, especially when locations and workflows vary.",
-      },
-      "201_plus": {
-        reality:
-          "At this scale, onboarding, reorders, and exception management are continuous and usually require strong governance and service coordination.",
-        coordination:
-          "Coordination pressure is highest where cross-site standards, approval ownership, and policy consistency are maintained.",
-        nextBand:
-          "At this size, recommendations are shaped by both program structure and budget goals so service depth matches operational complexity.",
-      },
-    };
-    const copy = map[band] ?? map["51_100"];
-    return {
-      selectedLabel: selected,
-      sections: guidanceSections(
-        { title: "What this size means for your team", body: copy.reality },
         {
-          title: "Where the coordination load actually falls",
-          body: copy.coordination,
+          title: "What this step sets",
+          body: "Industry, team size, and location structure set the baseline for service level, coverage planning, and support model.",
         },
         {
-          title: "What shifts when you move to the next band",
-          body: copy.nextBand,
+          title: "Industry context",
+          body: workTypeGuidance.needs,
         },
-      ),
-    };
-  }
-
-  if (stepId === "locations") {
-    const selected =
-      LOCATION_MODELS.find((option) => option.id === args.locationOptionId)
-        ?.label ?? null;
-    const map: Record<
-      "single" | "multi_same_region" | "multi_across_regions",
-      { easier: string; change: string }
-    > = {
-      single: {
-        easier:
-          "A single-site model allows one consistent operating workflow for approvals, ordering, and support.",
-        change:
-          "When additional sites are added, service routing and ownership usually expand beyond one local process.",
-      },
-      multi_same_region: {
-        easier:
-          "Same-region sites typically share similar scheduling and support windows while still requiring location-level accountability.",
-        change:
-          "As sites spread further apart, coordination plans usually need expanded fulfillment timing and communication workflows.",
-      },
-      multi_across_regions: {
-        easier:
-          "Across-region programs usually require regional execution planning under one consistent governance and reporting framework.",
-        change:
-          "As location count and regional diversity increase, recommendations usually require stronger consistency controls and support ownership.",
-      },
-    };
-    const copy = map[args.locationOptionId];
-    return {
-      selectedLabel: selected,
-      sections: guidanceSections(
-        { title: "What this structure makes easier", body: copy.easier },
-        { title: "What to think about when this changes", body: copy.change },
+        {
+          title: "Your current selection",
+          body: `Team size: ${teamLabel}. Location model: ${locationLabel}.`,
+        },
       ),
     };
   }
@@ -1685,6 +1438,22 @@ function buildGuidance(args: {
   const isSetupCollapsedDefault = Object.values(
     args.collapsedSetupSections,
   ).every(Boolean);
+  if (args.hasFormalProgram === false) {
+    return {
+      selectedLabel: "Setup details skipped",
+      sections: guidanceSections(
+        {
+          title: "What this means",
+          body: "You can skip setup details for now. We will still generate a practical baseline recommendation.",
+        },
+        {
+          title: "What happens next",
+          body: "Budget goals and exposure details will guide how structured the recommendation should be.",
+        },
+      ),
+    };
+  }
+
   if (isSetupCollapsedDefault) {
     return {
       selectedLabel: null,
@@ -1718,7 +1487,7 @@ function buildGuidance(args: {
         sections: guidanceSections(
           {
             title: "What this section controls",
-            body: "Coverage type determines whether employees are routed through prescription, non-prescription, OTG, or hybrid pathways.",
+            body: "Coverage type determines whether employees are routed through prescription, non-prescription, or hybrid pathways.",
           },
           {
             title: "Where this decision shows up first",
@@ -1955,9 +1724,9 @@ function exposureExplainer(risk: ProgramExposureRisk) {
 function setupLabel(item: CurrentSafetySetup) {
   const map: Record<CurrentSafetySetup, string> = {
     no_formal_program: "No Formal Program",
-    reimbursement: "Vendor / Optometry Partnership",
+    reimbursement: "Sole Vendor Partnership",
     covered_through_vision_insurance: "Covered Through Vision Insurance",
-    vendor_optometry_partnership: "Vendor / Optometry Partnership",
+    vendor_optometry_partnership: "Sole Vendor Partnership",
     voucher: "Voucher / Reimbursement",
     employer_fully_covered: "Employer Fully Covered",
     employer_base_with_upgrades: "Employer Base with Upgrades",
@@ -2009,11 +1778,11 @@ function setupExplainer(item: CurrentSafetySetup) {
     },
     vendor_optometry_partnership: {
       structure:
-        "Safety eyewear is routed through a partner vendor or optometry network tied to vision benefits coverage.",
+        "Safety eyewear is routed through a sole vendor partnership with an established operating process.",
       compliance:
-        "Compliance improves when partner catalogs and eligibility rules are aligned to approved safety standards.",
+        "Compliance improves when the partner catalog and eligibility rules are aligned to approved safety standards.",
       admin:
-        "Switching from an existing partner is a real operational step. Your specialist will walk through what that transition looks like and what stays the same.",
+        "Administration centers on keeping ordering, fitting, and fulfillment consistent across locations and roles.",
     },
     voucher: {
       structure:
@@ -2137,7 +1906,7 @@ function setupExplainer(item: CurrentSafetySetup) {
     },
     hybrid_eyewear: {
       structure:
-        "Program combines prescription safety eyewear, non-prescription options, and OTG pathways by role.",
+        "Program combines prescription and non-prescription pathways by role.",
       compliance:
         "Strong eligibility rules are required so each employee is routed to the correct compliant coverage pathway.",
       admin:
@@ -2149,10 +1918,10 @@ function setupExplainer(item: CurrentSafetySetup) {
 
 function budgetPreferenceLabel(value: ProgramBudgetPreference) {
   const map: Record<ProgramBudgetPreference, string> = {
-    super_strict: "Compliance First",
-    low_budget: "Operations Focused",
-    good_budget: "Ready to Grow",
-    unlimited_budget: "Full Program Investment",
+    super_strict: "Lean Budget",
+    low_budget: "Lean Budget",
+    good_budget: "Balanced Budget",
+    unlimited_budget: "Growth Budget",
   };
   return map[value];
 }
@@ -2164,25 +1933,25 @@ function budgetPreferenceExplainer(value: ProgramBudgetPreference) {
   > = {
     super_strict: {
       impact:
-        "Compliance-ready execution is the priority. Budget is directed toward clearly defined standards and controlled policy pathways. Recommendations favor foundational coverage and service structure that keep standards consistent and auditable. This approach is best when compliance consistency is the primary budget objective.",
+        "Foundational control is the priority. Recommendations emphasize clear standards, tighter guardrails, and predictable execution.",
       recommendation: "",
       bestFor: "",
     },
     low_budget: {
       impact:
-        "Cost-managed operations are the priority. Budget is focused on dependable day-to-day execution. Recommendations focus on stable service coverage with practical support depth for current operational demands. This approach is best when controlled spend and operational consistency are the primary budget goals.",
+        "Lean operations are the priority. Recommendations focus on practical service coverage with disciplined spend and dependable day-to-day workflows.",
       recommendation: "",
       bestFor: "",
     },
     good_budget: {
       impact:
-        "Balanced investment supports broader adoption, stronger consistency, and improved service maturity. Budget can include deeper support structure where workflow consistency and adoption improvements are needed. This approach is best when growth and long-term program reliability are budget priorities.",
+        "Balanced performance supports stronger adoption, smoother operations, and better consistency across the program.",
       recommendation: "",
       bestFor: "",
     },
     unlimited_budget: {
       impact:
-        "Budget can prioritize high-structure support, cross-site governance, and long-term scalability. Recommendations can support partnership-level service depth when operational signals indicate true complexity. This approach is best when long-term partnership and enterprise-level consistency are central budget objectives.",
+        "Strategic scale supports deeper partnership, broader governance, and long-term resilience for complex operations.",
       recommendation: "",
       bestFor: "",
     },

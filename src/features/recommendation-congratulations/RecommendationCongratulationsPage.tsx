@@ -104,7 +104,11 @@ export function RecommendationCongratulationsPage({
                 src="/images/congrats-specialist-handoff.jpg"
                 alt=""
                 className="aspect-4/3 w-full rounded-2xl border border-gray-200 object-cover"
-                loading="lazy"
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
+                width={1200}
+                height={900}
               />
             </div>
           </div>
@@ -140,6 +144,9 @@ export function RecommendationCongratulationsPage({
                       alt=""
                       className="h-36 w-full object-cover"
                       loading="lazy"
+                      decoding="async"
+                      width={1000}
+                      height={360}
                     />
                   </div>
 
@@ -200,6 +207,9 @@ export function RecommendationCongratulationsPage({
                   alt=""
                   className="aspect-3/2 w-full rounded-xl border border-border object-cover"
                   loading="lazy"
+                  decoding="async"
+                  width={960}
+                  height={640}
                 />
               </div>
 
